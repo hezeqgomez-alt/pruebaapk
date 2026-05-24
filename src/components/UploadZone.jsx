@@ -19,7 +19,10 @@ export default function UploadZone({ onFiles }) {
   const onDragOver = (e) => { e.preventDefault(); setDragging(true) }
   const onDragLeave = () => setDragging(false)
 
-  const onInput = (e) => handleFiles(e.target.files)
+  const onInput = (e) => {
+    handleFiles(e.target.files)
+    e.target.value = ''
+  }
 
   return (
     <div
