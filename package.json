@@ -49,8 +49,7 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerLanguages": ["es_AR", "es_ES"]
+      "allowToChangeInstallationDirectory": true
     }
   },
   "dependencies": {
