@@ -84,7 +84,7 @@ export default function App() {
   const hasData = transactions.length > 0
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'dashboard', label: 'Resumen' },
     { id: 'movimientos', label: `Movimientos (${transactions.length})` },
     { id: 'insights', label: `Alertas${findings.length > 0 ? ` (${findings.length})` : ''}` },
   ]

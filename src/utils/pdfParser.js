@@ -1,10 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist'
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { categorize } from './categorizer'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString()
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
 async function extractTextFromPDF(file) {
   const arrayBuffer = await file.arrayBuffer()

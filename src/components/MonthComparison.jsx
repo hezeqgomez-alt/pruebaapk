@@ -37,7 +37,7 @@ export default function MonthComparison({ transactions, selectedCategories }) {
   })).filter(d => d.data.some(v => v > 0))
 
   const totalByMonth = {
-    label: 'Total',
+    label: 'Total gastado',
     data: sortedMonths.map(m => Object.values(byMonthCat[m] || {}).reduce((s, v) => s + v, 0)),
     backgroundColor: '#1e40af',
     borderRadius: 4,

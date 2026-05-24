@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Upload, FileText, AlertCircle } from 'lucide-react'
+import { Upload, AlertCircle } from 'lucide-react'
 
 export default function UploadZone({ onFiles }) {
   const [dragging, setDragging] = useState(false)
@@ -25,16 +25,14 @@ export default function UploadZone({ onFiles }) {
   }
 
   return (
-    <div
+    <label
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200
+      className={`block border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200
         ${dragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-white hover:border-blue-400 hover:bg-blue-50'}`}
-      onClick={() => document.getElementById('pdf-input').click()}
     >
       <input
-        id="pdf-input"
         type="file"
         accept=".pdf,application/pdf"
         multiple
@@ -54,6 +52,6 @@ export default function UploadZone({ onFiles }) {
       <p className="text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
         <AlertCircle size={12} /> Los archivos se procesan localmente, nunca se suben a ningún servidor
       </p>
-    </div>
+    </label>
   )
 }
