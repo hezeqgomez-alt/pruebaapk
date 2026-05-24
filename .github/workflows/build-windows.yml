@@ -33,15 +33,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: List release folder
+      - name: Find generated files
         if: always()
-        run: dir release || echo "release folder not found"
+        run: |
+          echo "=== Contents of release/ ==="
+          dir release /s /b 2>nul || echo "release/ not found"
         shell: cmd
 
-      - name: Upload Windows installer
-        if: success()
+      - name: Upload all EXE files
         uses: actions/upload-artifact@v4
         with:
-          name: GastoTracker-Windows
-          path: release/*.exe
+          name: GastoTracker-Windows-EXE
+          path: |
+            release/**/*.exe
+            release/*.exe
+          if-no-files-found: warn
           retention-days: 30
