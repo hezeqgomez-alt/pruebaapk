@@ -5,6 +5,9 @@ on:
     branches: [claude/charming-rubin-d3P33, main]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -33,11 +36,3 @@ jobs:
           name: GastoTracker-Windows
           path: release/*.exe
           retention-days: 30
-
-      - name: Upload portable (if exists)
-        uses: actions/upload-artifact@v4
-        with:
-          name: GastoTracker-Windows-portable
-          path: release/*portable*.exe
-          retention-days: 30
-          if-no-files-found: ignore
