@@ -1,13 +1,57 @@
 {
-  "name": "pruebaapk",
+  "name": "gastotracker",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Analizador de resúmenes de tarjeta de crédito",
+  "author": {
+    "name": "GastoTracker",
+    "email": "hezeq.gomez@gmail.com"
+  },
+  "homepage": "https://github.com/hezeqgomez-alt/pruebaapk",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:build": "vite build && electron-builder --linux AppImage deb --x64",
+    "electron:build:win": "vite build && electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.gastotracker.app",
+    "productName": "GastoTracker",
+    "copyright": "Copyright © 2025",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ],
+      "category": "Office",
+      "icon": "public/icon.png"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": ["es_AR", "es_ES"]
+    }
   },
   "dependencies": {
     "chart.js": "^4.5.1",
@@ -24,6 +68,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
