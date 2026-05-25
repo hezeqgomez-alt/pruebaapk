@@ -27,6 +27,11 @@ function hexToRgb(hex) {
   return [r, g, b]
 }
 
+// jsPDF doesn't support emoji — use plain text label only
+function catLabel(cat) {
+  return CATEGORIES[cat]?.label || cat
+}
+
 function addPageChrome(doc, pageNum, totalPages) {
   const pw = doc.internal.pageSize.getWidth()
   const ph = doc.internal.pageSize.getHeight()
@@ -202,7 +207,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     startY: y,
     head: [['Categoría', 'Importe', '% del total', 'Mov.']],
     body: catSorted.map(([cat, amt]) => [
-      `${CATEGORIES[cat]?.icon || ''} ${CATEGORIES[cat]?.label || cat}`,
+      catLabel(cat),
       fmt(amt),
       `${((amt / totalDebits) * 100).toFixed(1)}%`,
       debits.filter(t => t.category === cat).length,
@@ -259,7 +264,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...DARK)
     doc.text(
-      `${CATEGORIES[cat]?.label || cat}: ${fmt(amt)} (${((amt / totalDebits) * 100).toFixed(1)}%)`,
+      `${catLabel(cat)}: ${fmt(amt)} (${((amt / totalDebits) * 100).toFixed(1)}%)`,
       lx + 5, ly
     )
   })
@@ -341,7 +346,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     .map(t => [
       format(parseISO(t.date), 'dd/MM/yy'),
       t.description.length > 40 ? t.description.slice(0, 40) + '…' : t.description,
-      `${CATEGORIES[t.category]?.icon || ''} ${CATEGORIES[t.category]?.label || t.category}`,
+      catLabel(t.category),
       t.type === 'credit' ? `+${fmt(t.amount)}` : fmt(t.amount),
     ])
 

@@ -1,11 +1,11 @@
 {
-  "name": "gastotracker",
+  "name": "easyresumen",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Analizador de resúmenes de tarjeta de crédito",
   "author": {
-    "name": "GastoTracker",
+    "name": "EasyResumen",
     "email": "hezeq.gomez@gmail.com"
   },
   "homepage": "https://github.com/hezeqgomez-alt/pruebaapk",
@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "com.gastotracker.app",
-    "productName": "GastoTracker",
+    "productName": "EasyResumen",
     "copyright": "Copyright © 2025",
     "directories": {
       "output": "release"

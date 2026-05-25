@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal } from 'lucide-react'
+import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CATEGORIES } from '../utils/categorizer'
@@ -68,8 +68,12 @@ export default function TransactionList({ transactions, onUpdate }) {
   const [sortBy, setSortBy]         = useState('date')
   const [sortDir, setSortDir]       = useState('desc')
   const [showFilters, setShowFilters] = useState(false)
-  const PER_PAGE = 50
 
+  // Multi-select state
+  const [selected, setSelected]       = useState(new Set())
+  const [bulkCat, setBulkCat]         = useState('')
+
+  const PER_PAGE = 50
   const hasActiveFilter = search || filterCat || filterType || dateFrom || dateTo
 
   function toggleSort(field) {
@@ -109,12 +113,45 @@ export default function TransactionList({ transactions, onUpdate }) {
     return t.type === 'credit' ? s - t.amount : s + t.amount
   }, 0)
 
+  // Selection helpers
+  const pagedIds = useMemo(() => new Set(paged.map(t => t.id)), [paged])
+  const allPageSelected = pagedIds.size > 0 && [...pagedIds].every(id => selected.has(id))
+  const someSelected = selected.size > 0
+
+  function toggleSelectAll() {
+    if (allPageSelected) {
+      setSelected(prev => { const next = new Set(prev); pagedIds.forEach(id => next.delete(id)); return next })
+    } else {
+      setSelected(prev => { const next = new Set(prev); pagedIds.forEach(id => next.add(id)); return next })
+    }
+  }
+
+  function toggleOne(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+    setBulkCat('')
+  }
+
+  function applyBulkCategory() {
+    if (!bulkCat || selected.size === 0) return
+    onUpdate(transactions.map(t => selected.has(t.id) ? { ...t, category: bulkCat } : t))
+    clearSelection()
+  }
+
   function updateCategory(id, category) {
     onUpdate(transactions.map(t => t.id === id ? { ...t, category } : t))
   }
 
   function deleteOne(id) {
     onUpdate(transactions.filter(t => t.id !== id))
+    setSelected(prev => { const next = new Set(prev); next.delete(id); return next })
   }
 
   if (transactions.length === 0) return null
@@ -133,6 +170,7 @@ export default function TransactionList({ transactions, onUpdate }) {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+
       {/* Header bar */}
       <div className="flex flex-wrap gap-2 p-4 pb-3 items-center border-b border-slate-100">
         <div>
@@ -234,11 +272,61 @@ export default function TransactionList({ transactions, onUpdate }) {
         </div>
       )}
 
+      {/* Bulk action bar — shown when items are selected */}
+      {someSelected && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-indigo-100 bg-indigo-50/70">
+          <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
+            <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {selected.size}
+            </div>
+            {selected.size === 1 ? 'movimiento seleccionado' : 'movimientos seleccionados'}
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <Tag size={14} className="text-indigo-500 shrink-0" />
+            <select
+              value={bulkCat}
+              onChange={e => setBulkCat(e.target.value)}
+              className="text-sm border border-indigo-200 rounded-xl px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <option value="">— Elegir categoría —</option>
+              {Object.entries(CATEGORIES).map(([k, c]) => (
+                <option key={k} value={k}>{c.icon} {c.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={applyBulkCategory}
+              disabled={!bulkCat}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-40 transition-colors"
+            >
+              <Check size={13} />
+              Aplicar
+            </button>
+            <button
+              onClick={clearSelection}
+              className="text-sm px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto px-4">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 text-left">
+              {/* Select-all checkbox */}
+              <th className="pb-3 pr-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={allPageSelected}
+                  onChange={toggleSelectAll}
+                  className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer"
+                  title="Seleccionar todos"
+                />
+              </th>
               <Th field="date">Fecha</Th>
               <Th field="desc">Descripción</Th>
               <Th field="cat">Categoría</Th>
@@ -250,8 +338,25 @@ export default function TransactionList({ transactions, onUpdate }) {
           <tbody>
             {paged.map(t => {
               const isCredit = t.type === 'credit'
+              const isSelected = selected.has(t.id)
               return (
-                <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group">
+                <tr
+                  key={t.id}
+                  className={`border-b border-slate-50 transition-colors group ${
+                    isSelected
+                      ? 'bg-indigo-50/60 hover:bg-indigo-50'
+                      : 'hover:bg-slate-50/80'
+                  }`}
+                >
+                  {/* Row checkbox */}
+                  <td className="py-2.5 pr-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOne(t.id)}
+                      className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer"
+                    />
+                  </td>
                   <td className="py-2.5 pr-4 text-slate-400 whitespace-nowrap text-xs font-mono">
                     {safeFormat(t.date, 'dd MMM yy', { locale: es })}
                   </td>

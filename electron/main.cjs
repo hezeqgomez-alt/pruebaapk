@@ -66,7 +66,7 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    title: 'GastoTracker',
+    title: 'EasyResumen',
     show: false,
     backgroundColor: '#f1f5f9',
   })
