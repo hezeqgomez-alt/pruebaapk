@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { Chart, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import { format, parseISO } from 'date-fns'
@@ -10,11 +11,13 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
-export default function MonthComparison({ transactions, selectedCategories }) {
+const MonthComparison = forwardRef(function MonthComparison({ transactions, selectedCategories }, ref) {
+  const debits = transactions.filter(t => t.type !== 'credit')
+
   const byMonthCat = {}
   const months = new Set()
 
-  for (const t of transactions) {
+  for (const t of debits) {
     const mo = t.date.slice(0, 7)
     months.add(mo)
     if (!byMonthCat[mo]) byMonthCat[mo] = {}
@@ -45,35 +48,33 @@ export default function MonthComparison({ transactions, selectedCategories }) {
   }
 
   const showStacked = selectedCategories && selectedCategories.length > 0
-
   const data = { labels, datasets: showStacked ? datasets : [totalByMonth] }
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: { display: showStacked, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-      tooltip: {
-        callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` },
-      },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } },
     },
     scales: {
       x: { stacked: showStacked, grid: { display: false } },
-      y: { stacked: showStacked, ticks: { callback: (v) => fmt(v) }, grid: { color: '#f1f5f9' } },
+      y: { stacked: showStacked, ticks: { callback: v => fmt(v) }, grid: { color: '#f1f5f9' } },
     },
   }
 
   const monthTable = sortedMonths.map(m => ({
     label: format(parseISO(m + '-01'), 'MMMM yyyy', { locale: es }),
     total: Object.values(byMonthCat[m] || {}).reduce((s, v) => s + v, 0),
-    count: transactions.filter(t => t.date.startsWith(m)).length,
+    count: debits.filter(t => t.date.startsWith(m)).length,
   }))
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5">
       <h3 className="text-base font-semibold text-slate-700 mb-4">Comparativo mes a mes</h3>
       <div style={{ height: 240 }}>
-        <Bar data={data} options={options} />
+        <Bar ref={ref} data={data} options={options} />
       </div>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-sm">
@@ -109,4 +110,6 @@ export default function MonthComparison({ transactions, selectedCategories }) {
       </div>
     </div>
   )
-}
+})
+
+export default MonthComparison

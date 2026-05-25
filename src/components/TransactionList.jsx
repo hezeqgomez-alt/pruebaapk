@@ -1,11 +1,16 @@
 import { useState, useMemo } from 'react'
-import { Search, Edit3, Check, X } from 'lucide-react'
+import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CATEGORIES } from '../utils/categorizer'
 
 function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n)
+}
+
+function SortIcon({ field, sortBy, sortDir }) {
+  if (sortBy !== field) return <ChevronsUpDown size={12} className="opacity-30" />
+  return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
 }
 
 function EditableCategory({ value, onChange }) {
@@ -17,7 +22,7 @@ function EditableCategory({ value, onChange }) {
       <button
         onClick={() => setEditing(true)}
         className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full hover:opacity-80 transition-opacity"
-        style={{ background: CATEGORIES[value]?.color + '22', color: CATEGORIES[value]?.color || '#64748b' }}
+        style={{ background: (CATEGORIES[value]?.color || '#94a3b8') + '22', color: CATEGORIES[value]?.color || '#64748b' }}
       >
         {CATEGORIES[value]?.icon} {CATEGORIES[value]?.label || value}
         <Edit3 size={10} />
@@ -29,7 +34,7 @@ function EditableCategory({ value, onChange }) {
     <div className="flex items-center gap-1">
       <select
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onChange={e => setVal(e.target.value)}
         className="text-xs border rounded px-1 py-0.5"
         autoFocus
       >
@@ -48,38 +53,83 @@ function EditableCategory({ value, onChange }) {
 }
 
 export default function TransactionList({ transactions, onUpdate }) {
-  const [search, setSearch] = useState('')
+  const [search, setSearch]       = useState('')
   const [filterCat, setFilterCat] = useState('')
-  const [filterMonth, setFilterMonth] = useState('')
-  const [page, setPage] = useState(1)
+  const [dateFrom, setDateFrom]   = useState('')
+  const [dateTo, setDateTo]       = useState('')
+  const [filterType, setFilterType] = useState('')
+  const [page, setPage]           = useState(1)
+  const [sortBy, setSortBy]       = useState('date')
+  const [sortDir, setSortDir]     = useState('desc')
   const PER_PAGE = 50
 
-  const months = useMemo(() => {
-    const s = new Set(transactions.map(t => t.date.slice(0, 7)))
-    return [...s].sort().reverse()
-  }, [transactions])
+  function toggleSort(field) {
+    if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(field); setSortDir('desc') }
+    setPage(1)
+  }
 
   const filtered = useMemo(() => {
     return transactions.filter(t => {
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
       if (filterCat && t.category !== filterCat) return false
-      if (filterMonth && !t.date.startsWith(filterMonth)) return false
+      if (filterType && (t.type || 'debit') !== filterType) return false
+      if (dateFrom && t.date < dateFrom) return false
+      if (dateTo && t.date > dateTo) return false
       return true
-    }).sort((a, b) => b.date.localeCompare(a.date))
-  }, [transactions, search, filterCat, filterMonth])
+    }).sort((a, b) => {
+      let va, vb
+      if (sortBy === 'date')        { va = a.date; vb = b.date }
+      else if (sortBy === 'amount') { va = a.amount; vb = b.amount }
+      else if (sortBy === 'desc')   { va = a.description; vb = b.description }
+      else if (sortBy === 'cat')    { va = a.category; vb = b.category }
+      else { va = a.date; vb = b.date }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1
+      if (va > vb) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [transactions, search, filterCat, filterType, dateFrom, dateTo, sortBy, sortDir])
 
   const paged = filtered.slice(0, page * PER_PAGE)
 
-  const updateCategory = (id, category) => {
+  const totalFiltered = filtered.reduce((s, t) => {
+    return t.type === 'credit' ? s - t.amount : s + t.amount
+  }, 0)
+
+  function updateCategory(id, category) {
     onUpdate(transactions.map(t => t.id === id ? { ...t, category } : t))
+  }
+
+  function deleteOne(id) {
+    onUpdate(transactions.filter(t => t.id !== id))
   }
 
   if (transactions.length === 0) return null
 
+  const Th = ({ field, children }) => (
+    <th
+      className="pb-2 pr-4 text-slate-500 font-medium cursor-pointer select-none hover:text-slate-700 whitespace-nowrap"
+      onClick={() => toggleSort(field)}
+    >
+      <span className="flex items-center gap-1">
+        {children}
+        <SortIcon field={field} sortBy={sortBy} sortDir={sortDir} />
+      </span>
+    </th>
+  )
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5">
-      <div className="flex flex-wrap gap-3 mb-4 items-center">
-        <h3 className="text-base font-semibold text-slate-700 mr-auto">Movimientos ({filtered.length})</h3>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
+        <h3 className="text-base font-semibold text-slate-700 mr-auto">
+          Movimientos ({filtered.length})
+          <span className={`ml-2 text-sm font-normal ${totalFiltered < 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+            · {totalFiltered < 0 ? '-' : ''}{fmt(Math.abs(totalFiltered))}
+          </span>
+        </h3>
+
+        {/* Search */}
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
           <Search size={14} className="text-slate-400" />
           <input
@@ -87,65 +137,115 @@ export default function TransactionList({ transactions, onUpdate }) {
             placeholder="Buscar..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
-            className="text-sm bg-transparent outline-none w-36 text-slate-700 placeholder-slate-400"
+            className="text-sm bg-transparent outline-none w-32 text-slate-700 placeholder-slate-400"
           />
         </div>
+
+        {/* Category */}
         <select
           value={filterCat}
           onChange={e => { setFilterCat(e.target.value); setPage(1) }}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700"
+          className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700"
         >
           <option value="">Todas las categorías</option>
           {Object.entries(CATEGORIES).map(([k, c]) => (
             <option key={k} value={k}>{c.icon} {c.label}</option>
           ))}
         </select>
+
+        {/* Type */}
         <select
-          value={filterMonth}
-          onChange={e => { setFilterMonth(e.target.value); setPage(1) }}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700"
+          value={filterType}
+          onChange={e => { setFilterType(e.target.value); setPage(1) }}
+          className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700"
         >
-          <option value="">Todos los meses</option>
-          {months.map(m => (
-            <option key={m} value={m}>{format(parseISO(m + '-01'), 'MMMM yyyy', { locale: es })}</option>
-          ))}
+          <option value="">Débitos y créditos</option>
+          <option value="debit">Solo débitos</option>
+          <option value="credit">Solo créditos</option>
         </select>
+
+        {/* Date range */}
+        <div className="flex items-center gap-1 text-sm text-slate-500">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+            className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-slate-700 bg-white"
+          />
+          <span>—</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => { setDateTo(e.target.value); setPage(1) }}
+            className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-slate-700 bg-white"
+          />
+        </div>
+
+        {(search || filterCat || filterType || dateFrom || dateTo) && (
+          <button
+            onClick={() => { setSearch(''); setFilterCat(''); setFilterType(''); setDateFrom(''); setDateTo(''); setPage(1) }}
+            className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 border border-slate-200 rounded-lg"
+          >
+            Limpiar
+          </button>
+        )}
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 text-left">
-              <th className="pb-2 pr-4 text-slate-500 font-medium">Fecha</th>
-              <th className="pb-2 pr-4 text-slate-500 font-medium">Descripción</th>
-              <th className="pb-2 pr-4 text-slate-500 font-medium">Categoría</th>
+              <Th field="date">Fecha</Th>
+              <Th field="desc">Descripción</Th>
+              <Th field="cat">Categoría</Th>
               <th className="pb-2 pr-4 text-slate-500 font-medium">Origen</th>
-              <th className="pb-2 text-right text-slate-500 font-medium">Importe</th>
+              <Th field="amount">
+                <span className="ml-auto">Importe</span>
+              </Th>
+              <th className="pb-2 w-8" />
             </tr>
           </thead>
           <tbody>
-            {paged.map(t => (
-              <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                <td className="py-2 pr-4 text-slate-500 whitespace-nowrap text-xs">
-                  {format(parseISO(t.date), 'dd MMM yy', { locale: es })}
-                </td>
-                <td className="py-2 pr-4 text-slate-700 max-w-xs truncate" title={t.description}>
-                  {t.description}
-                </td>
-                <td className="py-2 pr-4">
-                  <EditableCategory
-                    value={t.category}
-                    onChange={(cat) => updateCategory(t.id, cat)}
-                  />
-                </td>
-                <td className="py-2 pr-4 text-xs text-slate-400 max-w-[140px] truncate" title={t.source}>
-                  {t.source}
-                </td>
-                <td className="py-2 text-right font-semibold text-slate-800 whitespace-nowrap">
-                  {fmt(t.amount)}
-                </td>
-              </tr>
-            ))}
+            {paged.map(t => {
+              const isCredit = t.type === 'credit'
+              return (
+                <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors group">
+                  <td className="py-2 pr-4 text-slate-500 whitespace-nowrap text-xs">
+                    {format(parseISO(t.date), 'dd MMM yy', { locale: es })}
+                  </td>
+                  <td className="py-2 pr-4 text-slate-700 max-w-xs">
+                    <span className="truncate block" title={t.description}>{t.description}</span>
+                    {t.installment && (
+                      <span className="text-xs text-blue-500 font-medium">
+                        Cuota {t.installment.current}/{t.installment.total}
+                      </span>
+                    )}
+                    {isCredit && (
+                      <span className="text-xs text-emerald-600 font-medium ml-1">↩ Crédito</span>
+                    )}
+                  </td>
+                  <td className="py-2 pr-4">
+                    <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
+                  </td>
+                  <td className="py-2 pr-4 text-xs text-slate-400 max-w-[120px] truncate" title={t.source}>
+                    {t.source}
+                  </td>
+                  <td className={`py-2 pr-2 text-right font-semibold whitespace-nowrap ${isCredit ? 'text-emerald-600' : 'text-slate-800'}`}>
+                    {isCredit ? '+' : ''}{fmt(t.amount)}
+                  </td>
+                  <td className="py-2 w-8">
+                    <button
+                      onClick={() => deleteOne(t.id)}
+                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-1 rounded"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

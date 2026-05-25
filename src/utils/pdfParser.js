@@ -105,6 +105,19 @@ function parseDate(str, refYear) {
   return null
 }
 
+// ─── Installment detection ───────────────────────────────────────────────────
+
+function detectInstallment(text) {
+  const m = text.match(/\b(?:cta|cuota|ct|c)\.?\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\b/i)
+    || text.match(/\b(\d{1,2})\s*de\s*(\d{1,2})\b/i)
+    || text.match(/\b(\d{1,2})\s*\/\s*(\d{1,2})\b/)
+  if (!m) return null
+  const current = parseInt(m[1])
+  const total = parseInt(m[2])
+  if (current > 0 && total > 1 && current <= total) return { current, total }
+  return null
+}
+
 // ─── Amount detection in a line ──────────────────────────────────────────────
 
 // Monto válido: tiene separador de miles (1.234), coma decimal (1234,56),
@@ -182,7 +195,8 @@ function parseRows(rows, filename, refYear) {
     if (amounts.length === 0) continue
 
     // Rightmost (last) amount = cargo/débito
-    const amount = amounts[amounts.length - 1].val
+    const amountVal = amounts[amounts.length - 1].val
+    const type = amountVal < 0 ? 'credit' : 'debit'
 
     // Description: remove date patterns and amounts from the text
     let desc = row.text
@@ -202,11 +216,15 @@ function parseRows(rows, filename, refYear) {
     desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
     if (!desc || desc.length < 3) continue
 
+    const installment = detectInstallment(row.text)
+
     transactions.push({
       id: crypto.randomUUID(),
       date,
       description: desc,
-      amount: Math.abs(amount),
+      amount: Math.abs(amountVal),
+      type,
+      installment,
       category: categorize(desc),
       source: filename,
       raw: row.text,
@@ -239,7 +257,7 @@ function parseColumnar(rows, filename, refYear) {
     if (amtCol === dateCol) continue
 
     const amount = parseAmount(amtCol.text)
-    if (!amount || amount <= 0) continue
+    if (amount === null) continue
 
     // Description: columns between date and amount (or after date if amount is next)
     const descCols = cols.filter(c => c.x > dateCol.x && c.x < amtCol.x)
@@ -257,11 +275,14 @@ function parseColumnar(rows, filename, refYear) {
     if (!desc || desc.length < 3) continue
     if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|nro\.?|tarjeta|titular|nombre|cuenta)/i.test(desc)) continue
 
+    const installment = detectInstallment(text)
     transactions.push({
       id: crypto.randomUUID(),
       date,
       description: desc,
       amount: Math.abs(amount),
+      type: amount < 0 ? 'credit' : 'debit',
+      installment,
       category: categorize(desc),
       source: filename,
       raw: text,

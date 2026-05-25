@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { CreditCard, Trash2, Download, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { CreditCard, Trash2, Download, RefreshCw, FileText } from 'lucide-react'
 import UploadZone from './components/UploadZone'
 import StatsCards from './components/StatsCards'
 import CategoryChart from './components/CategoryChart'
@@ -9,6 +9,7 @@ import TransactionList from './components/TransactionList'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
 import { loadData, saveData, clearData } from './utils/storage'
+import { generateReport } from './utils/reportGenerator'
 
 function Toast({ msg, onDone }) {
   useEffect(() => {
@@ -24,9 +25,13 @@ function Toast({ msg, onDone }) {
 
 export default function App() {
   const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState([])
-  const [toast, setToast] = useState(null)
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [loading, setLoading]           = useState([])
+  const [toast, setToast]               = useState(null)
+  const [activeTab, setActiveTab]       = useState('dashboard')
+  const [generating, setGenerating]     = useState(false)
+
+  const chartDonutRef = useRef(null)
+  const chartBarRef   = useRef(null)
 
   useEffect(() => {
     const saved = loadData()
@@ -43,17 +48,22 @@ export default function App() {
       try {
         const result = await parsePDF(file)
         if (result.transactions.length === 0) {
-          setToast(`⚠️ No se encontraron movimientos en "${file.name}" (banco: ${result.bank})`)
+          setToast(`⚠️ Sin movimientos en "${file.name}" (banco: ${result.bank})`)
         } else {
           setTransactions(prev => {
-            const existingKeys = new Set(prev.map(t => t.date + t.amount + t.description.slice(0,15)))
-            const newOnes = result.transactions.filter(t => !existingKeys.has(t.date + t.amount + t.description.slice(0,15)))
-            setToast(`✅ ${newOnes.length} movimientos importados de ${result.bank} (${file.name})`)
+            const existingKeys = new Set(prev.map(t => t.date + t.amount + t.description.slice(0, 15)))
+            const newOnes = result.transactions.filter(
+              t => !existingKeys.has(t.date + t.amount + t.description.slice(0, 15))
+            )
+            const debCnt = newOnes.filter(t => t.type !== 'credit').length
+            const creCnt = newOnes.filter(t => t.type === 'credit').length
+            const detail = creCnt > 0 ? ` (${debCnt} débitos, ${creCnt} créditos)` : ''
+            setToast(`✅ ${newOnes.length} movimientos de ${result.bank}${detail}`)
             return [...prev, ...newOnes]
           })
         }
       } catch (e) {
-        setToast(`❌ Error procesando "${file.name}": ${e.message}`)
+        setToast(`❌ Error en "${file.name}": ${e.message}`)
       }
       setLoading(l => l.filter(n => n !== file.name))
     }
@@ -69,8 +79,15 @@ export default function App() {
 
   const exportCSV = () => {
     const rows = [
-      ['Fecha', 'Descripcion', 'Categoria', 'Importe', 'Origen'],
-      ...transactions.map(t => [t.date, `"${t.description.replace(/"/g, "'")}"`, t.category, t.amount, `"${t.source}"`]),
+      ['Fecha', 'Descripcion', 'Categoria', 'Tipo', 'Importe', 'Origen'],
+      ...transactions.map(t => [
+        t.date,
+        `"${t.description.replace(/"/g, "'")}"`,
+        t.category,
+        t.type || 'debit',
+        t.type === 'credit' ? t.amount : -t.amount,
+        `"${t.source}"`,
+      ]),
     ]
     const csv = rows.map(r => r.join(',')).join('\n')
     const a = document.createElement('a')
@@ -80,13 +97,29 @@ export default function App() {
     setToast('📥 CSV exportado')
   }
 
+  const handleGenerateReport = async () => {
+    if (generating) return
+    // Switch to dashboard tab so chart refs are mounted
+    setActiveTab('dashboard')
+    setGenerating(true)
+    // Small delay to ensure charts are rendered
+    await new Promise(r => setTimeout(r, 300))
+    try {
+      const fileName = await generateReport({ transactions, chartDonutRef, chartBarRef })
+      setToast(`📄 Informe guardado: ${fileName}`)
+    } catch (e) {
+      setToast(`❌ Error generando informe: ${e.message}`)
+    }
+    setGenerating(false)
+  }
+
   const findings = detectUnnecessary(transactions)
-  const hasData = transactions.length > 0
+  const hasData  = transactions.length > 0
 
   const tabs = [
-    { id: 'dashboard', label: 'Resumen' },
+    { id: 'dashboard',   label: 'Resumen' },
     { id: 'movimientos', label: `Movimientos (${transactions.length})` },
-    { id: 'insights', label: `Alertas${findings.length > 0 ? ` (${findings.length})` : ''}` },
+    { id: 'insights',    label: `Alertas${findings.length > 0 ? ` (${findings.length})` : ''}` },
   ]
 
   return (
@@ -102,13 +135,24 @@ export default function App() {
               <p className="text-xs text-slate-500">Analizador de resúmenes de tarjeta</p>
             </div>
           </div>
+
           {hasData && (
             <div className="flex gap-2">
+              <button
+                onClick={handleGenerateReport}
+                disabled={generating}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-60"
+              >
+                {generating
+                  ? <RefreshCw size={14} className="animate-spin" />
+                  : <FileText size={14} />}
+                {generating ? 'Generando…' : 'Informe PDF'}
+              </button>
               <button
                 onClick={exportCSV}
                 className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
               >
-                <Download size={14} /> Exportar CSV
+                <Download size={14} /> CSV
               </button>
               <button
                 onClick={handleClearAll}
@@ -153,8 +197,8 @@ export default function App() {
 
             {activeTab === 'dashboard' && (
               <div className="grid lg:grid-cols-2 gap-6">
-                <CategoryChart transactions={transactions} />
-                <MonthComparison transactions={transactions} />
+                <CategoryChart ref={chartDonutRef} transactions={transactions} />
+                <MonthComparison ref={chartBarRef} transactions={transactions} />
               </div>
             )}
 

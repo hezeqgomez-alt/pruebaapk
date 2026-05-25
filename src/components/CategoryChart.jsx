@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { Doughnut } from 'react-chartjs-2'
 import { Chart, ArcElement, Tooltip, Legend } from 'chart.js'
 import { CATEGORIES } from '../utils/categorizer'
@@ -8,9 +9,10 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
-export default function CategoryChart({ transactions }) {
+const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
+  const debits = transactions.filter(t => t.type !== 'credit')
   const byCategory = {}
-  for (const t of transactions) {
+  for (const t of debits) {
     if (!byCategory[t.category]) byCategory[t.category] = 0
     byCategory[t.category] += t.amount
   }
@@ -31,11 +33,12 @@ export default function CategoryChart({ transactions }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx) => ` ${fmt(ctx.raw)} (${((ctx.raw / total) * 100).toFixed(1)}%)`,
+          label: ctx => ` ${fmt(ctx.raw)} (${((ctx.raw / total) * 100).toFixed(1)}%)`,
         },
       },
     },
@@ -46,7 +49,7 @@ export default function CategoryChart({ transactions }) {
       <h3 className="text-base font-semibold text-slate-700 mb-4">Gastos por categoría</h3>
       <div className="flex gap-6 items-start">
         <div style={{ height: 200, minWidth: 200 }}>
-          <Doughnut data={data} options={options} />
+          <Doughnut ref={ref} data={data} options={options} />
         </div>
         <div className="flex-1 space-y-1 overflow-y-auto max-h-52">
           {sorted.map(([key, val]) => (
@@ -61,4 +64,6 @@ export default function CategoryChart({ transactions }) {
       </div>
     </div>
   )
-}
+})
+
+export default CategoryChart
