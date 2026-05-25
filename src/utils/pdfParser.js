@@ -43,8 +43,8 @@ function groupIntoRows(items, yTol = 3) {
 function parseAmount(str) {
   if (!str) return null
   let s = str.replace(/\s/g, '')
-  const neg = s.startsWith('-') || (s.startsWith('(') && s.endsWith(')'))
-  s = s.replace(/^[-()]|[()]$/g, '')
+  const neg = s.startsWith('-') || (s.startsWith('(') && s.endsWith(')')) || s.endsWith('-')
+  s = s.replace(/^[-()]|[()]$|-$/g, '')
 
   // Remove currency symbols and non-numeric prefix
   s = s.replace(/^[A-Z$€£¥]{1,3}\.?/, '')
@@ -94,6 +94,15 @@ function parseDate(str, refYear) {
     if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
       return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
+  // dd.mm.yy or dd.mm.yyyy (Banco Ciudad, ICBC, etc.)
+  m = str.match(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/)
+  if (m) {
+    const y  = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3])
+    const mo = parseInt(m[2])
+    const dy = parseInt(m[1])
+    if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
+      return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
+  }
   // dd/mm (sin año) — validar también para no capturar patrones como "1/31"
   m = str.match(/\b(\d{1,2})[\/\-](\d{1,2})\b/)
   if (m) {
@@ -126,8 +135,8 @@ function detectInstallment(text) {
 // ─── Amount detection in a line ──────────────────────────────────────────────
 
 // Monto válido: tiene separador de miles (1.234), coma decimal (1234,56),
-// signo $ delante, o es 5+ dígitos. Evita capturar números cortos como "234".
-const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\)?|-?\(?\d+,\d{2}\)?|-?\(?\d{5,}\)?)(?=\s|$)/g
+// signo $ delante, 5+ dígitos, o trailing dash para créditos (553.343,47-).
+const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?-?\)?|-?\(?\d+,\d{2}-?\)?|-?\(?\d{5,}-?\)?)(?=\s|$)/g
 
 function findAmounts(text) {
   const results = []
@@ -206,16 +215,28 @@ function parseRows(rows, filename, refYear) {
     // Description: remove date patterns and amounts from the text
     let desc = row.text
       .replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '')
+      .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, '')
+      .replace(/\b\d{1,2}\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\s+\d{2,4}\b/gi, '')
       .replace(AMT_RE, ' ')
       .replace(/\s+/g, ' ')
       .trim()
 
-    // Remove leading/trailing noise characters
-    desc = desc.replace(/^[\s\-\.\|\/]+|[\s\-\.\|\/]+$/g, '').trim()
+    // Remove leading/trailing noise characters (including underscore separators)
+    desc = desc.replace(/^[\s\-\.\|\/\_]+|[\s\-\.\|\/\_]+$/g, '').trim()
+
+    // Remove leading comprobante/voucher code (e.g. "645184*", "005067K", "007125*")
+    desc = desc.replace(/^\d{5,7}[A-Z*K]\s*/i, '').trim()
 
     // Skip obviously bad rows
     if (!desc || desc.length < 3) continue
-    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|saldo anterior|nro\.?|tarjeta|titular|nombre|cuenta|numero|operacion)/i.test(desc)) continue
+    // Start-of-description skip list
+    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|saldo anterior|vto\.?|nro\.?|tarjeta\s*\d*\s*total|tarjeta|titular|nombre|cuenta|numero|operacion)/i.test(desc)) continue
+    // Description starts with 4+ standalone digits = account/page header noise
+    if (/^\d{4,}\s/.test(desc)) continue
+    // Installment schedule rows: 3+ occurrences of "Month/YY" pattern
+    if ((desc.match(/\b(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)\/\d{2}\b/gi) || []).length >= 3) continue
+    // Contains summary keywords mid-description
+    if (/saldo anterior|proximo cierre|vto\.?\s+anterior/i.test(desc)) continue
 
     // Strip stray currency symbols left after amount removal
     desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
@@ -275,10 +296,12 @@ function parseColumnar(rows, filename, refYear) {
         .replace(/\s+/g, ' ').trim()
     }
 
-    desc = desc.replace(/^[\s\-\.\|\/]+|[\s\-\.\|\/]+$/g, '').trim()
+    desc = desc.replace(/^[\s\-\.\|\/\_]+|[\s\-\.\|\/\_]+$/g, '').trim()
     desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
+    // Remove leading comprobante/voucher code
+    desc = desc.replace(/^\d{5,7}[A-Z*K]\s*/i, '').trim()
     if (!desc || desc.length < 3) continue
-    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|nro\.?|tarjeta|titular|nombre|cuenta)/i.test(desc)) continue
+    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|nro\.?|tarjeta\s*\d*\s*total|tarjeta|titular|nombre|cuenta)/i.test(desc)) continue
 
     const installment = detectInstallment(text)
     transactions.push({
