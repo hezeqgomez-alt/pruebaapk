@@ -107,7 +107,9 @@ function parseDate(str, refYear) {
 
 // ─── Amount detection in a line ──────────────────────────────────────────────
 
-const AMT_RE = /(?:^|\s)(-?\(?\$?\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?\)?)(?:\s|$)/g
+// Monto válido: tiene separador de miles (1.234), coma decimal (1234,56),
+// signo $ delante, o es 5+ dígitos. Evita capturar números cortos como "234".
+const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\)?|-?\(?\d+,\d{2}\)?|-?\(?\d{5,}\)?)(?=\s|$)/g
 
 function findAmounts(text) {
   const results = []
@@ -194,7 +196,11 @@ function parseRows(rows, filename, refYear) {
 
     // Skip obviously bad rows
     if (!desc || desc.length < 3) continue
-    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|saldo anterior)/i.test(desc)) continue
+    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|saldo anterior|nro\.?|tarjeta|titular|nombre|cuenta|numero|operacion)/i.test(desc)) continue
+
+    // Strip stray currency symbols left after amount removal
+    desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
+    if (!desc || desc.length < 3) continue
 
     transactions.push({
       id: crypto.randomUUID(),
@@ -247,8 +253,9 @@ function parseColumnar(rows, filename, refYear) {
     }
 
     desc = desc.replace(/^[\s\-\.\|\/]+|[\s\-\.\|\/]+$/g, '').trim()
+    desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
     if (!desc || desc.length < 3) continue
-    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo)/i.test(desc)) continue
+    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|nro\.?|tarjeta|titular|nombre|cuenta)/i.test(desc)) continue
 
     transactions.push({
       id: crypto.randomUUID(),
