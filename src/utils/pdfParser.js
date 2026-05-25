@@ -108,9 +108,8 @@ function parseDate(str, refYear) {
 // ─── Installment detection ───────────────────────────────────────────────────
 
 function detectInstallment(text) {
-  const m = text.match(/\b(?:cta|cuota|ct|c)\.?\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\b/i)
-    || text.match(/\b(\d{1,2})\s*de\s*(\d{1,2})\b/i)
-    || text.match(/\b(\d{1,2})\s*\/\s*(\d{1,2})\b/)
+  // Require explicit keyword prefix to avoid false positives on dates (e.g. 04/04/2025)
+  const m = text.match(/\b(?:cta|cuota|ct)\.?\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\b/i)
   if (!m) return null
   const current = parseInt(m[1])
   const total = parseInt(m[2])

@@ -63,7 +63,8 @@ export default function App() {
           })
         }
       } catch (e) {
-        setToast(`❌ Error en "${file.name}": ${e.message}`)
+        console.error('parsePDF error:', e)
+        setToast(`❌ Error en "${file.name}": ${e?.message || String(e)}`)
       }
       setLoading(l => l.filter(n => n !== file.name))
     }

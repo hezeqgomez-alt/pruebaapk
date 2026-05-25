@@ -3,6 +3,12 @@ const path = require('path')
 const http = require('http')
 const fs = require('fs')
 
+const CORS_HEADERS = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+}
+
 const MIME_TYPES = {
   '.html': 'text/html',
   '.js': 'application/javascript',
@@ -29,14 +35,14 @@ function startServer(distPath) {
           // SPA fallback: serve index.html for unknown routes
           fs.readFile(path.join(distPath, 'index.html'), (err2, data2) => {
             if (err2) { res.writeHead(404); res.end('Not found'); return }
-            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.writeHead(200, { 'Content-Type': 'text/html', ...CORS_HEADERS })
             res.end(data2)
           })
           return
         }
         const ext = path.extname(filePath)
         const mime = MIME_TYPES[ext] || 'application/octet-stream'
-        res.writeHead(200, { 'Content-Type': mime })
+        res.writeHead(200, { 'Content-Type': mime, ...CORS_HEADERS })
         res.end(data)
       })
     })
