@@ -200,7 +200,8 @@ function cleanDesc(raw) {
     .replace(/\b\d{1,2}\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\s+\d{2,4}\b/gi, '')
     // Remove exchange rate references (e.g. "1078.774,71 TC1415,000")
     .replace(/\d[\d.,]+\s+TC\d[\d.,]*/gi, '')
-    // Remove amounts
+    // Remove amounts (including negative with leading minus)
+    .replace(/-\s*\d[\d.,]+/g, ' ')
     .replace(AMT_RE, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -208,8 +209,8 @@ function cleanDesc(raw) {
   // Remove leading/trailing noise chars (including underscores and parens)
   desc = desc.replace(/^[\s\-\.\|\/\_\(\)]+|[\s\-\.\|\/\_\(\)]+$/g, '').trim()
 
-  // Strip leading comprobante/voucher codes: 5-7 digits + letter (e.g. "645184*", "005067K")
-  desc = desc.replace(/^\d{5,7}[A-Z*K]\s*/i, '').trim()
+  // Strip leading comprobante/voucher codes: 4-7 digits + letter (e.g. "645184*", "005067K", "1998C")
+  desc = desc.replace(/^\d{4,7}[A-Z*K]\s*/i, '').trim()
 
   // Strip leading 3-4 digit voucher numbers (CABAL, Credicoop format: "4259 MERCHANT")
   desc = desc.replace(/^\d{3,4}\s+(?=[A-Z])/i, '').trim()
@@ -228,21 +229,31 @@ function shouldSkipDesc(desc) {
   // Barcode / binary noise rows
   if (desc.startsWith('<')) return true
   // Known header/summary keywords at start
-  if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|tarjeta|titular|nombre|cuenta|numero|operacion|viene\s+de|continua\s+en)/i.test(desc)) return true
+  if (/^(total|subtotal|saldo|vencimiento|fecha|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|titular|nombre|cuenta|numero|operacion|viene\s+de|continua\s+en)/i.test(desc)) return true
+  // Payment lines anywhere (card payments, min payments): "pago" at start OR common payment phrases
+  if (/^pago\b/i.test(desc)) return true
+  if (/\bsu\s+pago\b|\bpago\s+en\s+pesos\b|\bpago\s+m[ií]nimo\b|\bpago\s+de\s+tarjeta\b/i.test(desc)) return true
   // "TARJETA (9992) TOTAL CONSUMOS..." subtotal rows
   if (/tarjeta\s*\(?\d+\)?\s*total/i.test(desc)) return true
   // Summary keywords anywhere in description
-  if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|pago\s+m[ií]nimo|proximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|proximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  // Page header rows (cardholder name + card type + "Hoja")
+  if (/\b(?:visa|mastercard|amex|american\s+express|cabal|naranja)\s+(?:signature|platinum|classic|gold|black|infinite|signature)\b/i.test(desc)) return true
+  if (/\bhoja\s+\d+\b/i.test(desc)) return true
   // Account holder address fragments (Credicoop/Banco Ciudad header rows)
   if (/\bvilla\s+adelina\b/i.test(desc)) return true
   // Installment schedule rows: 3+ "Month/YY" or "Month-YY" tokens
   if ((desc.match(/\b(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)[\/\-]\d{2}\b/gi) || []).length >= 3) return true
+  // OCR garbage: description is just digits, colons or very few letters after cleaning
+  if (/^[\d\s:.,\/\-]+$/.test(desc)) return true
+  // Extremely short residual (e.g. single letter or code after cleaning)
+  if (desc.replace(/\s/g, '').length < 4) return true
   return false
 }
 
 // ─── Core row-based parser ───────────────────────────────────────────────────
 
-function parseRows(rows, filename, refYear) {
+function parseRows(rows, filename, refYear, ocrMode = false) {
   const transactions = []
 
   for (let i = 0; i < rows.length; i++) {
@@ -266,6 +277,12 @@ function parseRows(rows, filename, refYear) {
     let amountVal = amounts[amounts.length - 1].val
     if (amountVal < 0 && amounts.length > 1 && amounts.every(a => a.val < 0)) {
       amountVal = amounts.reduce((min, a) => a.val < min.val ? a : min).val
+    }
+    // OCR mode: the last amount may be a running balance, not the transaction amount.
+    // When it's 5× larger than the first positive amount on the row, prefer the first.
+    if (ocrMode && amounts.length >= 2) {
+      const firstPos = amounts.find(a => a.val > 0)
+      if (firstPos && amountVal > firstPos.val * 5) amountVal = firstPos.val
     }
     const type = amountVal < 0 ? 'credit' : 'debit'
 
@@ -459,7 +476,7 @@ export async function parsePDF(file, { onProgress } = {}) {
       const refYear = detectYear(ocrText)
       const rows = groupIntoRows(ocrItems)
       const colTxs = parseColumnar(rows, file.name, refYear)
-      const rowTxs = parseRows(rows, file.name, refYear)
+      const rowTxs = parseRows(rows, file.name, refYear, true)
       let transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
       return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
     } catch (e) {
