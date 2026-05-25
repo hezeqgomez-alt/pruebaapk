@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, CreditCard, Calendar, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, CreditCard, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -32,59 +32,78 @@ export default function StatsCards({ transactions }) {
 
   const sources = [...new Set(transactions.map(t => t.source))]
 
-  const cards = [
-    {
-      icon: <ArrowDownCircle size={20} />,
-      label: 'Total gastos',
-      value: fmt(totalDebits),
-      sub: `${debits.length} movimientos`,
-      color: 'blue',
-    },
-    {
-      icon: <ArrowUpCircle size={20} />,
-      label: 'Créditos / devoluciones',
-      value: fmt(totalCredits),
-      sub: credits.length > 0 ? `${credits.length} créditos · Neto: ${fmt(net)}` : 'Sin créditos',
-      color: 'emerald',
-    },
-    {
-      icon: trend !== null && trend > 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />,
-      label: 'Variación mensual',
-      value: trend !== null ? `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%` : 'N/A',
-      sub: lastMonth
-        ? `${safeFormat(lastMonth[0] + '-01', 'MMMM yyyy', { locale: es })} vs mes anterior`
-        : 'vs mes anterior',
-      color: trend !== null && trend > 15 ? 'red' : 'green',
-    },
-    {
-      icon: <CreditCard size={20} />,
-      label: 'Resúmenes cargados',
-      value: sources.length,
-      sub: sources.slice(0, 2).join(', ') + (sources.length > 2 ? ` +${sources.length - 2}` : ''),
-      color: 'slate',
-    },
-  ]
-
-  const colorMap = {
-    blue:    'bg-blue-50 text-blue-600 border-blue-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    green:   'bg-emerald-50 text-emerald-600 border-emerald-100',
-    red:     'bg-red-50 text-red-600 border-red-100',
-    slate:   'bg-slate-50 text-slate-600 border-slate-100',
-  }
-
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((c, i) => (
-        <div key={i} className={`rounded-2xl border p-4 ${colorMap[c.color]}`}>
-          <div className="flex items-center gap-2 mb-2 opacity-70">
-            {c.icon}
-            <span className="text-xs font-medium uppercase tracking-wide">{c.label}</span>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+      {/* Total gastos */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl p-4 text-white shadow-lg shadow-indigo-200/50">
+        <div className="flex items-start justify-between mb-3">
+          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+            <ArrowDownCircle size={18} />
           </div>
-          <div className="text-2xl font-bold">{c.value}</div>
-          <div className="text-xs opacity-60 mt-1">{c.sub}</div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest opacity-70">Gastos</span>
         </div>
-      ))}
+        <div className="text-2xl font-extrabold leading-none mb-1">{fmt(totalDebits)}</div>
+        <div className="text-xs opacity-70">{debits.length} movimientos</div>
+        <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/10" />
+      </div>
+
+      {/* Créditos */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-start justify-between mb-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+            <ArrowUpCircle size={18} className="text-emerald-600" />
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Créditos</span>
+        </div>
+        <div className="text-2xl font-extrabold text-slate-800 leading-none mb-1">{fmt(totalCredits)}</div>
+        <div className="text-xs text-slate-400">
+          {credits.length > 0
+            ? <span>Neto: <span className="font-semibold text-slate-600">{fmt(net)}</span></span>
+            : 'Sin créditos'}
+        </div>
+      </div>
+
+      {/* Variación */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-start justify-between mb-3">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+            trend === null ? 'bg-slate-50' : trend > 0 ? 'bg-red-50' : 'bg-emerald-50'
+          }`}>
+            {trend === null
+              ? <TrendingUp size={18} className="text-slate-400" />
+              : trend > 0
+              ? <TrendingUp size={18} className="text-red-500" />
+              : <TrendingDown size={18} className="text-emerald-600" />}
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Variación</span>
+        </div>
+        <div className={`text-2xl font-extrabold leading-none mb-1 ${
+          trend === null ? 'text-slate-400' : trend > 0 ? 'text-red-500' : 'text-emerald-600'
+        }`}>
+          {trend !== null ? `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%` : '—'}
+        </div>
+        <div className="text-xs text-slate-400">
+          {lastMonth
+            ? safeFormat(lastMonth[0] + '-01', "MMM ''yy", { locale: es }) + ' vs mes anterior'
+            : 'vs mes anterior'}
+        </div>
+      </div>
+
+      {/* Fuentes */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div className="flex items-start justify-between mb-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
+            <CreditCard size={18} className="text-violet-600" />
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Tarjetas</span>
+        </div>
+        <div className="text-2xl font-extrabold text-slate-800 leading-none mb-1">{sources.length}</div>
+        <div className="text-xs text-slate-400 truncate" title={sources.join(', ')}>
+          {sources.slice(0, 2).join(', ')}{sources.length > 2 ? ` +${sources.length - 2}` : ''}
+        </div>
+      </div>
+
     </div>
   )
 }

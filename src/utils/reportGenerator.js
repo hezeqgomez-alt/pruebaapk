@@ -4,12 +4,17 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CATEGORIES } from './categorizer'
 
-const BLUE = [30, 64, 175]
-const LIGHT = [241, 245, 249]
-const DARK = [30, 41, 59]
-const GRAY = [100, 116, 139]
-const GREEN = [5, 150, 105]
-const RED = [220, 38, 38]
+// Palette — indigo/violet brand
+const INDIGO   = [79, 70, 229]
+const VIOLET   = [124, 58, 237]
+const INDIGO_L = [238, 242, 255]  // indigo-100
+const DARK     = [15, 23, 42]     // slate-900
+const GRAY     = [100, 116, 139]  // slate-500
+const MID      = [71, 85, 105]    // slate-600
+const GREEN    = [5, 150, 105]
+const RED      = [220, 38, 38]
+const WHITE    = [255, 255, 255]
+const LIGHT    = [248, 250, 252]  // slate-50
 
 function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -22,28 +27,73 @@ function hexToRgb(hex) {
   return [r, g, b]
 }
 
-function addPageHeader(doc, pageNum, totalPages) {
+function addPageChrome(doc, pageNum, totalPages) {
   const pw = doc.internal.pageSize.getWidth()
-  doc.setFillColor(...BLUE)
-  doc.rect(0, 0, pw, 12, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(7)
+  const ph = doc.internal.pageSize.getHeight()
+
+  // Top stripe — gradient simulation with two overlapping rects
+  doc.setFillColor(...INDIGO)
+  doc.rect(0, 0, pw * 0.6, 11, 'F')
+  doc.setFillColor(...VIOLET)
+  doc.rect(pw * 0.4, 0, pw * 0.6, 11, 'F')
+
+  doc.setTextColor(...WHITE)
+  doc.setFontSize(6.5)
+  doc.setFont('helvetica', 'bold')
+  doc.text('EasyResumen', 10, 7.5)
   doc.setFont('helvetica', 'normal')
-  doc.text('GastoTracker — Informe de Resúmenes de Tarjeta', 10, 8)
-  doc.text(`Página ${pageNum} / ${totalPages}`, pw - 10, 8, { align: 'right' })
+  doc.text('Analizador de resúmenes de tarjeta', 38, 7.5)
+  doc.text(`Pág. ${pageNum} / ${totalPages}`, pw - 10, 7.5, { align: 'right' })
+
+  // Bottom footer
+  doc.setFontSize(6)
+  doc.setTextColor(...GRAY)
+  doc.text('EasyResumen · procesamiento 100% local, sin internet ni IA · easyresumen.app', pw / 2, ph - 5, { align: 'center' })
+
   doc.setTextColor(...DARK)
 }
 
-function sectionTitle(doc, text, y) {
+function sectionTitle(doc, text, y, accent = INDIGO) {
+  const pw = doc.internal.pageSize.getWidth()
+  doc.setFillColor(...accent)
+  doc.rect(14, y - 4, 3, 6, 'F')
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...BLUE)
-  doc.text(text, 14, y)
-  doc.setDrawColor(...BLUE)
-  doc.setLineWidth(0.5)
-  doc.line(14, y + 1.5, doc.internal.pageSize.getWidth() - 14, y + 1.5)
+  doc.setTextColor(...accent)
+  doc.text(text, 20, y)
+  doc.setDrawColor(226, 232, 240)
+  doc.setLineWidth(0.4)
+  doc.line(20, y + 1.5, pw - 14, y + 1.5)
   doc.setTextColor(...DARK)
-  return y + 8
+  return y + 9
+}
+
+function kpiCard(doc, x, y, w, h, label, value, sub, accentRgb) {
+  // Card background
+  doc.setFillColor(...LIGHT)
+  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'F')
+  // Top accent bar
+  doc.setFillColor(...accentRgb)
+  doc.roundedRect(x, y, w, 3, 2.5, 2.5, 'F')
+  doc.rect(x, y + 1, w, 2, 'F')  // fill bottom corners of top bar
+
+  doc.setFontSize(6.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...GRAY)
+  doc.text(label.toUpperCase(), x + w / 2, y + 9, { align: 'center' })
+
+  doc.setFontSize(10.5)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...accentRgb)
+  doc.text(String(value), x + w / 2, y + 17, { align: 'center' })
+
+  if (sub) {
+    doc.setFontSize(6)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...GRAY)
+    doc.text(String(sub), x + w / 2, y + 23, { align: 'center' })
+  }
+  doc.setTextColor(...DARK)
 }
 
 export async function generateReport({ transactions, chartDonutRef, chartBarRef }) {
@@ -57,12 +107,12 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   const totalCredits = credits.reduce((s, t) => s + t.amount, 0)
   const net = totalDebits - totalCredits
 
-  // ── By category ──
+  // By category
   const byCategory = {}
   for (const t of debits) byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
   const catSorted = Object.entries(byCategory).sort(([, a], [, b]) => b - a)
 
-  // ── By month ──
+  // By month
   const byMonth = {}
   for (const t of debits) {
     const mo = t.date.slice(0, 7)
@@ -70,76 +120,80 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   }
   const monthSorted = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b))
 
-  // ── Top merchants ──
+  // Top merchants
   const byMerchant = {}
   for (const t of debits) byMerchant[t.description] = (byMerchant[t.description] || 0) + t.amount
   const topMerchants = Object.entries(byMerchant).sort(([, a], [, b]) => b - a).slice(0, 10)
 
-  // ── Sources ──
   const sources = [...new Set(transactions.map(t => t.source))]
+  const TOTAL_PAGES = 3
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // PAGE 1 — Portada + resumen ejecutivo
-  // ─────────────────────────────────────────────────────────────────────────
-  addPageHeader(doc, 1, 3)
+  // ──────────────────────────────────────────────────────────────
+  // PAGE 1 — Cover + executive summary
+  // ──────────────────────────────────────────────────────────────
+  addPageChrome(doc, 1, TOTAL_PAGES)
 
-  // Portada
-  doc.setFillColor(...BLUE)
-  doc.rect(0, 14, pw, 40, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(22)
+  // Hero band
+  doc.setFillColor(...INDIGO)
+  doc.rect(0, 13, pw * 0.55, 46, 'F')
+  doc.setFillColor(...VIOLET)
+  doc.rect(pw * 0.45, 13, pw * 0.55, 46, 'F')
+
+  // Brand mark circle
+  doc.setFillColor(255, 255, 255, 0.15)
+  doc.circle(pw - 20, 20, 22, 'F')
+  doc.circle(pw - 10, 50, 14, 'F')
+
+  doc.setTextColor(...WHITE)
+  doc.setFontSize(24)
   doc.setFont('helvetica', 'bold')
-  doc.text('Informe de Gastos', pw / 2, 30, { align: 'center' })
-  doc.setFontSize(11)
+  doc.text('Informe de Gastos', 14, 31)
+  doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text('Resumen general de todas las tarjetas', pw / 2, 39, { align: 'center' })
-  doc.setFontSize(9)
-  doc.text(`Generado: ${format(new Date(), "d 'de' MMMM yyyy, HH:mm", { locale: es })}`, pw / 2, 47, { align: 'center' })
+  doc.text('Resumen consolidado de tarjetas', 14, 39)
+  doc.setFontSize(8)
+  doc.setTextColor(199, 210, 254)  // indigo-200
+  doc.text(`Generado el ${format(new Date(), "d 'de' MMMM yyyy, HH:mm", { locale: es })}`, 14, 47)
   doc.setTextColor(...DARK)
 
-  // KPI cards row
-  const cards = [
-    { label: 'Total gastos',     value: fmt(totalDebits),  color: BLUE },
-    { label: 'Créditos / devol.', value: fmt(totalCredits), color: [...GREEN] },
-    { label: 'Neto',             value: fmt(net),           color: net > totalDebits * 0.9 ? [...RED] : [...DARK] },
-    { label: 'Movimientos',      value: debits.length + credits.length, color: DARK },
+  // KPI cards
+  const cardW = (pw - 28 - 6) / 4
+  const kpis = [
+    { label: 'Total gastos',     value: fmt(totalDebits),  sub: `${debits.length} movimientos`, color: INDIGO },
+    { label: 'Créditos / devol.', value: fmt(totalCredits), sub: credits.length > 0 ? `${credits.length} créditos` : '—', color: [...GREEN] },
+    { label: 'Neto',             value: fmt(net),           sub: null, color: net > totalDebits * 0.9 ? [...RED] : [...MID] },
+    { label: 'Tarjetas',         value: sources.length,     sub: sources.slice(0, 2).join(', '), color: VIOLET },
   ]
-  const cardW = (pw - 28) / 4
-  cards.forEach((c, i) => {
-    const x = 14 + i * (cardW + 2)
-    const y = 60
-    doc.setFillColor(...LIGHT)
-    doc.roundedRect(x, y, cardW, 22, 2, 2, 'F')
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...GRAY)
-    doc.text(c.label.toUpperCase(), x + cardW / 2, y + 6, { align: 'center' })
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...c.color)
-    doc.text(String(c.value), x + cardW / 2, y + 15, { align: 'center' })
+  kpis.forEach((c, i) => {
+    kpiCard(doc, 14 + i * (cardW + 2), 65, cardW, 27, c.label, c.value, c.sub, c.color)
   })
-  doc.setTextColor(...DARK)
 
-  // Resúmenes cargados
-  let y = 92
+  // Sources list
+  let y = 101
   y = sectionTitle(doc, 'Resúmenes incluidos', y)
-  doc.setFontSize(9)
+  doc.setFontSize(8.5)
   doc.setFont('helvetica', 'normal')
   sources.forEach((src, i) => {
-    doc.text(`• ${src}`, 18, y + i * 5)
+    const col = i % 2
+    const row = Math.floor(i / 2)
+    doc.setFillColor(...INDIGO)
+    doc.circle(14 + col * (pw / 2 - 14) + 1.5, y + row * 6 - 1, 1, 'F')
+    doc.setTextColor(...MID)
+    doc.text(src, 14 + col * (pw / 2 - 14) + 5, y + row * 6)
   })
-  y += sources.length * 5 + 6
+  y += Math.ceil(sources.length / 2) * 6 + 4
+  doc.setTextColor(...DARK)
 
-  // Período
+  // Period
   if (monthSorted.length > 0) {
     const first = format(parseISO(monthSorted[0][0] + '-01'), 'MMMM yyyy', { locale: es })
     const last  = format(parseISO(monthSorted[monthSorted.length - 1][0] + '-01'), 'MMMM yyyy', { locale: es })
-    doc.setFontSize(9)
+    doc.setFontSize(8)
     doc.setTextColor(...GRAY)
-    doc.text(`Período analizado: ${first}${first !== last ? ' → ' + last : ''}`, 14, y)
+    const period = first !== last ? `${first} → ${last}` : first
+    doc.text(`Período analizado: ${period}`, 14, y)
+    y += 9
     doc.setTextColor(...DARK)
-    y += 8
   }
 
   // Category table
@@ -155,78 +209,73 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     ]),
     foot: [['Total gastos', fmt(totalDebits), '100%', debits.length]],
     theme: 'grid',
-    styles: { fontSize: 8.5, cellPadding: 2.5 },
-    headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
-    footStyles: { fillColor: LIGHT, textColor: DARK, fontStyle: 'bold' },
+    styles: { fontSize: 8.5, cellPadding: 2.5, font: 'helvetica' },
+    headStyles: { fillColor: INDIGO, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
+    footStyles: { fillColor: INDIGO_L, textColor: DARK, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: LIGHT },
     columnStyles: {
       1: { halign: 'right' },
       2: { halign: 'right' },
-      3: { halign: 'center' },
+      3: { halign: 'center', cellWidth: 18 },
     },
     didParseCell: (data) => {
-      if (data.section === 'body') {
+      if (data.section === 'body' && data.column.index === 0) {
         const cat = catSorted[data.row.index]?.[0]
-        if (cat && data.column.index === 0) {
-          const rgb = hexToRgb(CATEGORIES[cat]?.color || '#94a3b8')
-          data.cell.styles.textColor = rgb
-        }
+        if (cat) data.cell.styles.textColor = hexToRgb(CATEGORIES[cat]?.color || '#94a3b8')
       }
     },
   })
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // PAGE 2 — Gráficos
-  // ─────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────
+  // PAGE 2 — Charts
+  // ──────────────────────────────────────────────────────────────
   doc.addPage()
-  addPageHeader(doc, 2, 3)
+  addPageChrome(doc, 2, TOTAL_PAGES)
 
   y = 18
   y = sectionTitle(doc, 'Distribución por categoría', y)
 
-  // Donut chart image
   if (chartDonutRef?.current) {
     try {
       const imgData = chartDonutRef.current.toBase64Image('image/png', 1)
-      const chartSize = 75
+      const chartSize = 78
       doc.addImage(imgData, 'PNG', pw / 2 - chartSize / 2, y, chartSize, chartSize)
-      y += chartSize + 6
-    } catch {
-      y += 4
-    }
+      y += chartSize + 5
+    } catch { y += 4 }
   }
 
-  // Category legend (color blocks)
+  // Legend grid
   const cols = 2
-  const colW2 = (pw - 28) / cols
-  catSorted.slice(0, 10).forEach(([cat, amt], i) => {
+  const colW = (pw - 28) / cols
+  catSorted.slice(0, 12).forEach(([cat, amt], i) => {
     const col = i % cols
     const row = Math.floor(i / cols)
-    const lx = 14 + col * colW2
+    const lx = 14 + col * colW
     const ly = y + row * 7
     const rgb = hexToRgb(CATEGORIES[cat]?.color || '#94a3b8')
     doc.setFillColor(...rgb)
     doc.roundedRect(lx, ly - 3, 3, 3, 0.5, 0.5, 'F')
-    doc.setFontSize(8)
+    doc.setFontSize(7.5)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...DARK)
-    doc.text(`${CATEGORIES[cat]?.label || cat}: ${fmt(amt)} (${((amt / totalDebits) * 100).toFixed(1)}%)`, lx + 5, ly)
+    doc.text(
+      `${CATEGORIES[cat]?.label || cat}: ${fmt(amt)} (${((amt / totalDebits) * 100).toFixed(1)}%)`,
+      lx + 5, ly
+    )
   })
-  y += Math.ceil(Math.min(catSorted.length, 10) / cols) * 7 + 8
+  y += Math.ceil(Math.min(catSorted.length, 12) / cols) * 7 + 8
 
-  // Bar chart
   y = sectionTitle(doc, 'Comparativo mes a mes', y)
+
   if (chartBarRef?.current) {
     try {
       const imgData = chartBarRef.current.toBase64Image('image/png', 1)
       const imgH = 55
       doc.addImage(imgData, 'PNG', 14, y, pw - 28, imgH)
       y += imgH + 6
-    } catch {
-      y += 4
-    }
+    } catch { y += 4 }
   }
 
-  // Monthly table
   autoTable(doc, {
     startY: y,
     head: [['Mes', 'Total gastos', 'Movimientos', 'Variación']],
@@ -242,35 +291,50 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     }),
     theme: 'striped',
     styles: { fontSize: 8.5, cellPadding: 2.5 },
-    headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
+    headStyles: { fillColor: INDIGO, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
+    alternateRowStyles: { fillColor: LIGHT },
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'center' }, 3: { halign: 'right' } },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        const raw = data.cell.raw
+        if (typeof raw === 'string' && raw !== '—') {
+          const val = parseFloat(raw)
+          if (!isNaN(val)) data.cell.styles.textColor = val > 10 ? RED : val < -10 ? GREEN : GRAY
+        }
+      }
+    },
   })
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // PAGE 3 — Top comercios + listado de transacciones
-  // ─────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────
+  // PAGE 3 — Top merchants + transaction list
+  // ──────────────────────────────────────────────────────────────
   doc.addPage()
-  addPageHeader(doc, 3, 3)
+  addPageChrome(doc, 3, TOTAL_PAGES)
 
   y = 18
   y = sectionTitle(doc, 'Top 10 comercios', y)
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Comercio', 'Total', 'Operaciones']],
+    head: [['#', 'Comercio / descripción', 'Total', 'Operaciones']],
     body: topMerchants.map(([desc, amt], i) => [
       i + 1,
-      desc.length > 45 ? desc.slice(0, 45) + '…' : desc,
+      desc.length > 48 ? desc.slice(0, 48) + '…' : desc,
       fmt(amt),
       debits.filter(t => t.description === desc).length,
     ]),
     theme: 'grid',
     styles: { fontSize: 8.5, cellPadding: 2.5 },
-    headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
-    columnStyles: { 0: { halign: 'center', cellWidth: 10 }, 2: { halign: 'right' }, 3: { halign: 'center' } },
+    headStyles: { fillColor: INDIGO, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
+    alternateRowStyles: { fillColor: LIGHT },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },
+      2: { halign: 'right', cellWidth: 32 },
+      3: { halign: 'center', cellWidth: 22 },
+    },
   })
 
   y = doc.lastAutoTable.finalY + 10
-  y = sectionTitle(doc, 'Listado de movimientos', y)
+  y = sectionTitle(doc, 'Listado completo de movimientos', y)
 
   const txRows = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -286,32 +350,23 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     head: [['Fecha', 'Descripción', 'Categoría', 'Importe']],
     body: txRows,
     theme: 'striped',
-    styles: { fontSize: 7.5, cellPadding: 2 },
-    headStyles: { fillColor: BLUE, textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 7.5, cellPadding: 2, overflow: 'ellipsize' },
+    headStyles: { fillColor: INDIGO, textColor: WHITE, fontStyle: 'bold', fontSize: 7.5 },
+    alternateRowStyles: { fillColor: LIGHT },
     columnStyles: {
       0: { cellWidth: 18, halign: 'center' },
-      2: { cellWidth: 36 },
+      2: { cellWidth: 38 },
       3: { cellWidth: 28, halign: 'right' },
     },
     didParseCell: data => {
       if (data.section === 'body' && data.column.index === 3) {
         const raw = data.cell.raw
-        if (typeof raw === 'string' && raw.startsWith('+')) {
-          data.cell.styles.textColor = [...GREEN]
-        }
+        if (typeof raw === 'string' && raw.startsWith('+')) data.cell.styles.textColor = [...GREEN]
       }
     },
   })
 
-  // Footer
-  const finalY = doc.lastAutoTable.finalY + 6
-  if (finalY < ph - 12) {
-    doc.setFontSize(7)
-    doc.setTextColor(...GRAY)
-    doc.text('GastoTracker — procesamiento 100% local, sin internet ni IA.', pw / 2, ph - 8, { align: 'center' })
-  }
-
-  const fileName = `informe_gastos_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+  const fileName = `easyresumen_informe_${format(new Date(), 'yyyy-MM-dd')}.pdf`
   doc.save(fileName)
   return fileName
 }
