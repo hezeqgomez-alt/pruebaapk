@@ -43,11 +43,11 @@ export default function App() {
       try {
         const result = await parsePDF(file)
         if (result.transactions.length === 0) {
-          setToast(`⚠️ No se encontraron movimientos en "${file.name}"`)
+          setToast(`⚠️ No se encontraron movimientos en "${file.name}" (banco: ${result.bank})`)
         } else {
           setTransactions(prev => {
-            const existingKeys = new Set(prev.map(t => t.raw + t.date))
-            const newOnes = result.transactions.filter(t => !existingKeys.has(t.raw + t.date))
+            const existingKeys = new Set(prev.map(t => t.date + t.amount + t.description.slice(0,15)))
+            const newOnes = result.transactions.filter(t => !existingKeys.has(t.date + t.amount + t.description.slice(0,15)))
             setToast(`✅ ${newOnes.length} movimientos importados de ${result.bank} (${file.name})`)
             return [...prev, ...newOnes]
           })
