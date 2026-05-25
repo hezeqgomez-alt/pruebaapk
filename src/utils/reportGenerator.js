@@ -144,11 +144,6 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   doc.setFillColor(...VIOLET)
   doc.rect(pw * 0.45, 13, pw * 0.55, 46, 'F')
 
-  // Brand mark circle
-  doc.setFillColor(255, 255, 255, 0.15)
-  doc.circle(pw - 20, 20, 22, 'F')
-  doc.circle(pw - 10, 50, 14, 'F')
-
   doc.setTextColor(...WHITE)
   doc.setFontSize(24)
   doc.setFont('helvetica', 'bold')
@@ -181,10 +176,11 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   sources.forEach((src, i) => {
     const col = i % 2
     const row = Math.floor(i / 2)
-    doc.setFillColor(...INDIGO)
-    doc.circle(14 + col * (pw / 2 - 14) + 1.5, y + row * 6 - 1, 1, 'F')
+    const lx = 14 + col * (pw / 2 - 14)
+    doc.setTextColor(...INDIGO)
+    doc.text('•', lx, y + row * 6)
     doc.setTextColor(...MID)
-    doc.text(src, 14 + col * (pw / 2 - 14) + 5, y + row * 6)
+    doc.text(src, lx + 4, y + row * 6)
   })
   y += Math.ceil(sources.length / 2) * 6 + 4
   doc.setTextColor(...DARK)
@@ -213,6 +209,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
       debits.filter(t => t.category === cat).length,
     ]),
     foot: [['Total gastos', fmt(totalDebits), '100%', debits.length]],
+    showFoot: 'lastPage',
     theme: 'grid',
     styles: { fontSize: 8.5, cellPadding: 2.5, font: 'helvetica' },
     headStyles: { fillColor: INDIGO, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },

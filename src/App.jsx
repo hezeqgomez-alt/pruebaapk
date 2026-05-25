@@ -133,6 +133,7 @@ export default function App() {
     setGenerating(false)
   }
 
+  const [findingsKey, setFindingsKey] = useState(0)
   const findings = detectUnnecessary(transactions)
   const hasData  = transactions.length > 0
 
@@ -248,7 +249,12 @@ export default function App() {
             )}
 
             {activeTab === 'insights' && (
-              <InsightsPanel findings={findings} transactions={transactions} />
+              <InsightsPanel
+                key={findingsKey}
+                findings={findings}
+                transactions={transactions}
+                onRefresh={() => setFindingsKey(k => k + 1)}
+              />
             )}
           </>
         )}

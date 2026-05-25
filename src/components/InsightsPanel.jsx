@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AlertTriangle, RefreshCw, TrendingUp, Zap, CheckCircle2 } from 'lucide-react'
 import { CATEGORIES } from '../utils/categorizer'
 
@@ -30,6 +31,14 @@ const TYPE_CONFIG = {
     text: 'text-red-700',
     badge: 'bg-red-100 text-red-600',
   },
+  highFrequency: {
+    icon: Zap,
+    gradient: 'from-amber-400 to-orange-500',
+    bg: 'bg-amber-50',
+    border: 'border-amber-100',
+    text: 'text-amber-700',
+    badge: 'bg-amber-100 text-amber-600',
+  },
   ok: {
     icon: CheckCircle2,
     gradient: 'from-emerald-400 to-teal-500',
@@ -40,7 +49,9 @@ const TYPE_CONFIG = {
   },
 }
 
-export default function InsightsPanel({ findings, transactions }) {
+export default function InsightsPanel({ findings, transactions, onRefresh }) {
+  const [refreshing, setRefreshing] = useState(false)
+
   if (findings.length === 0 && transactions.length === 0) return null
 
   const byCategory = {}
@@ -79,6 +90,16 @@ export default function InsightsPanel({ findings, transactions }) {
     })
   }
 
+  const alertCount = insights.filter(i => i.type !== 'ok').length
+
+  function handleRefresh() {
+    setRefreshing(true)
+    setTimeout(() => {
+      onRefresh?.()
+      setRefreshing(false)
+    }, 600)
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5">
       <div className="flex items-center gap-2 mb-5">
@@ -86,11 +107,22 @@ export default function InsightsPanel({ findings, transactions }) {
           <AlertTriangle size={16} className="text-amber-500" />
         </div>
         <h3 className="text-base font-semibold text-slate-700">Alertas e insights</h3>
-        {insights.length > 0 && (
-          <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">
-            {insights.filter(i => i.type !== 'ok').length || 0} alertas
-          </span>
-        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          {alertCount > 0 && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">
+              {alertCount} {alertCount === 1 ? 'alerta' : 'alertas'}
+            </span>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Actualizar alertas"
+            className={`w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all disabled:opacity-50 ${refreshing ? 'bg-indigo-50 border-indigo-200' : ''}`}
+          >
+            <RefreshCw size={13} className={refreshing ? 'animate-spin text-indigo-500' : ''} />
+          </button>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -100,7 +132,7 @@ export default function InsightsPanel({ findings, transactions }) {
           return (
             <div
               key={i}
-              className={`relative overflow-hidden rounded-xl border p-4 ${cfg.bg} ${cfg.border}`}
+              className={`relative overflow-hidden rounded-xl border p-4 ${cfg.bg} ${cfg.border} ${refreshing ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}
             >
               <div className="flex items-start gap-3">
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${cfg.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
