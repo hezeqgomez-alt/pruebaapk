@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react'
-import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag, MessageSquare, AlertTriangle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CATEGORIES } from '../utils/categorizer'
+import { loadFilterPrefs, saveFilterPrefs } from '../utils/storage'
 
 function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n)
@@ -25,7 +26,7 @@ function EditableCategory({ value, onChange }) {
     return (
       <button
         onClick={() => setEditing(true)}
-        className="group flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg hover:ring-1 hover:ring-indigo-200 transition-all"
+        className="group flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg hover:ring-1 hover:ring-indigo-200 dark:hover:ring-indigo-700 transition-all"
         style={{ background: (CATEGORIES[value]?.color || '#94a3b8') + '18' }}
       >
         <span style={{ color: CATEGORIES[value]?.color || '#64748b' }} className="font-medium">
@@ -41,40 +42,90 @@ function EditableCategory({ value, onChange }) {
       <select
         value={val}
         onChange={e => setVal(e.target.value)}
-        className="text-xs border border-slate-200 rounded-lg px-1.5 py-1 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-1.5 py-1 bg-white dark:bg-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
         autoFocus
       >
         {Object.entries(CATEGORIES).map(([k, c]) => (
           <option key={k} value={k}>{c.icon} {c.label}</option>
         ))}
       </select>
-      <button onClick={() => { onChange(val); setEditing(false) }} className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200">
+      <button onClick={() => { onChange(val); setEditing(false) }} className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600">
         <Check size={12} />
       </button>
-      <button onClick={() => { setVal(value); setEditing(false) }} className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200">
+      <button onClick={() => { setVal(value); setEditing(false) }} className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400">
         <X size={12} />
       </button>
     </div>
   )
 }
 
+function InlineNote({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value || '')
+  const inputRef = useRef(null)
+
+  function commit() {
+    onSave(val.trim())
+    setEditing(false)
+  }
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => { setEditing(true); setTimeout(() => inputRef.current?.focus(), 0) }}
+        title={value ? value : 'Agregar nota'}
+        className={`w-6 h-6 flex items-center justify-center rounded-lg transition-all ${
+          value
+            ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-400'
+            : 'text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 opacity-0 group-hover:opacity-100'
+        }`}
+      >
+        <MessageSquare size={12} />
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 min-w-[180px]">
+      <input
+        ref={inputRef}
+        type="text"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setVal(value || ''); setEditing(false) } }}
+        onBlur={commit}
+        placeholder="Nota…"
+        className="flex-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-slate-300"
+      />
+    </div>
+  )
+}
+
 export default function TransactionList({ transactions, onUpdate }) {
-  const [search, setSearch]         = useState('')
-  const [filterCat, setFilterCat]   = useState('')
-  const [dateFrom, setDateFrom]     = useState('')
-  const [dateTo, setDateTo]         = useState('')
-  const [filterType, setFilterType] = useState('')
+  const prefs = loadFilterPrefs()
+
+  const [search, setSearch]         = useState(prefs.search || '')
+  const [filterCat, setFilterCat]   = useState(prefs.filterCat || '')
+  const [dateFrom, setDateFrom]     = useState(prefs.dateFrom || '')
+  const [dateTo, setDateTo]         = useState(prefs.dateTo || '')
+  const [filterType, setFilterType] = useState(prefs.filterType || '')
   const [page, setPage]             = useState(1)
   const [sortBy, setSortBy]         = useState('date')
   const [sortDir, setSortDir]       = useState('desc')
   const [showFilters, setShowFilters] = useState(false)
 
-  // Multi-select state
-  const [selected, setSelected]       = useState(new Set())
-  const [bulkCat, setBulkCat]         = useState('')
+  // Multi-select
+  const [selected, setSelected]   = useState(new Set())
+  const [bulkCat, setBulkCat]     = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const PER_PAGE = 50
   const hasActiveFilter = search || filterCat || filterType || dateFrom || dateTo
+
+  // Persist filter prefs
+  useEffect(() => {
+    saveFilterPrefs({ search, filterCat, filterType, dateFrom, dateTo })
+  }, [search, filterCat, filterType, dateFrom, dateTo])
 
   function toggleSort(field) {
     if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -113,31 +164,23 @@ export default function TransactionList({ transactions, onUpdate }) {
     return t.type === 'credit' ? s - t.amount : s + t.amount
   }, 0)
 
-  // Selection helpers
   const pagedIds = useMemo(() => new Set(paged.map(t => t.id)), [paged])
   const allPageSelected = pagedIds.size > 0 && [...pagedIds].every(id => selected.has(id))
   const someSelected = selected.size > 0
 
   function toggleSelectAll() {
     if (allPageSelected) {
-      setSelected(prev => { const next = new Set(prev); pagedIds.forEach(id => next.delete(id)); return next })
+      setSelected(prev => { const n = new Set(prev); pagedIds.forEach(id => n.delete(id)); return n })
     } else {
-      setSelected(prev => { const next = new Set(prev); pagedIds.forEach(id => next.add(id)); return next })
+      setSelected(prev => { const n = new Set(prev); pagedIds.forEach(id => n.add(id)); return n })
     }
   }
 
   function toggleOne(id) {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
 
-  function clearSelection() {
-    setSelected(new Set())
-    setBulkCat('')
-  }
+  function clearSelection() { setSelected(new Set()); setBulkCat(''); setConfirmDelete(false) }
 
   function applyBulkCategory() {
     if (!bulkCat || selected.size === 0) return
@@ -145,69 +188,70 @@ export default function TransactionList({ transactions, onUpdate }) {
     clearSelection()
   }
 
+  function bulkDelete() {
+    if (!confirmDelete) return setConfirmDelete(true)
+    onUpdate(transactions.filter(t => !selected.has(t.id)))
+    clearSelection()
+  }
+
   function updateCategory(id, category) {
     onUpdate(transactions.map(t => t.id === id ? { ...t, category } : t))
   }
 
+  function updateNote(id, note) {
+    onUpdate(transactions.map(t => t.id === id ? { ...t, note } : t))
+  }
+
   function deleteOne(id) {
     onUpdate(transactions.filter(t => t.id !== id))
-    setSelected(prev => { const next = new Set(prev); next.delete(id); return next })
+    setSelected(prev => { const n = new Set(prev); n.delete(id); return n })
   }
 
   if (transactions.length === 0) return null
 
   const Th = ({ field, children, className = '' }) => (
     <th
-      className={`pb-3 pr-4 text-slate-400 font-medium cursor-pointer select-none hover:text-slate-600 whitespace-nowrap text-xs uppercase tracking-wide ${className}`}
+      className={`pb-3 pr-4 text-slate-400 dark:text-slate-500 font-medium cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 whitespace-nowrap text-xs uppercase tracking-wide ${className}`}
       onClick={() => toggleSort(field)}
     >
-      <span className="flex items-center gap-1">
-        {children}
-        <SortIcon field={field} sortBy={sortBy} sortDir={sortDir} />
-      </span>
+      <span className="flex items-center gap-1">{children}<SortIcon field={field} sortBy={sortBy} sortDir={sortDir} /></span>
     </th>
   )
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
 
-      {/* Header bar */}
-      <div className="flex flex-wrap gap-2 p-4 pb-3 items-center border-b border-slate-100">
+      {/* Header */}
+      <div className="flex flex-wrap gap-2 p-4 pb-3 items-center border-b border-slate-100 dark:border-slate-700">
         <div>
-          <span className="text-base font-semibold text-slate-700">Movimientos</span>
-          <span className="ml-2 text-sm text-slate-400">({filtered.length})</span>
+          <span className="text-base font-semibold text-slate-700 dark:text-slate-200">Movimientos</span>
+          <span className="ml-2 text-sm text-slate-400 dark:text-slate-500">({filtered.length})</span>
           {hasActiveFilter && (
-            <span className={`ml-2 text-sm font-semibold ${totalFiltered < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
+            <span className={`ml-2 text-sm font-semibold ${totalFiltered < 0 ? 'text-emerald-600' : 'text-slate-600 dark:text-slate-300'}`}>
               · {fmt(Math.abs(totalFiltered))}
             </span>
           )}
         </div>
 
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          {/* Search */}
-          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${search ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
+          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${search ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-500'}`}>
             <Search size={13} className="text-slate-400 shrink-0" />
             <input
               type="text"
-              placeholder="Buscar descripción…"
+              placeholder="Buscar…"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
-              className="text-sm bg-transparent outline-none w-36 text-slate-700 placeholder-slate-400"
+              className="text-sm bg-transparent outline-none w-36 text-slate-700 dark:text-slate-200 placeholder-slate-400"
             />
-            {search && (
-              <button onClick={() => { setSearch(''); setPage(1) }} className="text-slate-300 hover:text-slate-500">
-                <X size={12} />
-              </button>
-            )}
+            {search && <button onClick={() => { setSearch(''); setPage(1) }} className="text-slate-300 hover:text-slate-500"><X size={12} /></button>}
           </div>
 
-          {/* Toggle filters */}
           <button
             onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors ${
               showFilters || (filterCat || filterType || dateFrom || dateTo)
-                ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-                : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'
+                ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400'
+                : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 hover:border-slate-300'
             }`}
           >
             <SlidersHorizontal size={13} />
@@ -220,10 +264,7 @@ export default function TransactionList({ transactions, onUpdate }) {
           </button>
 
           {hasActiveFilter && (
-            <button
-              onClick={clearFilters}
-              className="text-xs text-slate-400 hover:text-slate-600 px-2 py-2 border border-slate-200 rounded-xl hover:bg-slate-50"
-            >
+            <button onClick={clearFilters} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-2 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700">
               Limpiar
             </button>
           )}
@@ -232,80 +273,62 @@ export default function TransactionList({ transactions, onUpdate }) {
 
       {/* Expanded filters */}
       {showFilters && (
-        <div className="flex flex-wrap gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-          <select
-            value={filterCat}
-            onChange={e => { setFilterCat(e.target.value); setPage(1) }}
-            className="text-sm border border-slate-200 rounded-xl px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-          >
+        <div className="flex flex-wrap gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/20">
+          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setPage(1) }}
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
             <option value="">Todas las categorías</option>
-            {Object.entries(CATEGORIES).map(([k, c]) => (
-              <option key={k} value={k}>{c.icon} {c.label}</option>
-            ))}
+            {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
           </select>
-
-          <select
-            value={filterType}
-            onChange={e => { setFilterType(e.target.value); setPage(1) }}
-            className="text-sm border border-slate-200 rounded-xl px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-          >
+          <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }}
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
             <option value="">Débitos y créditos</option>
             <option value="debit">Solo débitos</option>
             <option value="credit">Solo créditos</option>
           </select>
-
-          <div className="flex items-center gap-1.5 text-sm text-slate-500">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-              className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-            />
-            <span className="text-slate-300">→</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={e => { setDateTo(e.target.value); setPage(1) }}
-              className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-            />
+          <div className="flex items-center gap-1.5">
+            <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+              className="border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+            <span className="text-slate-300 dark:text-slate-600">→</span>
+            <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }}
+              className="border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
           </div>
         </div>
       )}
 
-      {/* Bulk action bar — shown when items are selected */}
+      {/* Bulk action bar */}
       {someSelected && (
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-indigo-100 bg-indigo-50/70">
-          <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
-            <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center">
-              {selected.size}
-            </div>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-indigo-100 dark:border-indigo-900 bg-indigo-50/70 dark:bg-indigo-950/40">
+          <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+            <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center">{selected.size}</span>
             {selected.size === 1 ? 'movimiento seleccionado' : 'movimientos seleccionados'}
           </div>
-
           <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {/* Category assign */}
             <Tag size={14} className="text-indigo-500 shrink-0" />
-            <select
-              value={bulkCat}
-              onChange={e => setBulkCat(e.target.value)}
-              className="text-sm border border-indigo-200 rounded-xl px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              <option value="">— Elegir categoría —</option>
-              {Object.entries(CATEGORIES).map(([k, c]) => (
-                <option key={k} value={k}>{c.icon} {c.label}</option>
-              ))}
+            <select value={bulkCat} onChange={e => setBulkCat(e.target.value)}
+              className="text-sm border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option value="">— Categoría —</option>
+              {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
             </select>
-            <button
-              onClick={applyBulkCategory}
-              disabled={!bulkCat}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-40 transition-colors"
-            >
-              <Check size={13} />
-              Aplicar
+            <button onClick={applyBulkCategory} disabled={!bulkCat}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-40 transition-colors">
+              <Check size={13} /> Aplicar
             </button>
-            <button
-              onClick={clearSelection}
-              className="text-sm px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors"
-            >
+            {/* Bulk delete */}
+            {confirmDelete ? (
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle size={14} className="text-red-500" />
+                <span className="text-xs text-red-600 dark:text-red-400 font-medium">¿Confirmar?</span>
+                <button onClick={bulkDelete} className="text-sm px-2 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">Eliminar</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-sm px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">No</button>
+              </div>
+            ) : (
+              <button onClick={bulkDelete}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 transition-colors">
+                <Trash2 size={13} /> Eliminar
+              </button>
+            )}
+            <button onClick={clearSelection} className="text-sm px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-colors">
               Cancelar
             </button>
           </div>
@@ -316,78 +339,60 @@ export default function TransactionList({ transactions, onUpdate }) {
       <div className="overflow-x-auto px-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100 text-left">
-              {/* Select-all checkbox */}
+            <tr className="border-b border-slate-100 dark:border-slate-700 text-left">
               <th className="pb-3 pr-3 w-8">
-                <input
-                  type="checkbox"
-                  checked={allPageSelected}
-                  onChange={toggleSelectAll}
-                  className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer"
-                  title="Seleccionar todos"
-                />
+                <input type="checkbox" checked={allPageSelected} onChange={toggleSelectAll}
+                  className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" title="Seleccionar todos" />
               </th>
               <Th field="date">Fecha</Th>
               <Th field="desc">Descripción</Th>
               <Th field="cat">Categoría</Th>
-              <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 font-medium whitespace-nowrap">Origen</th>
+              <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">Nota</th>
+              <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap hidden lg:table-cell">Origen</th>
               <Th field="amount" className="text-right">Importe</Th>
               <th className="pb-3 w-8" />
             </tr>
           </thead>
           <tbody>
             {paged.map(t => {
-              const isCredit = t.type === 'credit'
+              const isCredit   = t.type === 'credit'
               const isSelected = selected.has(t.id)
               return (
-                <tr
-                  key={t.id}
-                  className={`border-b border-slate-50 transition-colors group ${
-                    isSelected
-                      ? 'bg-indigo-50/60 hover:bg-indigo-50'
-                      : 'hover:bg-slate-50/80'
-                  }`}
-                >
-                  {/* Row checkbox */}
+                <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
                   <td className="py-2.5 pr-3 w-8">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleOne(t.id)}
-                      className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer"
-                    />
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleOne(t.id)}
+                      className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
                   </td>
-                  <td className="py-2.5 pr-4 text-slate-400 whitespace-nowrap text-xs font-mono">
+                  <td className="py-2.5 pr-4 text-slate-400 dark:text-slate-500 whitespace-nowrap text-xs font-mono">
                     {safeFormat(t.date, 'dd MMM yy', { locale: es })}
                   </td>
                   <td className="py-2.5 pr-4 max-w-xs">
-                    <div className="truncate text-slate-700" title={t.description}>{t.description}</div>
+                    <div className="truncate text-slate-700 dark:text-slate-200" title={t.description}>{t.description}</div>
                     <div className="flex gap-1.5 mt-0.5">
-                      {t.installment && (
-                        <span className="text-[10px] text-indigo-500 font-semibold">
-                          Cuota {t.installment.current}/{t.installment.total}
-                        </span>
-                      )}
-                      {isCredit && (
-                        <span className="text-[10px] text-emerald-600 font-semibold">↩ Crédito</span>
-                      )}
+                      {t.installment && <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">Cuota {t.installment.current}/{t.installment.total}</span>}
+                      {isCredit && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">↩ Crédito</span>}
                     </div>
                   </td>
                   <td className="py-2.5 pr-4">
                     <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
                   </td>
-                  <td className="py-2.5 pr-4 max-w-[110px]">
-                    <span className="truncate block text-[11px] text-slate-400" title={t.source}>{t.source}</span>
+                  <td className="py-2.5 pr-4">
+                    <div className="flex flex-col gap-0.5">
+                      <InlineNote value={t.note} onSave={note => updateNote(t.id, note)} />
+                      {t.note && (
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[120px]" title={t.note}>{t.note}</span>
+                      )}
+                    </div>
                   </td>
-                  <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600' : 'text-slate-800'}`}>
+                  <td className="py-2.5 pr-4 max-w-[100px] hidden lg:table-cell">
+                    <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.source}>{t.source}</span>
+                  </td>
+                  <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                     {isCredit ? '+' : ''}{fmt(t.amount)}
                   </td>
                   <td className="py-2.5 w-8">
-                    <button
-                      onClick={() => deleteOne(t.id)}
-                      className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                      title="Eliminar"
-                    >
+                    <button onClick={() => deleteOne(t.id)}
+                      className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all" title="Eliminar">
                       <Trash2 size={12} />
                     </button>
                   </td>
@@ -400,10 +405,8 @@ export default function TransactionList({ transactions, onUpdate }) {
 
       {filtered.length > paged.length && (
         <div className="p-4 pt-3">
-          <button
-            onClick={() => setPage(p => p + 1)}
-            className="w-full py-2.5 text-sm text-indigo-600 hover:text-indigo-700 border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-colors font-medium"
-          >
+          <button onClick={() => setPage(p => p + 1)}
+            className="w-full py-2.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 border border-indigo-200 dark:border-indigo-700 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors font-medium">
             Mostrar más ({filtered.length - paged.length} restantes)
           </button>
         </div>

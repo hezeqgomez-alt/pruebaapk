@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, RefreshCw, TrendingUp, Zap, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, RefreshCw, TrendingUp, Zap, CheckCircle2, PiggyBank, X } from 'lucide-react'
 import { CATEGORIES } from '../utils/categorizer'
 
 function fmt(n) {
@@ -10,43 +10,109 @@ const TYPE_CONFIG = {
   subscription: {
     icon: RefreshCw,
     gradient: 'from-violet-500 to-purple-600',
-    bg: 'bg-violet-50',
-    border: 'border-violet-100',
-    text: 'text-violet-700',
-    badge: 'bg-violet-100 text-violet-600',
+    bg: 'bg-violet-50 dark:bg-violet-900/20',
+    border: 'border-violet-100 dark:border-violet-800',
+    text: 'text-violet-700 dark:text-violet-300',
+    badge: 'bg-violet-100 text-violet-600 dark:bg-violet-800 dark:text-violet-200',
   },
   impulse: {
     icon: Zap,
     gradient: 'from-amber-400 to-orange-500',
-    bg: 'bg-amber-50',
-    border: 'border-amber-100',
-    text: 'text-amber-700',
-    badge: 'bg-amber-100 text-amber-600',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-100 dark:border-amber-800',
+    text: 'text-amber-700 dark:text-amber-300',
+    badge: 'bg-amber-100 text-amber-600 dark:bg-amber-800 dark:text-amber-200',
   },
   concentration: {
     icon: TrendingUp,
     gradient: 'from-red-500 to-rose-600',
-    bg: 'bg-red-50',
-    border: 'border-red-100',
-    text: 'text-red-700',
-    badge: 'bg-red-100 text-red-600',
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    border: 'border-red-100 dark:border-red-800',
+    text: 'text-red-700 dark:text-red-300',
+    badge: 'bg-red-100 text-red-600 dark:bg-red-800 dark:text-red-200',
   },
   highFrequency: {
     icon: Zap,
     gradient: 'from-amber-400 to-orange-500',
-    bg: 'bg-amber-50',
-    border: 'border-amber-100',
-    text: 'text-amber-700',
-    badge: 'bg-amber-100 text-amber-600',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-100 dark:border-amber-800',
+    text: 'text-amber-700 dark:text-amber-300',
+    badge: 'bg-amber-100 text-amber-600 dark:bg-amber-800 dark:text-amber-200',
   },
   ok: {
     icon: CheckCircle2,
     gradient: 'from-emerald-400 to-teal-500',
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-100',
-    text: 'text-emerald-700',
-    badge: 'bg-emerald-100 text-emerald-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    border: 'border-emerald-100 dark:border-emerald-800',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    badge: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-200',
   },
+}
+
+function SavingsCalculator({ findings, transactions }) {
+  const [dismissed, setDismissed] = useState(new Set())
+
+  const subs = findings.filter(f => f.type === 'subscription' && !dismissed.has(f.description))
+  if (subs.length === 0) return null
+
+  // Estimate monthly cost: total spend / number of distinct months spanned
+  const months = new Set(transactions.map(t => t.date.slice(0, 7)))
+  const monthCount = Math.max(months.size, 1)
+
+  const subsWithCost = subs.map(f => ({
+    ...f,
+    monthly: f.total / monthCount,
+  }))
+
+  const totalMonthly = subsWithCost.reduce((s, f) => s + f.monthly, 0)
+  const totalAnnual  = totalMonthly * 12
+
+  return (
+    <div className="mt-5 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+          <PiggyBank size={16} className="text-white" />
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Calculadora de ahorro</h4>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400">Suscripciones detectadas que podrías cancelar</p>
+        </div>
+        <div className="ml-auto text-right">
+          <div className="text-lg font-extrabold text-emerald-700 dark:text-emerald-300">{fmt(totalMonthly)}/mes</div>
+          <div className="text-xs text-emerald-500 dark:text-emerald-400">{fmt(totalAnnual)} al año</div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {subsWithCost.map((f, i) => (
+          <div key={i} className="flex items-center gap-3 bg-white/70 dark:bg-white/10 rounded-xl px-3 py-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                {f.description.slice(0, 40)}
+              </div>
+              <div className="text-xs text-slate-400 dark:text-slate-500">
+                {f.count} cobros · {fmt(f.total)} total
+              </div>
+            </div>
+            <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+              {fmt(f.monthly)}/mes
+            </div>
+            <button
+              onClick={() => setDismissed(d => new Set([...d, f.description]))}
+              title="Descartar"
+              className="w-5 h-5 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+            >
+              <X size={11} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-xs text-emerald-600/70 dark:text-emerald-500 mt-3 text-center">
+        Cancelar todas estas suscripciones te ahorraría {fmt(totalAnnual)} por año
+      </p>
+    </div>
+  )
 }
 
 export default function InsightsPanel({ findings, transactions, onRefresh }) {
@@ -101,16 +167,16 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
       <div className="flex items-center gap-2 mb-5">
-        <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
           <AlertTriangle size={16} className="text-amber-500" />
         </div>
-        <h3 className="text-base font-semibold text-slate-700">Alertas e insights</h3>
+        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Alertas e insights</h3>
 
         <div className="ml-auto flex items-center gap-2">
           {alertCount > 0 && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-800 dark:text-amber-200">
               {alertCount} {alertCount === 1 ? 'alerta' : 'alertas'}
             </span>
           )}
@@ -118,7 +184,7 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
             onClick={handleRefresh}
             disabled={refreshing}
             title="Actualizar alertas"
-            className={`w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all disabled:opacity-50 ${refreshing ? 'bg-indigo-50 border-indigo-200' : ''}`}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all disabled:opacity-50 ${refreshing ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700' : ''}`}
           >
             <RefreshCw size={13} className={refreshing ? 'animate-spin text-indigo-500' : ''} />
           </button>
@@ -140,7 +206,7 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className={`font-semibold text-sm ${cfg.text}`}>{item.title}</div>
-                  <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.body}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{item.body}</div>
                   {item.amount && (
                     <div className={`inline-block mt-2 text-xs font-bold px-2 py-0.5 rounded-full ${cfg.badge}`}>
                       {item.amount}
@@ -152,6 +218,8 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
           )
         })}
       </div>
+
+      <SavingsCalculator findings={findings} transactions={transactions} />
     </div>
   )
 }

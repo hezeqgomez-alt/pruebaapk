@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useState } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { Chart, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import { format, parseISO } from 'date-fns'
@@ -16,20 +16,39 @@ function safeFormat(dateStr, fmtStr, opts) {
 }
 
 const MonthComparison = forwardRef(function MonthComparison({ transactions, selectedCategories }, ref) {
+  const [viewMode, setViewMode] = useState('monthly') // 'monthly' | 'annual'
+
   const debits = transactions.filter(t => t.type !== 'credit')
 
+  // ── Monthly grouping ──────────────────────────────────────────────────────────
   const byMonthCat = {}
   const months = new Set()
-
   for (const t of debits) {
     const mo = t.date.slice(0, 7)
     months.add(mo)
     if (!byMonthCat[mo]) byMonthCat[mo] = {}
     byMonthCat[mo][t.category] = (byMonthCat[mo][t.category] || 0) + t.amount
   }
-
   const sortedMonths = [...months].sort()
-  const labels = sortedMonths.map(m => safeFormat(m + '-01', 'MMM yy', { locale: es }))
+
+  // ── Annual grouping ───────────────────────────────────────────────────────────
+  const byYearCat = {}
+  const years = new Set()
+  for (const t of debits) {
+    const yr = t.date.slice(0, 4)
+    years.add(yr)
+    if (!byYearCat[yr]) byYearCat[yr] = {}
+    byYearCat[yr][t.category] = (byYearCat[yr][t.category] || 0) + t.amount
+  }
+  const sortedYears = [...years].sort()
+
+  // ── Pick active grouping ──────────────────────────────────────────────────────
+  const isAnnual    = viewMode === 'annual'
+  const keys        = isAnnual ? sortedYears : sortedMonths
+  const byKeyCat    = isAnnual ? byYearCat   : byMonthCat
+  const labels      = isAnnual
+    ? sortedYears
+    : sortedMonths.map(m => safeFormat(m + '-01', 'MMM yy', { locale: es }))
 
   const cats = selectedCategories && selectedCategories.length > 0
     ? selectedCategories
@@ -37,22 +56,22 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
 
   const datasets = cats.map(cat => ({
     label: CATEGORIES[cat]?.label || cat,
-    data: sortedMonths.map(m => byMonthCat[m]?.[cat] || 0),
+    data: keys.map(k => byKeyCat[k]?.[cat] || 0),
     backgroundColor: CATEGORIES[cat]?.color || '#94a3b8',
     borderRadius: 4,
     borderSkipped: false,
   })).filter(d => d.data.some(v => v > 0))
 
-  const totalByMonth = {
-    label: 'Total gastado',
-    data: sortedMonths.map(m => Object.values(byMonthCat[m] || {}).reduce((s, v) => s + v, 0)),
+  const totalByKey = {
+    label: isAnnual ? 'Total anual' : 'Total gastado',
+    data: keys.map(k => Object.values(byKeyCat[k] || {}).reduce((s, v) => s + v, 0)),
     backgroundColor: '#1e40af',
     borderRadius: 4,
     borderSkipped: false,
   }
 
   const showStacked = selectedCategories && selectedCategories.length > 0
-  const data = { labels, datasets: showStacked ? datasets : [totalByMonth] }
+  const data = { labels, datasets: showStacked ? datasets : [totalByKey] }
 
   const options = {
     responsive: true,
@@ -68,43 +87,77 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
     },
   }
 
-  const monthTable = sortedMonths.map(m => ({
-    label: safeFormat(m + '-01', 'MMMM yyyy', { locale: es }),
-    total: Object.values(byMonthCat[m] || {}).reduce((s, v) => s + v, 0),
-    count: debits.filter(t => t.date.startsWith(m)).length,
-  }))
+  // ── Table rows ────────────────────────────────────────────────────────────────
+  const tableRows = keys.map((k, i) => {
+    const total = Object.values(byKeyCat[k] || {}).reduce((s, v) => s + v, 0)
+    const count = debits.filter(t => (isAnnual ? t.date.startsWith(k) : t.date.startsWith(k))).length
+    const label = isAnnual
+      ? k
+      : safeFormat(k + '-01', 'MMMM yyyy', { locale: es })
+    return { label, total, count, key: k }
+  })
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5">
-      <h3 className="text-base font-semibold text-slate-700 mb-4">Comparativo mes a mes</h3>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+          {isAnnual ? 'Comparativo anual' : 'Comparativo mes a mes'}
+        </h3>
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+          <button
+            onClick={() => setViewMode('monthly')}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+              !isAnnual
+                ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            Mensual
+          </button>
+          <button
+            onClick={() => setViewMode('annual')}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+              isAnnual
+                ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            Anual
+          </button>
+        </div>
+      </div>
+
       <div style={{ height: 240 }}>
         <Bar ref={ref} data={data} options={options} />
       </div>
+
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100">
-              <th className="text-left py-2 text-slate-500 font-medium">Mes</th>
-              <th className="text-right py-2 text-slate-500 font-medium">Total</th>
-              <th className="text-right py-2 text-slate-500 font-medium">Movimientos</th>
-              <th className="text-right py-2 text-slate-500 font-medium">Variación</th>
+            <tr className="border-b border-slate-100 dark:border-slate-700">
+              <th className="text-left py-2 text-slate-500 dark:text-slate-400 font-medium">
+                {isAnnual ? 'Año' : 'Mes'}
+              </th>
+              <th className="text-right py-2 text-slate-500 dark:text-slate-400 font-medium">Total</th>
+              <th className="text-right py-2 text-slate-500 dark:text-slate-400 font-medium">Movimientos</th>
+              <th className="text-right py-2 text-slate-500 dark:text-slate-400 font-medium">Variación</th>
             </tr>
           </thead>
           <tbody>
-            {monthTable.map((row, i) => {
-              const prev = monthTable[i - 1]
+            {tableRows.map((row, i) => {
+              const prev = tableRows[i - 1]
               const variation = prev ? ((row.total - prev.total) / prev.total) * 100 : null
               return (
-                <tr key={row.label} className="border-b border-slate-50 hover:bg-slate-50">
-                  <td className="py-2 text-slate-700 capitalize">{row.label}</td>
-                  <td className="py-2 text-right font-semibold text-slate-800">{fmt(row.total)}</td>
-                  <td className="py-2 text-right text-slate-500">{row.count}</td>
+                <tr key={row.key} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <td className="py-2 text-slate-700 dark:text-slate-300 capitalize">{row.label}</td>
+                  <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-100">{fmt(row.total)}</td>
+                  <td className="py-2 text-right text-slate-500 dark:text-slate-400">{row.count}</td>
                   <td className="py-2 text-right">
                     {variation !== null ? (
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${variation > 10 ? 'bg-red-100 text-red-600' : variation < -10 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${variation > 10 ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' : variation < -10 ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
                         {variation > 0 ? '+' : ''}{variation.toFixed(1)}%
                       </span>
-                    ) : <span className="text-slate-300 text-xs">—</span>}
+                    ) : <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>}
                   </td>
                 </tr>
               )

@@ -1,10 +1,14 @@
-const KEY = 'gasto_tracker_data'
+const KEY       = 'gasto_tracker_data'
+const KEY_BUD   = 'easyresumen_budgets'
+const KEY_FILT  = 'easyresumen_filters'
+const KEY_DARK  = 'easyresumen_dark'
 
 function isValidDate(d) {
   if (!d || typeof d !== 'string') return false
-  const parsed = Date.parse(d)
-  return !isNaN(parsed)
+  return !isNaN(Date.parse(d))
 }
+
+// ── Transactions ─────────────────────────────────────────────────────────────
 
 export function loadData() {
   try {
@@ -26,4 +30,40 @@ export function saveData(data) {
 
 export function clearData() {
   localStorage.removeItem(KEY)
+}
+
+// ── Budgets ──────────────────────────────────────────────────────────────────
+
+export function loadBudgets() {
+  try {
+    const raw = localStorage.getItem(KEY_BUD)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+export function saveBudgets(budgets) {
+  localStorage.setItem(KEY_BUD, JSON.stringify(budgets))
+}
+
+// ── Filter preferences ────────────────────────────────────────────────────────
+
+export function loadFilterPrefs() {
+  try {
+    const raw = localStorage.getItem(KEY_FILT)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+export function saveFilterPrefs(prefs) {
+  localStorage.setItem(KEY_FILT, JSON.stringify(prefs))
+}
+
+// ── Dark mode ─────────────────────────────────────────────────────────────────
+
+export function loadDarkMode() {
+  return localStorage.getItem(KEY_DARK) === 'true'
+}
+
+export function saveDarkMode(val) {
+  localStorage.setItem(KEY_DARK, String(val))
 }

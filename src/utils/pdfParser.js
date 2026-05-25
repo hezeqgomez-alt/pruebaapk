@@ -358,34 +358,132 @@ function dedupe(txs) {
 
 // ─── Main entry ──────────────────────────────────────────────────────────────
 
-export async function parsePDF(file) {
-  const pages = await extractPages(file)
-  const allText = pages.flat().map(i => i.str).join(' ')
+// ─── OCR for scanned PDFs ───────────────────────────────────────────────────
 
-  // Detect if PDF is image-only (no extractable text)
+async function renderPageToCanvas(pdfPage, scale = 2.0) {
+  const viewport = pdfPage.getViewport({ scale })
+  const canvas = document.createElement('canvas')
+  canvas.width  = viewport.width
+  canvas.height = viewport.height
+  const ctx = canvas.getContext('2d')
+  await pdfPage.render({ canvasContext: ctx, viewport }).promise
+  return canvas
+}
+
+async function ocrPages(arrayBuffer, numPages, onProgress) {
+  const { createWorker } = await import('tesseract.js')
+  const worker = await createWorker('spa', 1, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        onProgress?.({ stage: 'ocr', progress: m.progress })
+      }
+    },
+  })
+
+  // Re-open with pdfjs to render pages
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  let fullText = ''
+
+  for (let i = 1; i <= numPages; i++) {
+    onProgress?.({ stage: 'ocr', progress: (i - 1) / numPages, page: i, total: numPages })
+    try {
+      const page = await pdf.getPage(i)
+      const canvas = await renderPageToCanvas(page)
+      const { data: { text } } = await worker.recognize(canvas)
+      fullText += text + '\n'
+    } catch { /* skip unrenderable page */ }
+  }
+
+  await worker.terminate()
+  return fullText
+}
+
+// Convert raw OCR text lines into pseudo text items for groupIntoRows
+function ocrTextToItems(text) {
+  return text.split('\n').map((line, i) => ({
+    str: line,
+    transform: [1, 0, 0, 1, 10, 1000 - i * 14],
+  }))
+}
+
+// ─── Main entry ──────────────────────────────────────────────────────────────
+
+export async function parsePDF(file, { onProgress } = {}) {
+  let pages
+  let arrayBuffer
+
+  try {
+    arrayBuffer = await file.arrayBuffer()
+    pages = []
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
+    for (let i = 1; i <= pdf.numPages; i++) {
+      try {
+        const page = await pdf.getPage(i)
+        const content = await page.getTextContent()
+        pages.push(content.items)
+      } catch {
+        pages.push([])  // push empty page on error, continue
+      }
+    }
+  } catch (e) {
+    throw new Error(`No se pudo leer el PDF: ${e.message}`)
+  }
+
+  const allText = pages.flat().map(i => i.str).join(' ')
   const textItems = pages.flat().filter(i => i.str.trim()).length
+
+  // Scanned / image-only PDF → try OCR
   if (textItems < 10) {
-    return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true }
+    if (!onProgress) {
+      return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true }
+    }
+    try {
+      onProgress({ stage: 'ocr', progress: 0, page: 0, total: pages.length })
+      const ocrText = await ocrPages(arrayBuffer, pages.length, onProgress)
+      onProgress({ stage: 'done', progress: 1 })
+
+      if (!ocrText.trim()) {
+        return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true, ocrFailed: true }
+      }
+
+      // Parse OCR text as a single synthetic page
+      const ocrItems = ocrTextToItems(ocrText)
+      const bank = detectBank(ocrText)
+      const refYear = detectYear(ocrText)
+      const rows = groupIntoRows(ocrItems)
+      const colTxs = parseColumnar(rows, file.name, refYear)
+      const rowTxs = parseRows(rows, file.name, refYear)
+      let transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
+      return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
+    } catch (e) {
+      return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true, ocrFailed: true, ocrError: e.message }
+    }
   }
 
   const bank = detectBank(allText)
   const refYear = detectYear(allText)
 
   let transactions = []
+  let pageErrors = 0
 
   for (const items of pages) {
-    const rows = groupIntoRows(items)
-
-    // Try columnar first (more precise)
-    const colTxs = parseColumnar(rows, file.name, refYear)
-    // Then row-based as fallback
-    const rowTxs = parseRows(rows, file.name, refYear)
-
-    // Use whichever found more transactions
-    transactions.push(...(colTxs.length >= rowTxs.length ? colTxs : rowTxs))
+    try {
+      const rows = groupIntoRows(items)
+      const colTxs = parseColumnar(rows, file.name, refYear)
+      const rowTxs = parseRows(rows, file.name, refYear)
+      transactions.push(...(colTxs.length >= rowTxs.length ? colTxs : rowTxs))
+    } catch {
+      pageErrors++
+    }
   }
 
   transactions = dedupe(transactions)
 
-  return { bank, transactions, pageCount: pages.length, rawText: allText.slice(0, 2000) }
+  return {
+    bank,
+    transactions,
+    pageCount: pages.length,
+    rawText: allText.slice(0, 2000),
+    pageErrors: pageErrors > 0 ? pageErrors : undefined,
+  }
 }
