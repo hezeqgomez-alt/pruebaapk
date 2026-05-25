@@ -372,7 +372,13 @@ async function renderPageToCanvas(pdfPage, scale = 2.0) {
 
 async function ocrPages(arrayBuffer, numPages, onProgress) {
   const { createWorker } = await import('tesseract.js')
+  // Use local assets (public/) so OCR works offline in Electron
+  const base = window.location.origin
+  // Point corePath to the exact file to skip SIMD detection (avoids DotProductSSE crash)
   const worker = await createWorker('spa', 1, {
+    workerPath: `${base}/tesseract/worker.min.js`,
+    langPath:   `${base}/lang`,
+    corePath:   `${base}/tesseract-core/tesseract-core-lstm.wasm.js`,
     logger: m => {
       if (m.status === 'recognizing text') {
         onProgress?.({ stage: 'ocr', progress: m.progress })
@@ -385,7 +391,7 @@ async function ocrPages(arrayBuffer, numPages, onProgress) {
   let fullText = ''
 
   for (let i = 1; i <= numPages; i++) {
-    onProgress?.({ stage: 'ocr', progress: (i - 1) / numPages, page: i, total: numPages })
+    onProgress?.({ stage: 'ocr', page: i, total: numPages, pct: ((i - 1) / numPages) * 100 })
     try {
       const page = await pdf.getPage(i)
       const canvas = await renderPageToCanvas(page)
@@ -415,7 +421,8 @@ export async function parsePDF(file, { onProgress } = {}) {
   try {
     arrayBuffer = await file.arrayBuffer()
     pages = []
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
+    // slice(0) copies the buffer — pdfjs transfers/detaches the original, we keep a copy for OCR
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise
     for (let i = 1; i <= pdf.numPages; i++) {
       try {
         const page = await pdf.getPage(i)
