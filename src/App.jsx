@@ -47,7 +47,9 @@ export default function App() {
       setLoading(l => [...l, file.name])
       try {
         const result = await parsePDF(file)
-        if (result.transactions.length === 0) {
+        if (result.scanned) {
+          setToast(`⚠️ "${file.name}" es un PDF escaneado (imagen). No se puede extraer texto sin OCR.`)
+        } else if (result.transactions.length === 0) {
           setToast(`⚠️ Sin movimientos en "${file.name}" (banco: ${result.bank})`)
         } else {
           setTransactions(prev => {

@@ -18,16 +18,22 @@ async function extractPages(file) {
   return pages
 }
 
+// Normalize unicode minus signs / dashes to ASCII hyphen
+function norm(str) {
+  return str.replace(/[−‒–—―]/g, '-')
+}
+
 // Group text items into rows by their Y coordinate (within tolerance)
 function groupIntoRows(items, yTol = 3) {
   const rows = []
   for (const item of items) {
-    if (!item.str.trim()) continue
+    const text = norm(item.str).trim()
+    if (!text) continue
     const y = Math.round(item.transform[5])
     const x = item.transform[4]
     let row = rows.find(r => Math.abs(r.y - y) <= yTol)
     if (!row) { row = { y, items: [] }; rows.push(row) }
-    row.items.push({ x, text: item.str.trim() })
+    row.items.push({ x, text })
   }
   return rows
     .sort((a, b) => b.y - a.y)       // top to bottom (PDF Y axis is inverted)
@@ -42,7 +48,7 @@ function groupIntoRows(items, yTol = 3) {
 
 function parseAmount(str) {
   if (!str) return null
-  let s = str.replace(/\s/g, '')
+  let s = norm(str).replace(/\s/g, '')
   const neg = s.startsWith('-') || (s.startsWith('(') && s.endsWith(')')) || s.endsWith('-')
   s = s.replace(/^[-()]|[()]$|-$/g, '')
 
@@ -83,10 +89,11 @@ const MONTHS_ES = { ene:1, feb:2, mar:3, abr:4, may:5, jun:6, jul:7, ago:8, sep:
 
 function parseDate(str, refYear) {
   if (!str) return null
+  const s = norm(str)
   const yr = refYear || new Date().getFullYear()
 
   // dd/mm/yyyy or dd-mm-yyyy
-  let m = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/)
+  let m = s.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/)
   if (m) {
     const y  = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3])
     const mo = parseInt(m[2])
@@ -95,7 +102,7 @@ function parseDate(str, refYear) {
       return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
   // dd.mm.yy or dd.mm.yyyy (Banco Ciudad, ICBC, etc.)
-  m = str.match(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/)
+  m = s.match(/\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/)
   if (m) {
     const y  = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3])
     const mo = parseInt(m[2])
@@ -103,8 +110,8 @@ function parseDate(str, refYear) {
     if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
       return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
-  // dd/mm (sin año) — validar también para no capturar patrones como "1/31"
-  m = str.match(/\b(\d{1,2})[\/\-](\d{1,2})\b/)
+  // dd/mm (sin año)
+  m = s.match(/\b(\d{1,2})[\/\-](\d{1,2})\b/)
   if (m) {
     const mo = parseInt(m[2])
     const dy = parseInt(m[1])
@@ -112,7 +119,7 @@ function parseDate(str, refYear) {
       return `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
   // dd ENE, dd ENERO, etc.
-  m = str.toLowerCase().match(/\b(\d{1,2})\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/)
+  m = s.toLowerCase().match(/\b(\d{1,2})\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/)
   if (m) {
     const mo = MONTHS_ES[m[2]]
     if (mo) return `${yr}-${String(mo).padStart(2,'0')}-${m[1].padStart(2,'0')}`
@@ -123,8 +130,9 @@ function parseDate(str, refYear) {
 // ─── Installment detection ───────────────────────────────────────────────────
 
 function detectInstallment(text) {
-  // Require explicit keyword prefix to avoid false positives on dates (e.g. 04/04/2025)
+  // Require explicit keyword prefix: CTA, CUOTA, C. — avoid false positives on dates
   const m = text.match(/\b(?:cta|cuota|ct)\.?\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\b/i)
+    || text.match(/\bC\.\s*(\d{1,2})\s*\/\s*(\d{1,2})\b/)
   if (!m) return null
   const current = parseInt(m[1])
   const total = parseInt(m[2])
@@ -134,7 +142,7 @@ function detectInstallment(text) {
 
 // ─── Amount detection in a line ──────────────────────────────────────────────
 
-// Monto válido: tiene separador de miles (1.234), coma decimal (1234,56),
+// Monto válido: separador de miles (1.234), coma decimal (1234,56),
 // signo $ delante, 5+ dígitos, o trailing dash para créditos (553.343,47-).
 const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?-?\)?|-?\(?\d+,\d{2}-?\)?|-?\(?\d{5,}-?\)?)(?=\s|$)/g
 
@@ -171,6 +179,7 @@ function detectBank(text) {
   if (t.includes('american express') || t.includes('amex')) return 'Amex'
   if (t.includes('brubank'))          return 'Brubank'
   if (t.includes('uala') || t.includes('ualá')) return 'Ualá'
+  if (t.includes('cabal'))            return 'Cabal'
   return 'Desconocido'
 }
 
@@ -181,14 +190,57 @@ function detectYear(allText) {
   return m ? parseInt(m[1]) : new Date().getFullYear()
 }
 
+// ─── Shared description cleaner ──────────────────────────────────────────────
+
+function cleanDesc(raw) {
+  let desc = raw
+    // Remove date formats
+    .replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '')
+    .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, '')
+    .replace(/\b\d{1,2}\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\s+\d{2,4}\b/gi, '')
+    // Remove exchange rate references (e.g. "1078.774,71 TC1415,000")
+    .replace(/\d[\d.,]+\s+TC\d[\d.,]*/gi, '')
+    // Remove amounts
+    .replace(AMT_RE, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Remove leading/trailing noise chars (including underscores and parens)
+  desc = desc.replace(/^[\s\-\.\|\/\_\(\)]+|[\s\-\.\|\/\_\(\)]+$/g, '').trim()
+
+  // Strip leading comprobante/voucher codes: 5-7 digits + letter (e.g. "645184*", "005067K")
+  desc = desc.replace(/^\d{5,7}[A-Z*K]\s*/i, '').trim()
+
+  // Strip leading 3-4 digit voucher numbers (CABAL, Credicoop format: "4259 MERCHANT")
+  desc = desc.replace(/^\d{3,4}\s+(?=[A-Z])/i, '').trim()
+
+  // Remove trailing installment keyword remnants (e.g. "MERCHANT cta", "AYSA C.")
+  desc = desc.replace(/\s+(?:cta|cuota|c)\.?\s*$/i, '').trim()
+
+  // Strip stray currency symbols and remaining noise
+  desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/[*\-,]+$/g, '').replace(/\s+/g, ' ').trim()
+
+  return desc
+}
+
+function shouldSkipDesc(desc) {
+  if (!desc || desc.length < 3) return true
+  // Barcode / binary noise rows
+  if (desc.startsWith('<')) return true
+  // Known header/summary keywords at start
+  if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|tarjeta|titular|nombre|cuenta|numero|operacion|viene\s+de|continua\s+en)/i.test(desc)) return true
+  // "TARJETA (9992) TOTAL CONSUMOS..." subtotal rows
+  if (/tarjeta\s*\(?\d+\)?\s*total/i.test(desc)) return true
+  // Summary keywords anywhere in description
+  if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|pago\s+m[ií]nimo|proximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  // Account holder address fragments (Credicoop/Banco Ciudad header rows)
+  if (/\bvilla\s+adelina\b/i.test(desc)) return true
+  // Installment schedule rows: 3+ "Month/YY" or "Month-YY" tokens
+  if ((desc.match(/\b(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)[\/\-]\d{2}\b/gi) || []).length >= 3) return true
+  return false
+}
+
 // ─── Core row-based parser ───────────────────────────────────────────────────
-//
-// Strategy:
-//  1. For each row, check if it contains a date.
-//  2. If yes, try to find amount(s) in that row.
-//  3. The rightmost amount is usually the charged amount.
-//  4. The description is the text between the date and the first amount.
-//  5. If no amount on the same row, peek at the next row for amounts.
 
 function parseRows(rows, filename, refYear) {
   const transactions = []
@@ -208,39 +260,17 @@ function parseRows(rows, filename, refYear) {
 
     if (amounts.length === 0) continue
 
-    // Rightmost (last) amount = cargo/débito
-    const amountVal = amounts[amounts.length - 1].val
+    // Rightmost (last) amount = cargo/débito.
+    // Exception: for credit rows (all-negative), pick the most-negative value —
+    // dual-currency statements (VISA/CABAL) place the smaller USD credit last.
+    let amountVal = amounts[amounts.length - 1].val
+    if (amountVal < 0 && amounts.length > 1 && amounts.every(a => a.val < 0)) {
+      amountVal = amounts.reduce((min, a) => a.val < min.val ? a : min).val
+    }
     const type = amountVal < 0 ? 'credit' : 'debit'
 
-    // Description: remove date patterns and amounts from the text
-    let desc = row.text
-      .replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '')
-      .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, '')
-      .replace(/\b\d{1,2}\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\s+\d{2,4}\b/gi, '')
-      .replace(AMT_RE, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    // Remove leading/trailing noise characters (including underscore separators)
-    desc = desc.replace(/^[\s\-\.\|\/\_]+|[\s\-\.\|\/\_]+$/g, '').trim()
-
-    // Remove leading comprobante/voucher code (e.g. "645184*", "005067K", "007125*")
-    desc = desc.replace(/^\d{5,7}[A-Z*K]\s*/i, '').trim()
-
-    // Skip obviously bad rows
-    if (!desc || desc.length < 3) continue
-    // Start-of-description skip list
-    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|saldo anterior|vto\.?|nro\.?|tarjeta\s*\d*\s*total|tarjeta|titular|nombre|cuenta|numero|operacion)/i.test(desc)) continue
-    // Description starts with 4+ standalone digits = account/page header noise
-    if (/^\d{4,}\s/.test(desc)) continue
-    // Installment schedule rows: 3+ occurrences of "Month/YY" pattern
-    if ((desc.match(/\b(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)\/\d{2}\b/gi) || []).length >= 3) continue
-    // Contains summary keywords mid-description
-    if (/saldo anterior|proximo cierre|vto\.?\s+anterior/i.test(desc)) continue
-
-    // Strip stray currency symbols left after amount removal
-    desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
-    if (!desc || desc.length < 3) continue
+    const desc = cleanDesc(row.text)
+    if (shouldSkipDesc(desc)) continue
 
     const installment = detectInstallment(row.text)
 
@@ -263,8 +293,6 @@ function parseRows(rows, filename, refYear) {
 // ─── Column-aware parser (for PDFs with clearly separated columns) ───────────
 
 function parseColumnar(rows, filename, refYear) {
-  // Detect X positions of date, description, and amount columns
-  // by analyzing rows that look like transaction rows
   const transactions = []
 
   for (let i = 0; i < rows.length; i++) {
@@ -285,23 +313,19 @@ function parseColumnar(rows, filename, refYear) {
     const amount = parseAmount(amtCol.text)
     if (amount === null) continue
 
-    // Description: columns between date and amount (or after date if amount is next)
+    // Description: columns between date and amount
     const descCols = cols.filter(c => c.x > dateCol.x && c.x < amtCol.x)
-    let desc = descCols.map(c => c.text).join(' ').trim()
+    let rawDesc = descCols.map(c => c.text).join(' ').trim()
 
-    // If no desc cols, take full row minus date and amount tokens
-    if (!desc) {
-      desc = text
+    // Fallback: full row minus date and amount tokens
+    if (!rawDesc) {
+      rawDesc = text
         .replace(dateCol.text, '').replace(amtCol.text, '')
         .replace(/\s+/g, ' ').trim()
     }
 
-    desc = desc.replace(/^[\s\-\.\|\/\_]+|[\s\-\.\|\/\_]+$/g, '').trim()
-    desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/\s+/g, ' ').trim()
-    // Remove leading comprobante/voucher code
-    desc = desc.replace(/^\d{5,7}[A-Z*K]\s*/i, '').trim()
-    if (!desc || desc.length < 3) continue
-    if (/^(total|subtotal|saldo|pago|vencimiento|fecha|cuota|resumen|periodo|nro\.?|tarjeta\s*\d*\s*total|tarjeta|titular|nombre|cuenta)/i.test(desc)) continue
+    const desc = cleanDesc(rawDesc)
+    if (shouldSkipDesc(desc)) continue
 
     const installment = detectInstallment(text)
     transactions.push({
@@ -337,6 +361,13 @@ function dedupe(txs) {
 export async function parsePDF(file) {
   const pages = await extractPages(file)
   const allText = pages.flat().map(i => i.str).join(' ')
+
+  // Detect if PDF is image-only (no extractable text)
+  const textItems = pages.flat().filter(i => i.str.trim()).length
+  if (textItems < 10) {
+    return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true }
+  }
+
   const bank = detectBank(allText)
   const refYear = detectYear(allText)
 
