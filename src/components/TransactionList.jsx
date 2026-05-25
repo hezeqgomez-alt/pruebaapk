@@ -8,6 +8,10 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n)
 }
 
+function safeFormat(dateStr, fmt, opts) {
+  try { return format(parseISO(dateStr), fmt, opts) } catch { return dateStr?.slice(0, 10) || '—' }
+}
+
 function SortIcon({ field, sortBy, sortDir }) {
   if (sortBy !== field) return <ChevronsUpDown size={12} className="opacity-30" />
   return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
@@ -212,7 +216,7 @@ export default function TransactionList({ transactions, onUpdate }) {
               return (
                 <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors group">
                   <td className="py-2 pr-4 text-slate-500 whitespace-nowrap text-xs">
-                    {format(parseISO(t.date), 'dd MMM yy', { locale: es })}
+                    {safeFormat(t.date, 'dd MMM yy', { locale: es })}
                   </td>
                   <td className="py-2 pr-4 text-slate-700 max-w-xs">
                     <span className="truncate block" title={t.description}>{t.description}</span>

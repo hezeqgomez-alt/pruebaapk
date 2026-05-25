@@ -11,6 +11,10 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
+function safeFormat(dateStr, fmtStr, opts) {
+  try { return format(parseISO(dateStr), fmtStr, opts) } catch { return dateStr?.slice(0, 7) || '' }
+}
+
 const MonthComparison = forwardRef(function MonthComparison({ transactions, selectedCategories }, ref) {
   const debits = transactions.filter(t => t.type !== 'credit')
 
@@ -25,7 +29,7 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
   }
 
   const sortedMonths = [...months].sort()
-  const labels = sortedMonths.map(m => format(parseISO(m + '-01'), 'MMM yy', { locale: es }))
+  const labels = sortedMonths.map(m => safeFormat(m + '-01', 'MMM yy', { locale: es }))
 
   const cats = selectedCategories && selectedCategories.length > 0
     ? selectedCategories
@@ -65,7 +69,7 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
   }
 
   const monthTable = sortedMonths.map(m => ({
-    label: format(parseISO(m + '-01'), 'MMMM yyyy', { locale: es }),
+    label: safeFormat(m + '-01', 'MMMM yyyy', { locale: es }),
     total: Object.values(byMonthCat[m] || {}).reduce((s, v) => s + v, 0),
     count: debits.filter(t => t.date.startsWith(m)).length,
   }))

@@ -88,13 +88,19 @@ function parseDate(str, refYear) {
   // dd/mm/yyyy or dd-mm-yyyy
   let m = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/)
   if (m) {
-    const y = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3])
-    return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`
+    const y  = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3])
+    const mo = parseInt(m[2])
+    const dy = parseInt(m[1])
+    if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
+      return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
-  // dd/mm (sin año)
+  // dd/mm (sin año) — validar también para no capturar patrones como "1/31"
   m = str.match(/\b(\d{1,2})[\/\-](\d{1,2})\b/)
   if (m) {
-    return `${yr}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`
+    const mo = parseInt(m[2])
+    const dy = parseInt(m[1])
+    if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
+      return `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
   // dd ENE, dd ENERO, etc.
   m = str.toLowerCase().match(/\b(\d{1,2})\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/)

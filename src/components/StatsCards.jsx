@@ -6,6 +6,10 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
+function safeFormat(dateStr, fmtStr, opts) {
+  try { return format(parseISO(dateStr), fmtStr, opts) } catch { return dateStr?.slice(0, 7) || '' }
+}
+
 export default function StatsCards({ transactions }) {
   if (transactions.length === 0) return null
 
@@ -48,7 +52,7 @@ export default function StatsCards({ transactions }) {
       label: 'Variación mensual',
       value: trend !== null ? `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%` : 'N/A',
       sub: lastMonth
-        ? `${format(parseISO(lastMonth[0] + '-01'), 'MMMM yyyy', { locale: es })} vs mes anterior`
+        ? `${safeFormat(lastMonth[0] + '-01', 'MMMM yyyy', { locale: es })} vs mes anterior`
         : 'vs mes anterior',
       color: trend !== null && trend > 15 ? 'red' : 'green',
     },
