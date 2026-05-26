@@ -228,26 +228,30 @@ function shouldSkipDesc(desc) {
   if (!desc || desc.length < 3) return true
   // Barcode / binary noise rows
   if (desc.startsWith('<')) return true
-  // Known header/summary keywords at start
-  if (/^(total|subtotal|saldo|vencimiento|fecha|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|titular|nombre|cuenta|numero|operacion|viene\s+de|continua\s+en)/i.test(desc)) return true
-  // Payment lines anywhere (card payments, min payments): "pago" at start OR common payment phrases
+  // Known header/summary keywords at start of line
+  // Note: 'tarjeta' and 'cuota' are included — in CC statements they never start a merchant name
+  if (/^(total|subtotal|saldo|vencimiento|fecha|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|titular|nombre|cuenta|numero|operacion|viene\s+de|continua\s+en|tarjeta|cuota)/i.test(desc)) return true
+  // Payment lines: "pago" at start OR common payment phrases anywhere
   if (/^pago\b/i.test(desc)) return true
   if (/\bsu\s+pago\b|\bpago\s+en\s+pesos\b|\bpago\s+m[ií]nimo\b|\bpago\s+de\s+tarjeta\b/i.test(desc)) return true
   // "TARJETA (9992) TOTAL CONSUMOS..." subtotal rows
   if (/tarjeta\s*\(?\d+\)?\s*total/i.test(desc)) return true
   // Summary keywords anywhere in description
   if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|proximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
-  // Page header rows (cardholder name + card type + "Hoja")
-  if (/\b(?:visa|mastercard|amex|american\s+express|cabal|naranja)\s+(?:signature|platinum|classic|gold|black|infinite|signature)\b/i.test(desc)) return true
+  // Page header rows (cardholder name + card type)
+  if (/\b(?:visa|mastercard|amex|american\s+express|cabal|naranja)\s+(?:signature|platinum|classic|gold|black|infinite)\b/i.test(desc)) return true
   if (/\bhoja\s+\d+\b/i.test(desc)) return true
-  // Account holder address fragments (Credicoop/Banco Ciudad header rows)
+  // Address fragments
   if (/\bvilla\s+adelina\b/i.test(desc)) return true
-  // Installment schedule rows: 3+ "Month/YY" or "Month-YY" tokens
-  if ((desc.match(/\b(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)[\/\-]\d{2}\b/gi) || []).length >= 3) return true
+  // Installment schedule rows: 2+ "Month/YY" or "Month-YY" tokens (e.g. "ENE/25 FEB/25")
+  if ((desc.match(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)[\/\-]\d{2}\b/gi) || []).length >= 2) return true
   // OCR garbage: description is just digits, colons or very few letters after cleaning
   if (/^[\d\s:.,\/\-]+$/.test(desc)) return true
-  // Extremely short residual (e.g. single letter or code after cleaning)
-  if (desc.replace(/\s/g, '').length < 4) return true
+  // Extremely short residual (allow 3-letter merchants like YPF, OCA, ACA)
+  if (desc.replace(/\s/g, '').length < 3) return true
+  // Description contains only month names/abbreviations + digits/symbols → pure schedule row (e.g. "ENE/25")
+  const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/gi, '').replace(/[\d\s\/\-,.:|()]+/g, '')
+  if (nonMonth.trim().length === 0) return true
   return false
 }
 
