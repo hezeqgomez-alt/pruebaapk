@@ -193,7 +193,8 @@ function detectYear(allText) {
 // ─── Shared description cleaner ──────────────────────────────────────────────
 
 function cleanDesc(raw) {
-  let desc = raw
+  // Normalize unicode dashes to ASCII so all regex patterns work uniformly
+  let desc = norm(raw)
     // Remove date formats
     .replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '')
     .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, '')
@@ -203,6 +204,8 @@ function cleanDesc(raw) {
     // Remove amounts (including negative with leading minus)
     .replace(/-\s*\d[\d.,]+/g, ' ')
     .replace(AMT_RE, ' ')
+    // Remove percentage-based charge references (e.g. "2,00%( 26416,26)", "30%")
+    .replace(/\d[\d.,]*\s*%(?:\s*\([\d\s.,]+\))?/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 
@@ -245,12 +248,14 @@ function shouldSkipDesc(desc) {
   if (/\bvilla\s+adelina\b/i.test(desc)) return true
   // Installment schedule rows: 2+ "Month/YY" or "Month-YY" tokens (e.g. "ENE/25 FEB/25")
   if ((desc.match(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)[\/\-]\d{2}\b/gi) || []).length >= 2) return true
+  // Argentine CC fiscal/fee rows: interest, taxes, commissions — not merchant purchases
+  if (/^(interes\w*\s+(?:de\s+)?financ|iibb\b|iva\s+rg|db\.?\s*iva|db\.?rg\b|com\.adm|transferencia\s+deuda|percep[^a-z])/i.test(desc)) return true
   // OCR garbage: description is just digits, colons or very few letters after cleaning
   if (/^[\d\s:.,\/\-]+$/.test(desc)) return true
   // Extremely short residual (allow 3-letter merchants like YPF, OCA, ACA)
   if (desc.replace(/\s/g, '').length < 3) return true
   // Description contains only month names/abbreviations + digits/symbols → pure schedule row (e.g. "ENE/25")
-  const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/gi, '').replace(/[\d\s\/\-,.:|()]+/g, '')
+  const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?|prox(?:imo)?s?|meses?)\b/gi, '').replace(/[\d\s\/\-,.:|()%$]+/g, '')
   if (nonMonth.trim().length === 0) return true
   return false
 }
