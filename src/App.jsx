@@ -63,6 +63,7 @@ export default function App() {
 
   const chartDonutRef = useRef(null)
   const chartBarRef   = useRef(null)
+  const addBtnRef     = useRef(null)
 
   // Apply / remove dark class on <html>
   useEffect(() => {
@@ -117,7 +118,9 @@ export default function App() {
             const creCnt = newOnes.filter(t => t.type === 'credit').length
             const ocrTag = result.ocr ? ' (OCR)' : ''
             const detail = creCnt > 0 ? ` · ${debCnt} débitos + ${creCnt} créditos` : ''
-            setToast(`✅ ${newOnes.length} movimientos de ${result.bank}${detail}${ocrTag}`)
+            const dupeCount = result.transactions.length - newOnes.length
+            const dupeMsg = dupeCount > 0 ? ` · ${dupeCount} duplicada${dupeCount > 1 ? 's' : ''} omitida${dupeCount > 1 ? 's' : ''}` : ''
+            setToast(`✅ ${newOnes.length} movimientos de ${result.bank}${detail}${ocrTag}${dupeMsg}`)
             return [...prev, ...newOnes]
           })
         }
@@ -318,6 +321,7 @@ export default function App() {
 
             {/* Add transaction */}
             <button
+              ref={addBtnRef}
               onClick={() => setShowAddModal(true)}
               title="Agregar movimiento manual"
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
@@ -450,6 +454,7 @@ export default function App() {
         <AddTransactionModal
           onAdd={handleAddTransaction}
           onClose={() => setShowAddModal(false)}
+          triggerRef={addBtnRef}
         />
       )}
 

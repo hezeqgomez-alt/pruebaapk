@@ -86,7 +86,8 @@ function rowsToTransactions(headers, rows) {
 
     // Category: trust what's in the file (user may have edited), fallback to auto
     const catRaw = String(getCell(row, idx, 'categoria', 'categora') || '')
-    const category = labelToCategory(catRaw) || catRaw.toLowerCase() || categorize(description)
+    const catKey = labelToCategory(catRaw)
+    const category = CATEGORIES[catKey] ? catKey : categorize(description)
 
     const source = String(getCell(row, idx, 'origen') || 'Importado').trim() || 'Importado'
     const note = String(getCell(row, idx, 'nota') || '').trim() || undefined

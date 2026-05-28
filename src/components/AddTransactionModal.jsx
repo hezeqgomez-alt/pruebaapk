@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Plus } from 'lucide-react'
 import { CATEGORIES } from '../utils/categorizer'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export default function AddTransactionModal({ onAdd, onClose }) {
+export default function AddTransactionModal({ onAdd, onClose, triggerRef }) {
   const [form, setForm] = useState({
     date: today(),
     description: '',
@@ -14,6 +14,7 @@ export default function AddTransactionModal({ onAdd, onClose }) {
     note: '',
   })
   const [error, setError] = useState('')
+  const dialogRef = useRef(null)
 
   // Close on Escape
   useEffect(() => {
@@ -21,6 +22,32 @@ export default function AddTransactionModal({ onAdd, onClose }) {
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
+
+  // Restore focus to trigger on unmount
+  useEffect(() => {
+    return () => { triggerRef?.current?.focus() }
+  }, [triggerRef])
+
+  // Focus trap: cycle Tab inside dialog only
+  useEffect(() => {
+    const el = dialogRef.current
+    if (!el) return
+    const FOCUSABLE = 'input, select, textarea, button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    const handler = (e) => {
+      if (e.key !== 'Tab') return
+      const focusable = [...el.querySelectorAll(FOCUSABLE)]
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last  = focusable[focusable.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus() }
+      } else {
+        if (document.activeElement === last)  { e.preventDefault(); first.focus() }
+      }
+    }
+    el.addEventListener('keydown', handler)
+    return () => el.removeEventListener('keydown', handler)
+  }, [])
 
   function set(field, val) {
     setForm(f => ({ ...f, [field]: val }))
@@ -54,6 +81,7 @@ export default function AddTransactionModal({ onAdd, onClose }) {
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

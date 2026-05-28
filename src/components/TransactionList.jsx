@@ -123,6 +123,11 @@ export default function TransactionList({ transactions, onUpdate }) {
   const [bulkCat, setBulkCat]     = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Undo toast
+  const deletedRef   = useRef([])
+  const undoTimerRef = useRef(null)
+  const [undoCount, setUndoCount] = useState(0)
+
   const PER_PAGE = 50
   const hasActiveFilter = searchInput || filterCat || filterType || dateFrom || dateTo || filterSource
 
@@ -132,6 +137,8 @@ export default function TransactionList({ transactions, onUpdate }) {
   useEffect(() => {
     saveFilterPrefs({ search: searchInput, filterCat, filterType, dateFrom, dateTo, filterSource })
   }, [searchInput, filterCat, filterType, dateFrom, dateTo, filterSource])
+
+  useEffect(() => () => clearTimeout(undoTimerRef.current), [])
 
   function toggleSort(field) {
     if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -198,8 +205,26 @@ export default function TransactionList({ transactions, onUpdate }) {
 
   function bulkDelete() {
     if (!confirmDelete) return setConfirmDelete(true)
+    const removed = transactions.filter(t => selected.has(t.id))
+    deletedRef.current = removed
     onUpdate(transactions.filter(t => !selected.has(t.id)))
     clearSelection()
+    clearTimeout(undoTimerRef.current)
+    setUndoCount(removed.length)
+    undoTimerRef.current = setTimeout(() => {
+      setUndoCount(0)
+      deletedRef.current = []
+    }, 5000)
+  }
+
+  function handleUndo() {
+    clearTimeout(undoTimerRef.current)
+    const toRestore = deletedRef.current
+    deletedRef.current = []
+    setUndoCount(0)
+    if (toRestore.length > 0) {
+      onUpdate(prev => [...prev, ...toRestore])
+    }
   }
 
   function updateCategory(id, category) {
@@ -374,57 +399,79 @@ export default function TransactionList({ transactions, onUpdate }) {
             </tr>
           </thead>
           <tbody>
-            {paged.map(t => {
-              const isCredit   = t.type === 'credit'
-              const isSelected = selected.has(t.id)
-              return (
-                <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
-                  <td className="py-2.5 pr-3 w-8">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleOne(t.id)}
-                      className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-                  </td>
-                  <td className="py-2.5 pr-4 text-slate-400 dark:text-slate-500 whitespace-nowrap text-xs font-mono">
-                    {safeFormat(t.date, 'dd MMM yy', { locale: es })}
-                  </td>
-                  <td className="py-2.5 pr-4 max-w-xs">
-                    <div className="truncate text-slate-700 dark:text-slate-200" title={t.description}>{t.description}</div>
-                    <div className="flex gap-1.5 mt-0.5 flex-wrap">
-                      {t.installment && <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">Cuota {t.installment.current}/{t.installment.total}</span>}
-                      {isCredit && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">↩ Crédito</span>}
-                      {t.originalCurrency && (
-                        <span className="text-[10px] text-sky-500 dark:text-sky-400 font-semibold font-mono">
-                          {t.originalCurrency} {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.originalAmount)}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <div className="flex flex-col gap-0.5">
-                      <InlineNote value={t.note} onSave={note => updateNote(t.id, note)} />
-                      {t.note && (
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[120px]" title={t.note}>{t.note}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2.5 pr-4 max-w-[100px] hidden lg:table-cell">
-                    <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.source}>{t.source}</span>
-                  </td>
-                  <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
-                    {isCredit ? '+' : ''}{fmt(t.amount)}
-                  </td>
-                  <td className="py-2.5 w-10">
-                    <button onClick={() => deleteOne(t.id)}
-                      aria-label="Eliminar movimiento"
-                      className="opacity-0 group-hover:opacity-100 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all" title="Eliminar">
-                      <Trash2 size={13} />
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500">
+                    <Search size={28} className="opacity-30" />
+                    <p className="text-sm font-medium">Sin resultados para los filtros aplicados</p>
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline underline-offset-2 transition-colors"
+                    >
+                      Limpiar filtros
                     </button>
-                  </td>
-                </tr>
-              )
-            })}
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              paged.map(t => {
+                const isCredit   = t.type === 'credit'
+                const isSelected = selected.has(t.id)
+                return (
+                  <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
+                    <td className="py-2.5 pr-3 w-8">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleOne(t.id)}
+                        className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
+                    </td>
+                    <td className="py-2.5 pr-4 text-slate-400 dark:text-slate-500 whitespace-nowrap text-xs font-mono">
+                      {safeFormat(t.date, 'dd MMM yy', { locale: es })}
+                    </td>
+                    <td className="py-2.5 pr-4 max-w-xs">
+                      <div className="truncate text-slate-700 dark:text-slate-200" title={t.description}>{t.description}</div>
+                      <div className="flex gap-1.5 mt-0.5 flex-wrap">
+                        {t.installment && <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">Cuota {t.installment.current}/{t.installment.total}</span>}
+                        {isCredit && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">↩ Crédito</span>}
+                        {t.originalCurrency && (
+                          <span className="text-[10px] text-sky-500 dark:text-sky-400 font-semibold font-mono">
+                            {t.originalCurrency} {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.originalAmount)}
+                          </span>
+                        )}
+                        {t.source && (
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[120px]" title={t.source}>
+                            {t.source}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <div className="flex flex-col gap-0.5">
+                        <InlineNote value={t.note} onSave={note => updateNote(t.id, note)} />
+                        {t.note && (
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[120px]" title={t.note}>{t.note}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2.5 pr-4 max-w-[100px] hidden lg:table-cell">
+                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.source}>{t.source}</span>
+                    </td>
+                    <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                      {isCredit ? '+' : ''}{fmt(t.amount)}
+                    </td>
+                    <td className="py-2.5 w-10">
+                      <button onClick={() => deleteOne(t.id)}
+                        aria-label="Eliminar movimiento"
+                        className="opacity-20 group-hover:opacity-100 focus:opacity-100 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all" title="Eliminar">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -434,6 +481,26 @@ export default function TransactionList({ transactions, onUpdate }) {
           <button onClick={() => setPage(p => p + 1)}
             className="w-full py-2.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 border border-indigo-200 dark:border-indigo-700 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors font-medium">
             Mostrar más ({filtered.length - paged.length} restantes)
+          </button>
+        </div>
+      )}
+
+      {undoCount > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl bg-slate-800 dark:bg-slate-700 text-white text-sm border border-slate-600 dark:border-slate-500">
+          <Trash2 size={14} className="text-slate-300 shrink-0" />
+          <span className="whitespace-nowrap">{undoCount} movimiento{undoCount > 1 ? 's' : ''} eliminado{undoCount > 1 ? 's' : ''}</span>
+          <button
+            onClick={handleUndo}
+            className="ml-1 px-3 py-1 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold transition-colors whitespace-nowrap"
+          >
+            Deshacer
+          </button>
+          <button
+            onClick={() => { clearTimeout(undoTimerRef.current); setUndoCount(0); deletedRef.current = [] }}
+            aria-label="Cerrar"
+            className="w-5 h-5 flex items-center justify-center opacity-40 hover:opacity-70 transition-opacity"
+          >
+            <X size={13} />
           </button>
         </div>
       )}
