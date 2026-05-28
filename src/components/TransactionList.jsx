@@ -368,9 +368,14 @@ export default function TransactionList({ transactions, onUpdate }) {
                   </td>
                   <td className="py-2.5 pr-4 max-w-xs">
                     <div className="truncate text-slate-700 dark:text-slate-200" title={t.description}>{t.description}</div>
-                    <div className="flex gap-1.5 mt-0.5">
+                    <div className="flex gap-1.5 mt-0.5 flex-wrap">
                       {t.installment && <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">Cuota {t.installment.current}/{t.installment.total}</span>}
                       {isCredit && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">↩ Crédito</span>}
+                      {t.originalCurrency && (
+                        <span className="text-[10px] text-sky-500 dark:text-sky-400 font-semibold font-mono">
+                          {t.originalCurrency} {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.originalAmount)}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="py-2.5 pr-4">

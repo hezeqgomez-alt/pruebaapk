@@ -92,6 +92,10 @@ function rowsToTransactions(headers, rows) {
     const note = String(getCell(row, idx, 'nota') || '').trim() || undefined
     const installment = parseInstallment(getCell(row, idx, 'cuota'))
 
+    const originalCurrency = String(getCell(row, idx, 'moneda') || '').trim().toUpperCase() || undefined
+    const origRaw = getCell(row, idx, 'importeorig')
+    const originalAmount = origRaw !== '' ? (parseFloat(String(origRaw).replace(',', '.')) || undefined) : undefined
+
     txs.push({
       date,
       description,
@@ -101,6 +105,8 @@ function rowsToTransactions(headers, rows) {
       source,
       ...(note ? { note } : {}),
       ...(installment ? { installment } : {}),
+      ...(originalCurrency ? { originalCurrency } : {}),
+      ...(originalAmount ? { originalAmount } : {}),
     })
   }
 

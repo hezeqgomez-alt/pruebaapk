@@ -140,6 +140,20 @@ function detectInstallment(text) {
   return null
 }
 
+// ─── Foreign currency detection ─────────────────────────────────────────────
+
+const FX_RE = /\b(U\$[DS]|USD|EUR|GBP|BRL|CLP|UYU)\s+([\d.,]+)/i
+const FX_NORM = { 'U$D': 'USD', 'U$S': 'USD' }
+
+function detectForeignCurrency(text) {
+  const m = norm(text).match(FX_RE)
+  if (!m) return null
+  const currency = FX_NORM[m[1].toUpperCase()] || m[1].toUpperCase()
+  const originalAmount = parseAmount(m[2])
+  if (!originalAmount || originalAmount <= 0) return null
+  return { originalCurrency: currency, originalAmount }
+}
+
 // ─── Amount detection in a line ──────────────────────────────────────────────
 
 // Monto válido: separador de miles (1.234), coma decimal (1234,56),
@@ -301,6 +315,7 @@ function parseRows(rows, filename, refYear, ocrMode = false) {
     if (shouldSkipDesc(desc)) continue
 
     const installment = detectInstallment(row.text)
+    const fx = detectForeignCurrency(row.text)
 
     transactions.push({
       id: crypto.randomUUID(),
@@ -311,6 +326,7 @@ function parseRows(rows, filename, refYear, ocrMode = false) {
       installment,
       category: categorize(desc),
       source: filename,
+      ...(fx || {}),
       raw: row.text,
     })
   }
@@ -356,6 +372,7 @@ function parseColumnar(rows, filename, refYear) {
     if (shouldSkipDesc(desc)) continue
 
     const installment = detectInstallment(text)
+    const fx = detectForeignCurrency(text)
     transactions.push({
       id: crypto.randomUUID(),
       date,
@@ -365,6 +382,7 @@ function parseColumnar(rows, filename, refYear) {
       installment,
       category: categorize(desc),
       source: filename,
+      ...(fx || {}),
       raw: text,
     })
   }

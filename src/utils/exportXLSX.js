@@ -75,7 +75,7 @@ export function exportXLSX(transactions) {
   XLSX.utils.book_append_sheet(wb, wsMo, 'Por mes')
 
   // ── Sheet 4: Movimientos ──────────────────────────────────────────────────
-  const txHead = ['Fecha', 'Descripción', 'Categoría', 'Tipo', 'Importe ($)', 'Cuota', 'Nota', 'Origen']
+  const txHead = ['Fecha', 'Descripción', 'Categoría', 'Tipo', 'Importe ($)', 'Moneda', 'Importe orig.', 'Cuota', 'Nota', 'Origen']
   const txRows = [txHead, ...[...transactions]
     .sort((a, b) => b.date.localeCompare(a.date))
     .map(t => [
@@ -84,12 +84,14 @@ export function exportXLSX(transactions) {
       CATEGORIES[t.category]?.label || t.category,
       t.type === 'credit' ? 'Crédito' : 'Débito',
       t.type === 'credit' ? fmtNum(t.amount) : fmtNum(-t.amount),
+      t.originalCurrency || '',
+      t.originalAmount ? fmtNum(t.originalAmount) : '',
       t.installment ? `${t.installment.current}/${t.installment.total}` : '',
       t.note || '',
       t.source,
     ])]
   const wsTx = XLSX.utils.aoa_to_sheet(txRows)
-  wsTx['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 30 }, { wch: 30 }]
+  wsTx['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 30 }, { wch: 30 }]
   XLSX.utils.book_append_sheet(wb, wsTx, 'Movimientos')
 
   // ── Sheet 5: Cuotas activas ───────────────────────────────────────────────
