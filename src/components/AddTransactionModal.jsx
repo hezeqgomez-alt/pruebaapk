@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Plus } from 'lucide-react'
 import { CATEGORIES } from '../utils/categorizer'
 
+function parseArgAmount(raw) {
+  let s = String(raw).trim()
+  if (s.includes(',')) return parseFloat(s.replace(/\./g, '').replace(',', '.'))
+  s = s.replace(/\.(?=\d{3}(\D|$))/g, '')
+  return parseFloat(s)
+}
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function AddTransactionModal({ onAdd, onClose, triggerRef }) {
@@ -57,7 +64,7 @@ export default function AddTransactionModal({ onAdd, onClose, triggerRef }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!form.description.trim()) return setError('Ingresá una descripción')
-    const amount = parseFloat(form.amount.replace(',', '.'))
+    const amount = parseArgAmount(form.amount)
     if (isNaN(amount) || amount <= 0) return setError('Ingresá un importe válido mayor a 0')
     if (!form.date) return setError('Ingresá una fecha')
 

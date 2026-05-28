@@ -98,6 +98,7 @@ function rowsToTransactions(headers, rows) {
     const originalAmount = origRaw !== '' ? (parseFloat(String(origRaw).replace(',', '.')) || undefined) : undefined
 
     txs.push({
+      id: crypto.randomUUID(),
       date,
       description,
       amount,
