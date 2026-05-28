@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Target, Edit3, Check, X, AlertTriangle } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { CATEGORIES } from '../utils/categorizer'
 import { saveBudgets } from '../utils/storage'
 
@@ -99,7 +101,7 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
       {/* Summary bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Gastado este mes', value: fmt(totalSpend), sub: currentMonth?.replace('-', '/') || '—', color: 'indigo' },
+          { label: 'Gastado este mes', value: fmt(totalSpend), sub: currentMonth ? format(parseISO(currentMonth + '-01'), 'MMMM yyyy', { locale: es }) : '—', color: 'indigo' },
           { label: 'Presupuesto total', value: totalBudget ? fmt(totalBudget) : 'Sin definir', sub: `${budgetedCategories.length} categ. configuradas`, color: 'violet' },
           { label: 'Disponible', value: totalBudget ? fmt(Math.max(0, totalBudget - totalSpend)) : '—', sub: totalBudget ? `${((totalSpend / totalBudget) * 100).toFixed(0)}% usado` : 'Configurá tu presupuesto', color: totalBudget && totalSpend > totalBudget ? 'red' : 'emerald' },
           { label: 'Categorías sobre límite', value: overBudget.length, sub: overBudget.length ? overBudget.map(c => CATEGORIES[c]?.label).join(', ') : 'Todo dentro del límite', color: overBudget.length ? 'red' : 'emerald' },

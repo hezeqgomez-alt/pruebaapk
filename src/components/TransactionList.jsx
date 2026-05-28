@@ -74,6 +74,7 @@ function InlineNote({ value, onSave }) {
       <button
         onClick={() => { setEditing(true); setTimeout(() => inputRef.current?.focus(), 0) }}
         title={value ? value : 'Agregar nota'}
+        aria-label={value ? 'Editar nota' : 'Agregar nota'}
         className={`w-6 h-6 flex items-center justify-center rounded-lg transition-all ${
           value
             ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950 dark:text-indigo-400'
@@ -355,7 +356,7 @@ export default function TransactionList({ transactions, onUpdate }) {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto px-4">
+      <div className="relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-700 text-left">
@@ -414,10 +415,11 @@ export default function TransactionList({ transactions, onUpdate }) {
                   <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                     {isCredit ? '+' : ''}{fmt(t.amount)}
                   </td>
-                  <td className="py-2.5 w-8">
+                  <td className="py-2.5 w-10">
                     <button onClick={() => deleteOne(t.id)}
-                      className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all" title="Eliminar">
-                      <Trash2 size={12} />
+                      aria-label="Eliminar movimiento"
+                      className="opacity-0 group-hover:opacity-100 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all" title="Eliminar">
+                      <Trash2 size={13} />
                     </button>
                   </td>
                 </tr>

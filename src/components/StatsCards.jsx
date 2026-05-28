@@ -49,41 +49,41 @@ export default function StatsCards({ transactions }) {
       </div>
 
       {/* Créditos */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
         <div className="flex items-start justify-between mb-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
-            <ArrowUpCircle size={18} className="text-emerald-600" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center">
+            <ArrowUpCircle size={18} className="text-emerald-600 dark:text-emerald-400" />
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Créditos</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Créditos</span>
         </div>
-        <div className="text-2xl font-extrabold text-slate-800 leading-none mb-1">{fmt(totalCredits)}</div>
-        <div className="text-xs text-slate-400">
+        <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none mb-1">{fmt(totalCredits)}</div>
+        <div className="text-xs text-slate-400 dark:text-slate-500">
           {credits.length > 0
-            ? <span>Neto: <span className="font-semibold text-slate-600">{fmt(net)}</span></span>
+            ? <span>Neto: <span className="font-semibold text-slate-600 dark:text-slate-300">{fmt(net)}</span></span>
             : 'Sin créditos'}
         </div>
       </div>
 
       {/* Variación */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
         <div className="flex items-start justify-between mb-3">
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-            trend === null ? 'bg-slate-50' : trend > 0 ? 'bg-red-50' : 'bg-emerald-50'
+            trend === null ? 'bg-slate-50 dark:bg-slate-700' : trend > 0 ? 'bg-red-50 dark:bg-red-900/40' : 'bg-emerald-50 dark:bg-emerald-900/40'
           }`}>
             {trend === null
               ? <TrendingUp size={18} className="text-slate-400" />
               : trend > 0
               ? <TrendingUp size={18} className="text-red-500" />
-              : <TrendingDown size={18} className="text-emerald-600" />}
+              : <TrendingDown size={18} className="text-emerald-600 dark:text-emerald-400" />}
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Variación</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variación</span>
         </div>
         <div className={`text-2xl font-extrabold leading-none mb-1 ${
-          trend === null ? 'text-slate-400' : trend > 0 ? 'text-red-500' : 'text-emerald-600'
+          trend === null ? 'text-slate-400' : trend > 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'
         }`}>
           {trend !== null ? `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%` : '—'}
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-slate-400 dark:text-slate-500">
           {lastMonth
             ? safeFormat(lastMonth[0] + '-01', "MMM ''yy", { locale: es }) + ' vs mes anterior'
             : 'vs mes anterior'}
@@ -91,15 +91,15 @@ export default function StatsCards({ transactions }) {
       </div>
 
       {/* Fuentes */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
         <div className="flex items-start justify-between mb-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
-            <CreditCard size={18} className="text-violet-600" />
+          <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-900/40 flex items-center justify-center">
+            <CreditCard size={18} className="text-violet-600 dark:text-violet-400" />
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Tarjetas</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Tarjetas</span>
         </div>
-        <div className="text-2xl font-extrabold text-slate-800 leading-none mb-1">{sources.length}</div>
-        <div className="text-xs text-slate-400 truncate" title={sources.join(', ')}>
+        <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none mb-1">{sources.length}</div>
+        <div className="text-xs text-slate-400 dark:text-slate-500 truncate" title={sources.join(', ')}>
           {sources.slice(0, 2).join(', ')}{sources.length > 2 ? ` +${sources.length - 2}` : ''}
         </div>
       </div>

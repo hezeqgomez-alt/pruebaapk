@@ -272,6 +272,16 @@ function normalize(s) {
     .trim()
 }
 
+// Like normalize but without .trim() — preserves leading/trailing spaces so
+// keywords like 'bar ' act as word-boundary guards when matched against a
+// padded description (' ' + n + ' ').
+function normalizeKw(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+}
+
 // Payment gateway prefixes that concatenate the merchant name without spaces
 // e.g. "MERPAGOMOSTAZA" → merchant "MOSTAZA", "PAYU*AR*UBER" → "UBER"
 const GATEWAY_PREFIXES = [
@@ -300,17 +310,19 @@ function extractMerchant(desc) {
 export function categorize(description) {
   if (!description) return 'otros'
   const n = normalize(description)
+  const np = ' ' + n + ' '
 
   for (const rule of RULES) {
-    if (rule.kw.some(k => n.includes(normalize(k)))) return rule.cat
+    if (rule.kw.some(k => np.includes(normalizeKw(k)))) return rule.cat
   }
 
   // If it's a gateway transaction, extract the merchant name and retry
   const merchant = extractMerchant(description)
   if (merchant && merchant.length >= 3) {
     const mn = normalize(merchant)
+    const mnp = ' ' + mn + ' '
     for (const rule of RULES) {
-      if (rule.kw.some(k => mn.includes(normalize(k)))) return rule.cat
+      if (rule.kw.some(k => mnp.includes(normalizeKw(k)))) return rule.cat
     }
   }
 

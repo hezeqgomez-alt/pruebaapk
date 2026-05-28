@@ -44,7 +44,6 @@ export default function AddTransactionModal({ onAdd, onClose }) {
       note: form.note.trim(),
       installment: null,
       source: 'Ingreso manual',
-      raw: '',
     })
     onClose()
   }
@@ -54,7 +53,12 @@ export default function AddTransactionModal({ onAdd, onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700"
+      >
 
         {/* Header */}
         <div className="flex items-center gap-3 p-5 border-b border-slate-100 dark:border-slate-700">
@@ -62,10 +66,10 @@ export default function AddTransactionModal({ onAdd, onClose }) {
             <Plus size={18} className="text-white" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Agregar movimiento</h2>
+            <h2 id="modal-title" className="font-semibold text-slate-800 dark:text-slate-100">Agregar movimiento</h2>
             <p className="text-xs text-slate-400">Ingreso manual de transacción</p>
           </div>
-          <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} aria-label="Cerrar" className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
             <X size={18} />
           </button>
         </div>

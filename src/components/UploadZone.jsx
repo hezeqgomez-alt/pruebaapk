@@ -70,9 +70,9 @@ export default function UploadZone({ onFiles, onRejected, compact }) {
         </div>
 
         <p className="text-lg font-semibold text-slate-700 mb-1">
-          {dragging ? 'Soltá los archivos aquí' : 'Arrastrá tus resúmenes de tarjeta'}
+          {dragging ? 'Soltá los archivos aquí' : 'Subí tus resúmenes de tarjeta o banco'}
         </p>
-        <p className="text-sm text-slate-400 mb-6">o hacé clic para seleccionar archivos PDF</p>
+        <p className="text-sm text-slate-400 mb-6">Arrastrá los PDFs o hacé clic para seleccionarlos</p>
 
         <div className="flex flex-wrap gap-2 justify-center mb-5">
           {BANKS.map(b => (
