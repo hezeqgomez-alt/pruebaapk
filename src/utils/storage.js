@@ -52,7 +52,7 @@ export function loadBudgets() {
 }
 
 export function saveBudgets(budgets) {
-  localStorage.setItem(KEY_BUD, JSON.stringify(budgets))
+  try { localStorage.setItem(KEY_BUD, JSON.stringify(budgets)) } catch { /* quota/private-mode */ }
 }
 
 // ── Filter preferences ────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export function loadFilterPrefs() {
 }
 
 export function saveFilterPrefs(prefs) {
-  localStorage.setItem(KEY_FILT, JSON.stringify(prefs))
+  try { localStorage.setItem(KEY_FILT, JSON.stringify(prefs)) } catch { /* quota/private-mode */ }
 }
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
@@ -75,5 +75,5 @@ export function loadDarkMode() {
 }
 
 export function saveDarkMode(val) {
-  localStorage.setItem(KEY_DARK, String(val))
+  try { localStorage.setItem(KEY_DARK, String(val)) } catch { /* quota/private-mode */ }
 }

@@ -164,7 +164,7 @@ export default function TransactionList({ transactions, onUpdate }) {
       if (va > vb) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [transactions, search, filterCat, filterType, dateFrom, dateTo, sortBy, sortDir])
+  }, [transactions, search, filterCat, filterSource, filterType, dateFrom, dateTo, sortBy, sortDir])
 
   const paged = filtered.slice(0, page * PER_PAGE)
 
