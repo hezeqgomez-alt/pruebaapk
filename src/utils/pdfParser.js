@@ -276,13 +276,34 @@ function shouldSkipDesc(desc) {
   return false
 }
 
+// ─── Card-section header detection ───────────────────────────────────────────
+// Matches: "TARJETA (0085) TOTAL CONSUMOS DE GUIDO/MARIA CANDELA  493.829,90  0,00"
+const CARD_HDR_RE = /tarjeta\s*\((\d+)\)[^A-Z]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,50})/i
+
+function extractCardInfo(text) {
+  const m = text.match(CARD_HDR_RE)
+  if (!m) return null
+  const suffix = m[1].replace(/\D/g, '').slice(-4)
+  // Argentine format: APELLIDO/NOMBRE — we show only the given name
+  const raw = m[2].trim().replace(/\s+[\d.,\s]+$/, '') // strip trailing amount fragments
+  const given = raw.includes('/') ? raw.split('/').pop().trim() : raw
+  const holder = given.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+  return { suffix, holder }
+}
+
 // ─── Core row-based parser ───────────────────────────────────────────────────
 
-function parseRows(rows, filename, refYear, ocrMode = false) {
+function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
   const transactions = []
+  let currentCard = null
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
+
+    // Detect card section headers before date check (they have no parseable date)
+    const cardInfo = extractCardInfo(row.text)
+    if (cardInfo) { currentCard = cardInfo; continue }
+
     const date = parseDate(row.text, refYear)
     if (!date) continue
 
@@ -325,7 +346,8 @@ function parseRows(rows, filename, refYear, ocrMode = false) {
       type,
       installment,
       category: categorize(desc),
-      source: filename,
+      source: currentCard ? `${bank || filename} · *${currentCard.suffix}` : filename,
+      ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     })
   }
@@ -335,11 +357,17 @@ function parseRows(rows, filename, refYear, ocrMode = false) {
 
 // ─── Column-aware parser (for PDFs with clearly separated columns) ───────────
 
-function parseColumnar(rows, filename, refYear) {
+function parseColumnar(rows, filename, refYear, bank = '') {
   const transactions = []
+  let currentCard = null
 
   for (let i = 0; i < rows.length; i++) {
     const { cols, text } = rows[i]
+
+    // Detect card section headers
+    const cardInfo = extractCardInfo(text)
+    if (cardInfo) { currentCard = cardInfo; continue }
+
     if (cols.length < 2) continue
 
     // First column: try to find a date
@@ -380,7 +408,8 @@ function parseColumnar(rows, filename, refYear) {
       type: amount < 0 ? 'credit' : 'debit',
       installment,
       category: categorize(desc),
-      source: filename,
+      source: currentCard ? `${bank || filename} · *${currentCard.suffix}` : filename,
+      ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     })
   }
@@ -502,8 +531,8 @@ export async function parsePDF(file, { onProgress } = {}) {
       const bank = detectBank(ocrText)
       const refYear = detectYear(ocrText)
       const rows = groupIntoRows(ocrItems)
-      const colTxs = parseColumnar(rows, file.name, refYear)
-      const rowTxs = parseRows(rows, file.name, refYear, true)
+      const colTxs = parseColumnar(rows, file.name, refYear, bank)
+      const rowTxs = parseRows(rows, file.name, refYear, true, bank)
       let transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
       return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
     } catch (e) {
@@ -520,8 +549,8 @@ export async function parsePDF(file, { onProgress } = {}) {
   for (const items of pages) {
     try {
       const rows = groupIntoRows(items)
-      const colTxs = parseColumnar(rows, file.name, refYear)
-      const rowTxs = parseRows(rows, file.name, refYear)
+      const colTxs = parseColumnar(rows, file.name, refYear, bank)
+      const rowTxs = parseRows(rows, file.name, refYear, false, bank)
       transactions.push(...(colTxs.length >= rowTxs.length ? colTxs : rowTxs))
     } catch {
       pageErrors++

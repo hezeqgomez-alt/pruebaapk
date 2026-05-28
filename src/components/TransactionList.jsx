@@ -438,8 +438,8 @@ export default function TransactionList({ transactions, onUpdate }) {
                           </span>
                         )}
                         {t.source && (
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[120px]" title={t.source}>
-                            {t.source}
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[140px]" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>
+                            {t.source}{t.cardHolder ? ` · ${t.cardHolder}` : ''}
                           </span>
                         )}
                       </div>
@@ -455,8 +455,9 @@ export default function TransactionList({ transactions, onUpdate }) {
                         )}
                       </div>
                     </td>
-                    <td className="py-2.5 pr-4 max-w-[100px] hidden lg:table-cell">
-                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.source}>{t.source}</span>
+                    <td className="py-2.5 pr-4 max-w-[120px] hidden lg:table-cell">
+                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>{t.source}</span>
+                      {t.cardHolder && <span className="truncate block text-[10px] text-slate-300 dark:text-slate-600">{t.cardHolder}</span>}
                     </td>
                     <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                       {isCredit ? '+' : ''}{fmt(t.amount)}
