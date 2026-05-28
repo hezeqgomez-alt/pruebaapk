@@ -327,7 +327,6 @@ function parseRows(rows, filename, refYear, ocrMode = false) {
       category: categorize(desc),
       source: filename,
       ...(fx || {}),
-      raw: row.text,
     })
   }
 
@@ -383,7 +382,6 @@ function parseColumnar(rows, filename, refYear) {
       category: categorize(desc),
       source: filename,
       ...(fx || {}),
-      raw: text,
     })
   }
 

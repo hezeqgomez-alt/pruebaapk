@@ -83,8 +83,8 @@ const RULES = [
     'adobe', 'canva ', 'figma', 'notion ', 'slack ', 'zoom ', 'github ',
     'chatgpt', 'openai', 'linkedin premium', 'duolingo', 'rosetta',
     'quillbot', 'audible', 'kindle',
-    // Telefonía argentina
-    'personal ', 'claro ', 'movistar', 'tuenti', 'telecom',
+    // Telefonía argentina (usar nombres específicos para evitar "PERSONAL TRAINER" → suscripciones)
+    'personal ar', 'personal prepago', 'personal movil', 'claro ', 'movistar', 'tuenti', 'telecom',
     'tigo ', 'nextel', 'telefonica', 'arnet', 'speedy',
     'coop tel', 'cooperativa telefonica',
   ]},
@@ -134,7 +134,7 @@ const RULES = [
 
   // ── Combustible ──────────────────────────────────────────────────────────────
   { cat: 'combustible', kw: [
-    'ypf', 'shell ', 'axion', 'puma ', 'petrobras', 'oil combustible',
+    'ypf', 'shell ', 'axion', 'puma energy', 'petrobras', 'oil combustible',
     'refinor', 'eg3', 'dapsa', 'nafta', 'combustible', 'gasoil',
     'gasolina', 'estacion de servicio', 'service station', 'surtidor',
   ]},
@@ -150,7 +150,7 @@ const RULES = [
     'fisioterapia', 'kinesiologia', 'psicologia', 'psiquiatria',
     'nutricionista', 'gym', 'gimnasio', 'personal trainer',
     'pilates', 'yoga', 'meditacion',
-    'garrahan', 'italaqua',
+    'italaqua',
   ]},
 
   // ── Indumentaria ─────────────────────────────────────────────────────────────

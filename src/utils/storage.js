@@ -25,7 +25,17 @@ export function loadData() {
 }
 
 export function saveData(data) {
-  localStorage.setItem(KEY, JSON.stringify(data))
+  const slim = {
+    ...data,
+    transactions: data.transactions?.map(({ raw, ...t }) => t),
+  }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(slim))
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      console.warn('EasyResumen: localStorage quota exceeded, datos no guardados')
+    }
+  }
 }
 
 export function clearData() {

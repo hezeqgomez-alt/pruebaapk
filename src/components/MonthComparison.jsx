@@ -15,8 +15,9 @@ function safeFormat(dateStr, fmtStr, opts) {
   try { return format(parseISO(dateStr), fmtStr, opts) } catch { return dateStr?.slice(0, 7) || '' }
 }
 
-const MonthComparison = forwardRef(function MonthComparison({ transactions, selectedCategories }, ref) {
-  const [viewMode, setViewMode] = useState('monthly') // 'monthly' | 'annual'
+const MonthComparison = forwardRef(function MonthComparison({ transactions }, ref) {
+  const [viewMode, setViewMode]     = useState('monthly') // 'monthly' | 'annual'
+  const [showStacked, setShowStacked] = useState(false)
 
   const debits = transactions.filter(t => t.type !== 'credit')
 
@@ -50,9 +51,7 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
     ? sortedYears
     : sortedMonths.map(m => safeFormat(m + '-01', 'MMM yy', { locale: es }))
 
-  const cats = selectedCategories && selectedCategories.length > 0
-    ? selectedCategories
-    : Object.keys(CATEGORIES)
+  const cats = Object.keys(CATEGORIES)
 
   const datasets = cats.map(cat => ({
     label: CATEGORIES[cat]?.label || cat,
@@ -70,7 +69,6 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
     borderSkipped: false,
   }
 
-  const showStacked = selectedCategories && selectedCategories.length > 0
   const data = { labels, datasets: showStacked ? datasets : [totalByKey] }
 
   const options = {
@@ -99,10 +97,21 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">
           {isAnnual ? 'Comparativo anual' : 'Comparativo mes a mes'}
         </h3>
+        <div className="flex gap-1 flex-wrap">
+        <button
+          onClick={() => setShowStacked(v => !v)}
+          className={`px-3 py-1 rounded-xl text-xs font-medium border transition-all ${
+            showStacked
+              ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300'
+              : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+          }`}
+        >
+          Por categoría
+        </button>
         <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
           <button
             onClick={() => setViewMode('monthly')}
@@ -124,6 +133,7 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions, sele
           >
             Anual
           </button>
+        </div>
         </div>
       </div>
 

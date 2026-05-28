@@ -7,10 +7,19 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
+function parseArgAmount(raw) {
+  let s = raw.trim()
+  // If there's a comma → Argentine format: dots are thousands, comma is decimal
+  if (s.includes(',')) return parseFloat(s.replace(/\./g, '').replace(',', '.'))
+  // No comma: strip dots that look like thousands separators (digit.3digits pattern)
+  s = s.replace(/\.(?=\d{3}(\D|$))/g, '')
+  return parseFloat(s)
+}
+
 function EditBudget({ value, onSave, onCancel }) {
   const [val, setVal] = useState(value ? String(value).replace('.', ',') : '')
   function commit() {
-    const n = parseFloat(val.replace(',', '.'))
+    const n = parseArgAmount(val)
     if (!isNaN(n) && n > 0) onSave(n)
     else if (val === '' || val === '0') onSave(0)
   }

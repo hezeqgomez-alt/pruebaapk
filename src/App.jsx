@@ -400,9 +400,10 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'movimientos' && (
+            {/* Always mounted to preserve page/sort state when switching tabs */}
+            <div className={activeTab !== 'movimientos' ? 'hidden' : ''}>
               <TransactionList transactions={transactions} onUpdate={setTransactions} />
-            )}
+            </div>
 
             {activeTab === 'presupuesto' && (
               <BudgetPanel

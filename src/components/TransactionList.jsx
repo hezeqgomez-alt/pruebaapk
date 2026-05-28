@@ -32,7 +32,7 @@ function EditableCategory({ value, onChange }) {
         <span style={{ color: CATEGORIES[value]?.color || '#64748b' }} className="font-medium">
           {CATEGORIES[value]?.icon} {CATEGORIES[value]?.label || value}
         </span>
-        <Edit3 size={9} className="opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: CATEGORIES[value]?.color || '#64748b' }} />
+        <Edit3 size={9} className="opacity-20 group-hover:opacity-60 transition-opacity" style={{ color: CATEGORIES[value]?.color || '#64748b' }} />
       </button>
     )
   }
@@ -104,14 +104,17 @@ function InlineNote({ value, onSave }) {
 export default function TransactionList({ transactions, onUpdate }) {
   const prefs = loadFilterPrefs()
 
-  const [search, setSearch]         = useState(prefs.search || '')
-  const [filterCat, setFilterCat]   = useState(prefs.filterCat || '')
-  const [dateFrom, setDateFrom]     = useState(prefs.dateFrom || '')
-  const [dateTo, setDateTo]         = useState(prefs.dateTo || '')
-  const [filterType, setFilterType] = useState(prefs.filterType || '')
-  const [page, setPage]             = useState(1)
-  const [sortBy, setSortBy]         = useState('date')
-  const [sortDir, setSortDir]       = useState('desc')
+  const [searchInput, setSearchInput] = useState(prefs.search || '')
+  const [search, setSearch]           = useState(prefs.search || '')
+  const searchTimer                   = useRef(null)
+  const [filterCat, setFilterCat]     = useState(prefs.filterCat || '')
+  const [filterSource, setFilterSource] = useState(prefs.filterSource || '')
+  const [dateFrom, setDateFrom]       = useState(prefs.dateFrom || '')
+  const [dateTo, setDateTo]           = useState(prefs.dateTo || '')
+  const [filterType, setFilterType]   = useState(prefs.filterType || '')
+  const [page, setPage]               = useState(1)
+  const [sortBy, setSortBy]           = useState('date')
+  const [sortDir, setSortDir]         = useState('desc')
   const [showFilters, setShowFilters] = useState(false)
 
   // Multi-select
@@ -120,12 +123,14 @@ export default function TransactionList({ transactions, onUpdate }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const PER_PAGE = 50
-  const hasActiveFilter = search || filterCat || filterType || dateFrom || dateTo
+  const hasActiveFilter = searchInput || filterCat || filterType || dateFrom || dateTo || filterSource
+
+  const sources = useMemo(() => [...new Set(transactions.map(t => t.source))].sort(), [transactions])
 
   // Persist filter prefs
   useEffect(() => {
-    saveFilterPrefs({ search, filterCat, filterType, dateFrom, dateTo })
-  }, [search, filterCat, filterType, dateFrom, dateTo])
+    saveFilterPrefs({ search: searchInput, filterCat, filterType, dateFrom, dateTo, filterSource })
+  }, [searchInput, filterCat, filterType, dateFrom, dateTo, filterSource])
 
   function toggleSort(field) {
     if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -134,13 +139,15 @@ export default function TransactionList({ transactions, onUpdate }) {
   }
 
   function clearFilters() {
-    setSearch(''); setFilterCat(''); setFilterType(''); setDateFrom(''); setDateTo(''); setPage(1)
+    setSearchInput(''); setSearch(''); setFilterCat(''); setFilterSource(''); setFilterType(''); setDateFrom(''); setDateTo(''); setPage(1)
+    clearTimeout(searchTimer.current)
   }
 
   const filtered = useMemo(() => {
     return transactions.filter(t => {
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
       if (filterCat && t.category !== filterCat) return false
+      if (filterSource && t.source !== filterSource) return false
       if (filterType && (t.type || 'debit') !== filterType) return false
       if (dateFrom && t.date < dateFrom) return false
       if (dateTo && t.date > dateTo) return false
@@ -234,31 +241,36 @@ export default function TransactionList({ transactions, onUpdate }) {
         </div>
 
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${search ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-500'}`}>
+          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${searchInput ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-500'}`}>
             <Search size={13} className="text-slate-400 shrink-0" />
             <input
               type="text"
               placeholder="Buscar…"
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              value={searchInput}
+              onChange={e => {
+                const v = e.target.value
+                setSearchInput(v); setPage(1)
+                clearTimeout(searchTimer.current)
+                searchTimer.current = setTimeout(() => setSearch(v), 150)
+              }}
               className="text-sm bg-transparent outline-none w-36 text-slate-700 dark:text-slate-200 placeholder-slate-400"
             />
-            {search && <button onClick={() => { setSearch(''); setPage(1) }} className="text-slate-300 hover:text-slate-500"><X size={12} /></button>}
+            {searchInput && <button onClick={() => { setSearchInput(''); setSearch(''); setPage(1) }} className="text-slate-300 hover:text-slate-500"><X size={12} /></button>}
           </div>
 
           <button
             onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors ${
-              showFilters || (filterCat || filterType || dateFrom || dateTo)
+              showFilters || (filterCat || filterType || dateFrom || dateTo || filterSource)
                 ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400'
                 : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 hover:border-slate-300'
             }`}
           >
             <SlidersHorizontal size={13} />
             <span className="hidden sm:inline">Filtros</span>
-            {(filterCat || filterType || dateFrom || dateTo) && (
+            {(filterCat || filterType || dateFrom || dateTo || filterSource) && (
               <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">
-                {[filterCat, filterType, dateFrom || dateTo].filter(Boolean).length}
+                {[filterCat, filterType, filterSource, dateFrom || dateTo].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -279,6 +291,13 @@ export default function TransactionList({ transactions, onUpdate }) {
             <option value="">Todas las categorías</option>
             {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
           </select>
+          {sources.length > 1 && (
+            <select value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(1) }}
+              className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+              <option value="">Todas las tarjetas</option>
+              {sources.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
           <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }}
             className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
             <option value="">Débitos y créditos</option>

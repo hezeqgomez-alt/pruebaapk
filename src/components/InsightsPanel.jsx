@@ -116,7 +116,7 @@ function SavingsCalculator({ findings, transactions }) {
 }
 
 export default function InsightsPanel({ findings, transactions, onRefresh }) {
-  const [refreshing, setRefreshing] = useState(false)
+  const [refreshing, setRefreshing] = useState(false) // eslint-disable-line no-unused-vars
 
   if (findings.length === 0 && transactions.length === 0) return null
 
@@ -159,11 +159,7 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
   const alertCount = insights.filter(i => i.type !== 'ok').length
 
   function handleRefresh() {
-    setRefreshing(true)
-    setTimeout(() => {
-      onRefresh?.()
-      setRefreshing(false)
-    }, 600)
+    onRefresh?.()
   }
 
   return (
@@ -182,11 +178,10 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
           )}
           <button
             onClick={handleRefresh}
-            disabled={refreshing}
-            title="Actualizar alertas"
-            className={`w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all disabled:opacity-50 ${refreshing ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700' : ''}`}
+            title="Reiniciar alertas descartadas"
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all"
           >
-            <RefreshCw size={13} className={refreshing ? 'animate-spin text-indigo-500' : ''} />
+            <RefreshCw size={13} />
           </button>
         </div>
       </div>
