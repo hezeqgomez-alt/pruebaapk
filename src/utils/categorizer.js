@@ -75,8 +75,8 @@ const RULES = [
     'apple storage', 'icloud',
     // Sony servicios (antes de 'sony ' en hogar)
     'sony one', 'sony music', 'sony liv',
-    // Google
-    'google one', 'google storage', 'google play',
+    // Google (any product: One, Play, GSuite, Workspace, Services…)
+    'google', 'gsuite', 'google workspace',
     // Microsoft / cloud
     'microsoft 365', 'office 365', 'dropbox',
     // Productividad / software

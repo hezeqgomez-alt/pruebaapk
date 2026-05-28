@@ -249,7 +249,9 @@ function shouldSkipDesc(desc) {
   // Installment schedule rows: 2+ "Month/YY" or "Month-YY" tokens (e.g. "ENE/25 FEB/25")
   if ((desc.match(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)[\/\-]\d{2}\b/gi) || []).length >= 2) return true
   // Argentine CC fiscal/fee rows: interest, taxes, commissions — not merchant purchases
-  if (/^(interes\w*\s+(?:de\s+)?financ|iibb\b|iva\s+rg|db\.?\s*iva|db\.?rg\b|com\.adm|transferencia\s+deuda|percep[^a-z])/i.test(desc)) return true
+  if (/^(interes\w*\s+(?:(?:de|por|s\/)\s+)?financ|iibb\b|iva\s+rg|db\.?\s*iva|db\.?rg\b|com\.adm|transferencia\s+deuda|percep[^a-z])/i.test(desc)) return true
+  // Bank administrative cargo rows (e.g. "CARGO COM.ADM", "CARGO FINANCIERO", "CARGO RENOVACION ANUAL")
+  if (/^cargo\s+(?:com\.?\s*adm|financiero|renovaci[oó]n|administrativo|mantenimiento|anual\b)/i.test(desc)) return true
   // OCR garbage: description is just digits, colons or very few letters after cleaning
   if (/^[\d\s:.,\/\-]+$/.test(desc)) return true
   // Extremely short residual (allow 3-letter merchants like YPF, OCA, ACA)
