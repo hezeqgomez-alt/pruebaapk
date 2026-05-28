@@ -30,19 +30,19 @@ export default function UploadZone({ onFiles, onRejected, compact }) {
         onDragLeave={onDragLeave}
         className={`flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
           dragging
-            ? 'border-indigo-400 bg-indigo-50/80'
-            : 'border-slate-200 bg-white/60 hover:border-indigo-300 hover:bg-indigo-50/40'
+            ? 'border-indigo-400 bg-indigo-50/80 dark:border-indigo-500 dark:bg-indigo-900/40'
+            : 'border-slate-200 bg-white/60 hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-600 dark:bg-slate-800/60 dark:hover:border-indigo-600 dark:hover:bg-indigo-900/30'
         }`}
       >
         <input type="file" accept=".pdf,application/pdf" multiple className="hidden" onChange={onInput} />
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-          dragging ? 'bg-indigo-100' : 'bg-slate-100'
+          dragging ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-slate-100 dark:bg-slate-700'
         }`}>
           <Upload size={15} className={dragging ? 'text-indigo-500' : 'text-slate-400'} />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-700">Agregar más resúmenes</p>
-          <p className="text-xs text-slate-400">Arrastrá o hacé clic · PDF</p>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Agregar más resúmenes</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">Arrastrá o hacé clic · PDF</p>
         </div>
       </label>
     )

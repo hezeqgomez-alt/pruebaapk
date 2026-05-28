@@ -28,20 +28,19 @@ const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
       const { ctx, chartArea: { top, bottom, left, right } } = chart
       const cx = (left + right) / 2
       const cy = (top + bottom) / 2
+      const isDark = document.documentElement.classList.contains('dark')
 
       ctx.save()
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
-      // "top" caption
       ctx.font = '500 10px system-ui, -apple-system, sans-serif'
       ctx.fillStyle = '#94a3b8'
       ctx.fillText('top', cx, cy - 18)
 
-      // Category name — wrap long names at ~12 chars per line
       const label = CATEGORIES[topCat[0]]?.label || topCat[0]
       ctx.font = 'bold 12px system-ui, -apple-system, sans-serif'
-      ctx.fillStyle = '#1e293b'
+      ctx.fillStyle = isDark ? '#f1f5f9' : '#1e293b'
       if (label.length <= 12) {
         ctx.fillText(label, cx, cy)
       } else {
@@ -51,7 +50,6 @@ const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
         ctx.fillText(words.slice(mid).join(' '), cx, cy + 7)
       }
 
-      // Percentage
       const pct = ((topCat[1] / total) * 100).toFixed(0) + '%'
       ctx.font = '500 10px system-ui, -apple-system, sans-serif'
       ctx.fillStyle = '#64748b'
@@ -67,7 +65,7 @@ const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
       data: sorted.map(([, v]) => v),
       backgroundColor: sorted.map(([k]) => CATEGORIES[k]?.color || '#94a3b8'),
       borderWidth: 3,
-      borderColor: '#fff',
+      borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff',
       hoverBorderWidth: 3,
       hoverOffset: 6,
     }],
@@ -95,8 +93,8 @@ const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col">
-      <h3 className="text-base font-semibold text-slate-700 mb-4">Gastos por categoría</h3>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 flex flex-col">
+      <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Gastos por categoría</h3>
 
       <div className="flex gap-5 items-start flex-1">
         {/* Donut — center label drawn on canvas via plugin, tooltip always on top */}
@@ -115,12 +113,12 @@ const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ background: CATEGORIES[key]?.color || '#94a3b8' }}
                   />
-                  <span className="flex-1 text-slate-600 truncate text-xs">
+                  <span className="flex-1 text-slate-600 dark:text-slate-300 truncate text-xs">
                     {CATEGORIES[key]?.icon} {CATEGORIES[key]?.label || key}
                   </span>
-                  <span className="font-semibold text-slate-800 text-xs whitespace-nowrap">{fmt(val)}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-xs whitespace-nowrap">{fmt(val)}</span>
                 </div>
-                <div className="ml-4 h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div className="ml-4 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{ width: `${pct}%`, background: CATEGORIES[key]?.color || '#94a3b8' }}
