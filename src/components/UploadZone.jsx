@@ -3,14 +3,19 @@ import { Upload, ShieldCheck } from 'lucide-react'
 
 const BANKS = ['CABAL', 'VISA', 'Mastercard', 'AMEX', 'Galicia', 'BBVA', 'Santander', 'Naranja X', '+más']
 
-export default function UploadZone({ onFiles, compact }) {
+export default function UploadZone({ onFiles, onRejected, compact }) {
   const [dragging, setDragging] = useState(false)
 
   const handleFiles = useCallback((files) => {
-    const pdfs = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'))
+    const all = Array.from(files)
+    const pdfs = all.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+    const rejected = all.filter(f => !pdfs.includes(f))
+    if (rejected.length > 0 && onRejected) {
+      onRejected(rejected.map(f => f.name))
+    }
     if (pdfs.length === 0) return
     onFiles(pdfs)
-  }, [onFiles])
+  }, [onFiles, onRejected])
 
   const onDrop = (e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }
   const onDragOver = (e) => { e.preventDefault(); setDragging(true) }

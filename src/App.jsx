@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload,
 } from 'lucide-react'
 import UploadZone from './components/UploadZone'
 import StatsCards from './components/StatsCards'
@@ -17,6 +17,7 @@ import { detectUnnecessary } from './utils/categorizer'
 import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
+import { importFromXLSX, importFromCSV } from './utils/importFile'
 
 function Toast({ msg, onDone }) {
   const isError   = msg.startsWith('❌')
@@ -166,6 +167,46 @@ export default function App() {
     }
   }
 
+  const handleImportFile = useCallback(async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    const name = file.name.toLowerCase()
+    const isXLSX = name.endsWith('.xlsx') || name.endsWith('.xls')
+    const isCSV  = name.endsWith('.csv')
+    if (!isXLSX && !isCSV) {
+      setToast('⚠️ Solo se pueden importar archivos .xlsx o .csv')
+      return
+    }
+
+    try {
+      let imported
+      if (isXLSX) {
+        imported = await importFromXLSX(file)
+      } else {
+        const text = await file.text()
+        imported = importFromCSV(text)
+      }
+
+      if (imported.length === 0) {
+        setToast('⚠️ No se encontraron movimientos válidos en el archivo')
+        return
+      }
+
+      setTransactions(prev => {
+        const existingKeys = new Set(prev.map(t => t.date + t.amount + t.description.slice(0, 15)))
+        const newOnes = imported.filter(t => !existingKeys.has(t.date + t.amount + t.description.slice(0, 15)))
+        const dupes = imported.length - newOnes.length
+        const dupeMsg = dupes > 0 ? ` (${dupes} ya existían)` : ''
+        setToast(`✅ ${newOnes.length} movimientos importados desde ${file.name}${dupeMsg}`)
+        return [...prev, ...newOnes]
+      })
+    } catch (err) {
+      setToast(`❌ Error importando "${file.name}": ${err.message}`)
+    }
+  }, [])
+
   const handleGenerateReport = async () => {
     if (generating) return
     setActiveTab('dashboard')
@@ -260,6 +301,21 @@ export default function App() {
               </>
             )}
 
+            {/* Import Excel/CSV */}
+            <label
+              title="Importar Excel o CSV exportado previamente"
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium transition-colors cursor-pointer"
+            >
+              <Upload size={14} />
+              <span className="hidden sm:inline">Importar</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+            </label>
+
             {/* Add transaction */}
             <button
               onClick={() => setShowAddModal(true)}
@@ -285,7 +341,11 @@ export default function App() {
       {/* ── Main ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        <UploadZone onFiles={handleFiles} compact={hasData} />
+        <UploadZone
+          onFiles={handleFiles}
+          compact={hasData}
+          onRejected={(names) => setToast(`⚠️ Solo se aceptan PDF. Ignorados: ${names.join(', ')}`)}
+        />
 
         {/* Processing indicator */}
         {(loading.length > 0 || ocrProgress) && (
