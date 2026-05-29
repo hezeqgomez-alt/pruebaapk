@@ -4,6 +4,7 @@ import {
   CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload,
 } from 'lucide-react'
 import UploadZone from './components/UploadZone'
+import OnboardingTooltip from './components/OnboardingTooltip'
 import StatsCards from './components/StatsCards'
 import CategoryChart from './components/CategoryChart'
 import MonthComparison from './components/MonthComparison'
@@ -143,9 +144,10 @@ export default function App() {
   }
 
   const exportCSV = () => {
+    const data = filteredForReport ?? transactions
     const rows = [
       ['Fecha', 'Descripcion', 'Categoria', 'Tipo', 'Importe', 'Origen'],
-      ...transactions.map(t => [
+      ...data.map(t => [
         t.date,
         `"${t.description.replace(/"/g, "'")}"`,
         t.category,
@@ -164,7 +166,8 @@ export default function App() {
 
   const handleExportXLSX = () => {
     try {
-      exportXLSX(transactions)
+      const data = filteredForReport ?? transactions
+      exportXLSX(data)
       setToast('📥 Excel exportado')
     } catch (e) {
       setToast(`❌ Error exportando Excel: ${e.message}`)
@@ -282,18 +285,30 @@ export default function App() {
 
                 <button
                   onClick={handleExportXLSX}
-                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
+                  title={filteredForReport && filteredForReport.length < transactions.length ? `Exportar ${filteredForReport.length} movimientos filtrados` : 'Exportar Excel'}
+                  className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
                 >
                   <FileSpreadsheet size={14} />
-                  <span className="hidden sm:inline">Excel</span>
+                  <span className="hidden sm:inline">
+                    Excel{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
+                  </span>
+                  {filteredForReport && filteredForReport.length < transactions.length && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+                  )}
                 </button>
 
                 <button
                   onClick={exportCSV}
-                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
+                  title={filteredForReport && filteredForReport.length < transactions.length ? `Exportar ${filteredForReport.length} movimientos filtrados` : 'Exportar CSV'}
+                  className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
                 >
                   <Download size={14} />
-                  <span className="hidden sm:inline">CSV</span>
+                  <span className="hidden sm:inline">
+                    CSV{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
+                  </span>
+                  {filteredForReport && filteredForReport.length < transactions.length && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+                  )}
                 </button>
 
                 <button
@@ -352,6 +367,7 @@ export default function App() {
           compact={hasData}
           onRejected={(names) => setToast(`⚠️ Solo se aceptan PDF. Ignorados: ${names.join(', ')}`)}
         />
+        <OnboardingTooltip hasData={hasData} />
 
         {/* Processing indicator */}
         {(loading.length > 0 || ocrProgress) && (

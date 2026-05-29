@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag, MessageSquare, AlertTriangle } from 'lucide-react'
+import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag, MessageSquare, AlertTriangle, Info } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CATEGORIES } from '../utils/categorizer'
@@ -396,7 +396,12 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
               <Th field="desc">Descripción</Th>
               <Th field="cat">Categoría</Th>
               <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">Nota</th>
-              <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap hidden lg:table-cell">Origen</th>
+              <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap hidden lg:table-cell">
+                <span className="flex items-center gap-1">
+                  Origen
+                  <Info size={11} className="opacity-50" title="Filtrá por tarjeta usando el botón Filtros ↑" />
+                </span>
+              </th>
               <Th field="amount" className="text-right">Importe</Th>
               <th className="pb-3 w-8" />
             </tr>
