@@ -306,6 +306,16 @@ function buildSource(bank, filename, card) {
   return base
 }
 
+// Returns true for account-holder section headers that have NO card number
+// (e.g. "TARJETA TITULAR", "CONSUMOS TITULARES", "CUENTA TITULAR").
+// When matched we reset currentCard so titular purchases aren't tagged as an additional.
+function isTitularReset(text) {
+  return /\b(?:tarjeta|cuenta|consumos?)\s+titular(?:es)?\b/i.test(text) &&
+    !text.match(/\((\d+)\)/) &&          // no (nnnn) → not an additional
+    !text.match(/terminada\s+en\s+\d{4}/) &&
+    !text.match(/adicional/i)
+}
+
 function extractCardInfo(text) {
   let m
 
@@ -350,6 +360,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
     const row = rows[i]
 
     // Detect card section headers before date check (they have no parseable date)
+    if (isTitularReset(row.text)) { currentCard = null; continue }
     const cardInfo = extractCardInfo(row.text)
     if (cardInfo) { currentCard = cardInfo; continue }
 
@@ -414,6 +425,7 @@ function parseColumnar(rows, filename, refYear, bank = '') {
     const { cols, text } = rows[i]
 
     // Detect card section headers
+    if (isTitularReset(text)) { currentCard = null; continue }
     const cardInfo = extractCardInfo(text)
     if (cardInfo) { currentCard = cardInfo; continue }
 
