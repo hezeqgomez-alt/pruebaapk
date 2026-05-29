@@ -78,7 +78,6 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
     const next = { ...budgets, [cat]: value }
     if (!value) delete next[cat]
     onBudgetsChange(next)
-    saveBudgets(next)
     setEditing(null)
   }
 

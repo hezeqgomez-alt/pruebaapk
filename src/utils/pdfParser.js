@@ -205,7 +205,7 @@ function detectBank(text) {
 // ─── Detect year from PDF text ────────────────────────────────────────────
 
 function detectYear(allText) {
-  const m = allText.match(/\b(202\d)\b/)
+  const m = allText.match(/\b(20[2-4]\d)\b/)
   return m ? parseInt(m[1]) : new Date().getFullYear()
 }
 
@@ -494,7 +494,7 @@ function parseColumnar(rows, filename, refYear, bank = '') {
 function dedupe(txs) {
   const seen = new Set()
   return txs.filter(t => {
-    const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}`
+    const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}`
     if (seen.has(key)) return false
     seen.add(key)
     return true
@@ -520,13 +520,14 @@ async function ocrPages(arrayBuffer, numPages, onProgress) {
   // Use local assets (public/) so OCR works offline in Electron
   const base = window.location.origin
   // Point corePath to the exact file to skip SIMD detection (avoids DotProductSSE crash)
+  let currentPage = 0
   const worker = await createWorker('spa', 1, {
     workerPath: `${base}/tesseract/worker.min.js`,
     langPath:   `${base}/lang`,
     corePath:   `${base}/tesseract-core/tesseract-core-lstm.wasm.js`,
     logger: m => {
       if (m.status === 'recognizing text') {
-        onProgress?.({ stage: 'ocr', progress: m.progress })
+        onProgress?.({ stage: 'ocr', progress: m.progress, page: currentPage, total: numPages, pct: ((currentPage - 1 + m.progress) / numPages) * 100 })
       }
     },
   })
@@ -536,6 +537,7 @@ async function ocrPages(arrayBuffer, numPages, onProgress) {
   let fullText = ''
 
   for (let i = 1; i <= numPages; i++) {
+    currentPage = i
     onProgress?.({ stage: 'ocr', page: i, total: numPages, pct: ((i - 1) / numPages) * 100 })
     try {
       const page = await pdf.getPage(i)
@@ -612,7 +614,7 @@ export async function parsePDF(file, { onProgress } = {}) {
     }
   }
 
-  const bank = detectBank(allText)
+  const bank = detectBank(allText.slice(0, 3000))
   const refYear = detectYear(allText)
 
   let transactions = []

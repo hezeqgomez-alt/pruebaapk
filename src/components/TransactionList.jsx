@@ -103,16 +103,15 @@ function InlineNote({ value, onSave }) {
 }
 
 export default function TransactionList({ transactions, onUpdate, onFilteredChange }) {
-  const prefs = loadFilterPrefs()
-
-  const [searchInput, setSearchInput] = useState(prefs.search || '')
-  const [search, setSearch]           = useState(prefs.search || '')
+  const _prefs                          = useRef(loadFilterPrefs())
+  const [searchInput, setSearchInput] = useState(_prefs.current.search || '')
+  const [search, setSearch]           = useState(_prefs.current.search || '')
   const searchTimer                   = useRef(null)
-  const [filterCat, setFilterCat]     = useState(prefs.filterCat || '')
-  const [filterSource, setFilterSource] = useState(prefs.filterSource || '')
-  const [dateFrom, setDateFrom]       = useState(prefs.dateFrom || '')
-  const [dateTo, setDateTo]           = useState(prefs.dateTo || '')
-  const [filterType, setFilterType]   = useState(prefs.filterType || '')
+  const [filterCat, setFilterCat]     = useState(_prefs.current.filterCat || '')
+  const [filterSource, setFilterSource] = useState(_prefs.current.filterSource || '')
+  const [dateFrom, setDateFrom]       = useState(_prefs.current.dateFrom || '')
+  const [dateTo, setDateTo]           = useState(_prefs.current.dateTo || '')
+  const [filterType, setFilterType]   = useState(_prefs.current.filterType || '')
   const [page, setPage]               = useState(1)
   const [sortBy, setSortBy]           = useState('date')
   const [sortDir, setSortDir]         = useState('desc')

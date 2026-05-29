@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
   CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload,
@@ -158,9 +158,11 @@ export default function App() {
     ]
     const csv = rows.map(r => r.join(',')).join('\n')
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
+    const blobUrl = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
+    a.href = blobUrl
     a.download = 'easyresumen_gastos.csv'
     a.click()
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
     setToast('📥 CSV exportado')
   }
 
@@ -235,17 +237,17 @@ export default function App() {
   }
 
   const [findingsKey, setFindingsKey] = useState(0)
-  const findings = detectUnnecessary(transactions)
+  const findings = useMemo(() => detectUnnecessary(transactions), [transactions])
   const hasData  = transactions.length > 0
 
   const hasInstallments = transactions.some(t => t.installment)
 
   const tabs = [
     { id: 'dashboard',    label: 'Resumen' },
-    { id: 'movimientos',  label: 'Movimientos', count: transactions.length },
+    { id: 'movimientos',  label: 'Movimientos', count: (filteredForReport && filteredForReport.length < transactions.length) ? filteredForReport.length : transactions.length },
     { id: 'presupuesto',  label: 'Presupuesto' },
     ...(hasInstallments ? [{ id: 'cuotas', label: 'Cuotas' }] : []),
-    { id: 'insights',     label: 'Alertas', count: findings.length || null },
+    { id: 'insights',     label: 'Alertas', count: findings.length },
   ]
 
   return (
@@ -476,7 +478,7 @@ export default function App() {
         />
       )}
 
-      {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
+      {toast && <Toast key={toast} msg={toast} onDone={() => setToast(null)} />}
     </div>
   )
 }
