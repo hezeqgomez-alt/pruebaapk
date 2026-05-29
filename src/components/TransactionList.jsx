@@ -87,7 +87,7 @@ function InlineNote({ value, onSave }) {
   }
 
   return (
-    <div className="flex items-center gap-1 min-w-[180px]">
+    <div className="flex items-center gap-1 w-full max-w-[180px]">
       <input
         ref={inputRef}
         type="text"
@@ -102,7 +102,7 @@ function InlineNote({ value, onSave }) {
   )
 }
 
-export default function TransactionList({ transactions, onUpdate }) {
+export default function TransactionList({ transactions, onUpdate, onFilteredChange }) {
   const prefs = loadFilterPrefs()
 
   const [searchInput, setSearchInput] = useState(prefs.search || '')
@@ -172,6 +172,9 @@ export default function TransactionList({ transactions, onUpdate }) {
       return 0
     })
   }, [transactions, search, filterCat, filterSource, filterType, dateFrom, dateTo, sortBy, sortDir])
+
+  // Notify parent of current filtered list so it can use it for report generation
+  useEffect(() => { onFilteredChange?.(filtered) }, [filtered, onFilteredChange])
 
   const paged = filtered.slice(0, page * PER_PAGE)
 
@@ -313,29 +316,29 @@ export default function TransactionList({ transactions, onUpdate }) {
       {showFilters && (
         <div className="flex flex-wrap gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-700/20">
           <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setPage(1) }}
-            className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
             <option value="">Todas las categorías</option>
             {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
           </select>
           {sources.length > 1 && (
             <select value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(1) }}
-              className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+              className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
               <option value="">Todas las tarjetas</option>
               {sources.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           )}
           <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }}
-            className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
             <option value="">Débitos y créditos</option>
             <option value="debit">Solo débitos</option>
             <option value="credit">Solo créditos</option>
           </select>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
             <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-              className="border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-            <span className="text-slate-300 dark:text-slate-600">→</span>
+              className="border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 flex-1 min-w-0" />
+            <span className="text-slate-300 dark:text-slate-600 shrink-0">→</span>
             <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }}
-              className="border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+              className="border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 flex-1 min-w-0" />
           </div>
         </div>
       )}

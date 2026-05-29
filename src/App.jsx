@@ -51,15 +51,16 @@ function Toast({ msg, onDone }) {
 }
 
 export default function App() {
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading]           = useState([])
-  const [toast, setToast]               = useState(null)
-  const [activeTab, setActiveTab]       = useState('dashboard')
-  const [generating, setGenerating]     = useState(false)
-  const [budgets, setBudgets]           = useState(() => loadBudgets())
-  const [darkMode, setDarkMode]         = useState(() => loadDarkMode())
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [ocrProgress, setOcrProgress]  = useState(null)
+  const [transactions, setTransactions]           = useState([])
+  const [loading, setLoading]                     = useState([])
+  const [toast, setToast]                         = useState(null)
+  const [activeTab, setActiveTab]                 = useState('dashboard')
+  const [generating, setGenerating]               = useState(false)
+  const [budgets, setBudgets]                     = useState(() => loadBudgets())
+  const [darkMode, setDarkMode]                   = useState(() => loadDarkMode())
+  const [showAddModal, setShowAddModal]           = useState(false)
+  const [ocrProgress, setOcrProgress]             = useState(null)
+  const [filteredForReport, setFilteredForReport] = useState(null)
 
   const chartDonutRef = useRef(null)
   const chartBarRef   = useRef(null)
@@ -110,9 +111,9 @@ export default function App() {
           setToast(`⚠️ Sin movimientos en "${file.name}" (banco: ${result.bank})`)
         } else {
           setTransactions(prev => {
-            const existingKeys = new Set(prev.map(t => t.date + '|' + t.amount + '|' + t.description))
+            const existingKeys = new Set(prev.map(t => t.date + '|' + t.amount + '|' + t.description + '|' + t.source))
             const newOnes = result.transactions.filter(
-              t => !existingKeys.has(t.date + '|' + t.amount + '|' + t.description)
+              t => !existingKeys.has(t.date + '|' + t.amount + '|' + t.description + '|' + t.source)
             )
             const debCnt = newOnes.filter(t => t.type !== 'credit').length
             const creCnt = newOnes.filter(t => t.type === 'credit').length
@@ -198,8 +199,8 @@ export default function App() {
       }
 
       setTransactions(prev => {
-        const existingKeys = new Set(prev.map(t => t.date + '|' + t.amount + '|' + t.description))
-        const newOnes = imported.filter(t => !existingKeys.has(t.date + '|' + t.amount + '|' + t.description))
+        const existingKeys = new Set(prev.map(t => t.date + '|' + t.amount + '|' + t.description + '|' + t.source))
+        const newOnes = imported.filter(t => !existingKeys.has(t.date + '|' + t.amount + '|' + t.description + '|' + t.source))
         const dupes = imported.length - newOnes.length
         const dupeMsg = dupes > 0 ? ` (${dupes} ya existían)` : ''
         setToast(`✅ ${newOnes.length} movimientos importados desde ${file.name}${dupeMsg}`)
@@ -216,7 +217,8 @@ export default function App() {
     setGenerating(true)
     await new Promise(r => setTimeout(r, 300))
     try {
-      const fileName = await generateReport({ transactions, chartDonutRef, chartBarRef })
+      const reportTxs = filteredForReport ?? transactions
+      const fileName = await generateReport({ transactions: reportTxs, chartDonutRef, chartBarRef })
       setToast(`📄 Informe guardado: ${fileName}`)
     } catch (e) {
       setToast(`❌ Error generando informe: ${e.message}`)
@@ -343,7 +345,7 @@ export default function App() {
       </header>
 
       {/* ── Main ── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 overflow-x-hidden">
 
         <UploadZone
           onFiles={handleFiles}
@@ -406,7 +408,7 @@ export default function App() {
 
             {/* Always mounted to preserve page/sort state when switching tabs */}
             <div className={activeTab !== 'movimientos' ? 'hidden' : ''}>
-              <TransactionList transactions={transactions} onUpdate={setTransactions} />
+              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={setFilteredForReport} />
             </div>
 
             {activeTab === 'presupuesto' && (

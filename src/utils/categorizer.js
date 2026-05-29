@@ -384,10 +384,15 @@ export function detectUnnecessary(transactions) {
     const mk = `${t.category}|${normalize(t.description).slice(0, 20)}`
     merchantTotals[mk] = (merchantTotals[mk] || 0) + t.amount
   }
+  const catCounts = {}
+  for (const t of transactions.filter(t => t.type !== 'credit')) {
+    catCounts[t.category] = (catCounts[t.category] || 0) + 1
+  }
   for (const [mk, amt] of Object.entries(merchantTotals)) {
     const [cat, desc] = mk.split('|')
     const catTotal = catTotals[cat] || 0
-    if (catTotal > 0 && amt / catTotal > 0.5) {
+    // Require ≥3 transactions in the category before flagging concentration
+    if (catTotal > 0 && (catCounts[cat] || 0) >= 3 && amt / catTotal > 0.5) {
       if (!findings.some(f => normalize(f.description).startsWith(desc))) {
         findings.push({
           type: 'concentration',

@@ -175,25 +175,30 @@ function findAmounts(text) {
 
 function detectBank(text) {
   const t = text.toLowerCase()
-  if (t.includes('galicia'))          return 'Galicia'
-  if (t.includes('bbva'))             return 'BBVA'
-  if (t.includes('santander'))        return 'Santander'
-  if (t.includes('macro'))            return 'Macro'
-  if (t.includes('icbc'))             return 'ICBC'
-  if (t.includes('supervielle'))      return 'Supervielle'
-  if (t.includes('hsbc'))             return 'HSBC'
-  if (t.includes('itau') || t.includes('itaú')) return 'Itaú'
-  if (t.includes('ciudad'))           return 'Banco Ciudad'
-  if (t.includes('nacion') || t.includes('bna')) return 'Banco Nación'
-  if (t.includes('patagonia'))        return 'Patagonia'
-  if (t.includes('hipotecario'))      return 'Hipotecario'
-  if (t.includes('credicoop'))        return 'Credicoop'
-  if (t.includes('naranja'))          return 'Naranja X'
+  // Most specific / branded names first to avoid false positives on generic words
+  if (t.includes('american express'))  return 'AMEX'
+  if (t.includes('naranja x'))         return 'Naranja X'
+  if (t.includes('naranja'))           return 'Naranja X'
   if (t.includes('mercado pago') || t.includes('mercadopago')) return 'Mercado Pago'
-  if (t.includes('american express') || t.includes('amex')) return 'Amex'
-  if (t.includes('brubank'))          return 'Brubank'
-  if (t.includes('uala') || t.includes('ualá')) return 'Ualá'
-  if (t.includes('cabal'))            return 'Cabal'
+  if (t.includes('brubank'))           return 'Brubank'
+  if (t.includes('ualá') || t.includes('uala')) return 'Ualá'
+  if (t.includes('credicoop'))         return 'Credicoop'
+  if (t.includes('hipotecario'))       return 'Hipotecario'
+  if (t.includes('supervielle'))       return 'Supervielle'
+  if (t.includes('patagonia'))         return 'Patagonia'
+  if (t.includes('cabal'))             return 'CABAL'
+  if (t.includes('amex'))              return 'AMEX'
+  if (t.includes('galicia'))           return 'Galicia'
+  if (t.includes('bbva'))              return 'BBVA'
+  if (t.includes('santander'))         return 'Santander'
+  if (t.includes('hsbc'))              return 'HSBC'
+  if (t.includes('icbc'))              return 'ICBC'
+  if (t.includes('macro'))             return 'Macro'
+  if (t.includes('itaú') || t.includes('itau')) return 'Itaú'
+  if (t.includes('nacion') || t.includes('nación') || t.includes('bna')) return 'Banco Nación'
+  if (t.includes('ciudad'))            return 'Banco Ciudad'
+  if (t.includes('mastercard'))        return 'Mastercard'
+  if (t.includes('visa'))              return 'Visa'
   return 'Desconocido'
 }
 
@@ -301,7 +306,13 @@ function buildCardInfo(suffix, rawName) {
 function buildSource(bank, filename, card) {
   const base = (bank && bank !== 'Desconocido') ? bank : filename.replace(/\.[^.]+$/, '')
   if (!card) return base
-  if (card.suffix) return `${base} · *${card.suffix}`
+  if (card.suffix) {
+    // Ordinal markers (A1, A2…) from P7 pattern → human-readable "Adicional N"
+    const display = /^A\d+$/.test(card.suffix)
+      ? `Adicional ${card.suffix.slice(1)}`
+      : `*${card.suffix}`
+    return `${base} · ${display}`
+  }
   if (card.holder) return `${base} · ${card.holder}`
   return base
 }
