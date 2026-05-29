@@ -277,18 +277,67 @@ function shouldSkipDesc(desc) {
 }
 
 // ─── Card-section header detection ───────────────────────────────────────────
-// Matches: "TARJETA (0085) TOTAL CONSUMOS DE GUIDO/MARIA CANDELA  493.829,90  0,00"
-const CARD_HDR_RE = /tarjeta\s*\((\d+)\)[^A-Z]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,50})/i
+// Covers 7 patterns across all recognised Argentine banks.
+
+function buildCardInfo(suffix, rawName) {
+  const cleanSuffix = suffix
+    ? (/^\d+$/.test(String(suffix))
+        ? String(suffix).replace(/\D/g, '').slice(-4) || null
+        : String(suffix).toUpperCase().slice(0, 4))
+    : null
+  let holder = null
+  if (rawName) {
+    const trimmed = rawName.trim().replace(/\s*[\d.,]+\s*$/, '').trim()
+    if (trimmed.length >= 2) {
+      const given = trimmed.includes('/') ? trimmed.split('/').pop().trim() : trimmed
+      holder = given.split(/\s+/).filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+      if (holder.length < 2) holder = null
+    }
+  }
+  return (cleanSuffix || holder) ? { suffix: cleanSuffix, holder } : null
+}
+
+function buildSource(bank, filename, card) {
+  const base = (bank && bank !== 'Desconocido') ? bank : filename.replace(/\.[^.]+$/, '')
+  if (!card) return base
+  if (card.suffix) return `${base} · *${card.suffix}`
+  if (card.holder) return `${base} · ${card.holder}`
+  return base
+}
 
 function extractCardInfo(text) {
-  const m = text.match(CARD_HDR_RE)
-  if (!m) return null
-  const suffix = m[1].replace(/\D/g, '').slice(-4)
-  // Argentine format: APELLIDO/NOMBRE — we show only the given name
-  const raw = m[2].trim().replace(/\s+[\d.,\s]+$/, '') // strip trailing amount fragments
-  const given = raw.includes('/') ? raw.split('/').pop().trim() : raw
-  const holder = given.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-  return { suffix, holder }
+  let m
+
+  // P1 · CABAL / Naranja X — "TARJETA (0085) TOTAL CONSUMOS DE GUIDO/MARIA CANDELA"
+  m = text.match(/tarjeta\s*\((\d+)\)[^()]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,50})/i)
+  if (m) return buildCardInfo(m[1], m[2])
+
+  // P2 · Visa/MC adicional con número corto — "TARJETA ADICIONAL Nro. 4521 PEREZ JUAN"
+  m = text.match(/tarjeta\s+adicional\s+(?:nro\.?\s*|n[°º]?\s*)?(?:[*X\s]{0,10})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40})/i)
+  if (m) return buildCardInfo(m[1], m[2])
+
+  // P3 · Visa/MC adicional con número enmascarado largo — "TARJETA ADICIONAL **** **** **** 4521 PEREZ"
+  m = text.match(/tarjeta\s+adicional\s+(?:[\d*X\s]{6,18})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40})/i)
+  if (m) return buildCardInfo(m[1], m[2])
+
+  // P4 · Galicia / HSBC / Santander — "TERMINADA EN 4521 - PEREZ JUAN" o sin nombre
+  m = text.match(/terminada\s+en\s+(\d{4})(?:\s*[-–·:,]?\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40}))?/i)
+  if (m) return buildCardInfo(m[1], m[2] || null)
+
+  // P5 · AMEX — "CUENTA ADICIONAL 3728-XXXXXX JUAN PEREZ"
+  m = text.match(/cuenta\s+adicional\s+(?:[\dX*\-]+\s+)?([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{4,40})/i)
+  if (m) return buildCardInfo(null, m[1])
+
+  // P6 · Genérico — "TITULAR: PEREZ JUAN" / "TITULAR ADICIONAL: JUAN" / "NOMBRE DEL TITULAR: JUAN"
+  m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal|de\s+la\s+cuenta))?\s*[:\-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{4,40})/i)
+  if (m) return buildCardInfo(null, m[1])
+
+  // P7 · Numeración ordinal — "ADICIONAL N° 2 - PEREZ JUAN" (Macro, Patagonia, ICBC)
+  m = text.match(/\badicional\s+n[°º]?\.?\s*(\d{1,2})\s*[-–·]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{4,40})/i)
+  if (m) return buildCardInfo(`A${m[1]}`, m[2])
+
+  return null
 }
 
 // ─── Core row-based parser ───────────────────────────────────────────────────
@@ -346,7 +395,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
       type,
       installment,
       category: categorize(desc),
-      source: currentCard ? `${bank || filename} · *${currentCard.suffix}` : filename,
+      source: buildSource(bank, filename, currentCard),
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     })
@@ -408,7 +457,7 @@ function parseColumnar(rows, filename, refYear, bank = '') {
       type: amount < 0 ? 'credit' : 'debit',
       installment,
       category: categorize(desc),
-      source: currentCard ? `${bank || filename} · *${currentCard.suffix}` : filename,
+      source: buildSource(bank, filename, currentCard),
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     })
