@@ -102,6 +102,99 @@ function InlineNote({ value, onSave }) {
   )
 }
 
+function SourceFilter({ sources, selected, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  const allSelected = selected.length === 0
+  const label = allSelected
+    ? 'Todas las tarjetas'
+    : selected.length === 1
+      ? selected[0]
+      : `${selected.length} de ${sources.length} tarjetas`
+
+  function toggle(source) {
+    if (selected.includes(source)) onChange(selected.filter(s => s !== source))
+    else onChange([...selected, source])
+  }
+
+  return (
+    <div ref={ref} className="relative w-full sm:w-auto">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`flex items-center justify-between gap-2 text-sm border rounded-xl px-3 py-1.5 w-full sm:w-52 text-left transition-colors
+          ${selected.length > 0
+            ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'
+            : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200'}`}
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-64 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
+          {/* All / None shortcuts */}
+          <div className="flex gap-0 border-b border-slate-100 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className={`flex-1 px-3 py-2 text-xs font-semibold transition-colors
+                ${allSelected
+                  ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              Todas
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange([...sources])}
+              className={`flex-1 px-3 py-2 text-xs font-semibold transition-colors border-l border-slate-100 dark:border-slate-700
+                ${!allSelected && selected.length === sources.length
+                  ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+            >
+              Seleccionar todas
+            </button>
+          </div>
+          {/* Checkboxes */}
+          <ul className="max-h-60 overflow-y-auto">
+            {sources.map(source => {
+              const checked = selected.includes(source)
+              return (
+                <li key={source}>
+                  <label className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer select-none transition-colors
+                    ${checked
+                      ? 'bg-indigo-50/80 dark:bg-indigo-950/30'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(source)}
+                      className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer shrink-0"
+                    />
+                    <span className={`text-sm truncate ${checked ? 'font-medium text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                      {source}
+                    </span>
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
   return (
     <th
@@ -119,7 +212,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   const [search, setSearch]           = useState(_p.search || '')
   const searchTimer                   = useRef(null)
   const [filterCat, setFilterCat]     = useState(_p.filterCat || '')
-  const [filterSource, setFilterSource] = useState(_p.filterSource || '')
+  const [filterSources, setFilterSources] = useState(() => Array.isArray(_p.filterSources) ? _p.filterSources : [])
   const [dateFrom, setDateFrom]       = useState(_p.dateFrom || '')
   const [dateTo, setDateTo]           = useState(_p.dateTo || '')
   const [filterType, setFilterType]   = useState(_p.filterType || '')
@@ -139,14 +232,14 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   const [undoCount, setUndoCount] = useState(0)
 
   const PER_PAGE = 50
-  const hasActiveFilter = searchInput || filterCat || filterType || dateFrom || dateTo || filterSource
+  const hasActiveFilter = searchInput || filterCat || filterType || dateFrom || dateTo || filterSources.length > 0
 
   const sources = useMemo(() => [...new Set(transactions.map(t => t.source))].sort(), [transactions])
 
   // Persist filter prefs
   useEffect(() => {
-    saveFilterPrefs({ search: searchInput, filterCat, filterType, dateFrom, dateTo, filterSource })
-  }, [searchInput, filterCat, filterType, dateFrom, dateTo, filterSource])
+    saveFilterPrefs({ search: searchInput, filterCat, filterType, dateFrom, dateTo, filterSources })
+  }, [searchInput, filterCat, filterType, dateFrom, dateTo, filterSources])
 
   useEffect(() => () => clearTimeout(undoTimerRef.current), [])
 
@@ -157,7 +250,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   }
 
   function clearFilters() {
-    setSearchInput(''); setSearch(''); setFilterCat(''); setFilterSource(''); setFilterType(''); setDateFrom(''); setDateTo(''); setPage(1)
+    setSearchInput(''); setSearch(''); setFilterCat(''); setFilterSources([]); setFilterType(''); setDateFrom(''); setDateTo(''); setPage(1)
     clearTimeout(searchTimer.current)
   }
 
@@ -165,7 +258,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
     return transactions.filter(t => {
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
       if (filterCat && t.category !== filterCat) return false
-      if (filterSource && t.source !== filterSource) return false
+      if (filterSources.length > 0 && !filterSources.includes(t.source)) return false
       if (filterType && (t.type || 'debit') !== filterType) return false
       if (dateFrom && t.date < dateFrom) return false
       if (dateTo && t.date > dateTo) return false
@@ -181,7 +274,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
       if (va > vb) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [transactions, search, filterCat, filterSource, filterType, dateFrom, dateTo, sortBy, sortDir])
+  }, [transactions, search, filterCat, filterSources, filterType, dateFrom, dateTo, sortBy, sortDir])
 
   // Notify parent of current filtered list so it can use it for report generation
   useEffect(() => { onFilteredChange?.(filtered) }, [filtered, onFilteredChange])
@@ -291,16 +384,16 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
           <button
             onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors ${
-              showFilters || (filterCat || filterType || dateFrom || dateTo || filterSource)
+              showFilters || (filterCat || filterType || dateFrom || dateTo || filterSources.length > 0)
                 ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400'
                 : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 hover:border-slate-300'
             }`}
           >
             <SlidersHorizontal size={13} />
             <span className="hidden sm:inline">Filtros</span>
-            {(filterCat || filterType || dateFrom || dateTo || filterSource) && (
+            {(filterCat || filterType || dateFrom || dateTo || filterSources.length > 0) && (
               <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">
-                {[filterCat, filterType, filterSource, dateFrom || dateTo].filter(Boolean).length}
+                {[filterCat, filterType, filterSources.length > 0 ? '1' : '', dateFrom || dateTo].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -322,11 +415,11 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
             {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
           </select>
           {sources.length > 1 && (
-            <select value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(1) }}
-              className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
-              <option value="">Todas las tarjetas</option>
-              {sources.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <SourceFilter
+              sources={sources}
+              selected={filterSources}
+              onChange={v => { setFilterSources(v); setPage(1) }}
+            />
           )}
           <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }}
             className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
