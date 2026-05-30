@@ -6,13 +6,40 @@ const LOANS_STORAGE_KEY = 'easyresumen_loans'
 
 const fmt = n => n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
 
+const FIXED_EXPENSES = [
+  { key: 'alquiler',        label: 'Alquiler',                        icon: '🏠' },
+  { key: 'impInmobiliario', label: 'Impuesto Inmobiliario',           icon: '📋' },
+  { key: 'impMunicipal',    label: 'Impuesto Municipal',              icon: '🏛️' },
+  { key: 'luz',             label: 'Luz',                             icon: '💡' },
+  { key: 'gas',             label: 'Gas',                             icon: '🔥' },
+  { key: 'agua',            label: 'Agua',                            icon: '💧' },
+  { key: 'internet',        label: 'Internet',                        icon: '📡' },
+  { key: 'seguroAuto',      label: 'Seguro Auto',                     icon: '🚗' },
+  { key: 'seguroHogar',     label: 'Seguro Hogar',                    icon: '🛡️' },
+  { key: 'empleadosCasa',   label: 'Empleados de casas particulares', icon: '🧹' },
+]
+
+const EMPTY_FIXED = Object.fromEntries(FIXED_EXPENSES.map(f => [f.key, '']))
+
+function parseAmt(str) {
+  if (str === '' || str == null) return 0
+  const s = String(str).trim().replace(/\./g, '').replace(',', '.')
+  const n = parseFloat(s)
+  return isNaN(n) || n < 0 ? 0 : n
+}
+
 function loadEntries() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { expenses: [], incomes: [] }
-    return JSON.parse(raw)
+    if (!raw) return { expenses: [], incomes: [], fixedExpenses: { ...EMPTY_FIXED } }
+    const parsed = JSON.parse(raw)
+    return {
+      expenses:      parsed.expenses      ?? [],
+      incomes:       parsed.incomes       ?? [],
+      fixedExpenses: { ...EMPTY_FIXED, ...(parsed.fixedExpenses ?? {}) },
+    }
   } catch {
-    return { expenses: [], incomes: [] }
+    return { expenses: [], incomes: [], fixedExpenses: { ...EMPTY_FIXED } }
   }
 }
 
@@ -21,24 +48,27 @@ function loadLoansSnapshot() {
     const raw = localStorage.getItem(LOANS_STORAGE_KEY)
     const loans = raw ? JSON.parse(raw) : []
     const active = loans.filter(l => l.mesesPagados < l.plazo)
-    const totalPagar  = active.filter(l => l.tipo === 'pagar').reduce((s, l) => s + l.cuota, 0)
-    const totalCobrar = active.filter(l => l.tipo === 'cobrar').reduce((s, l) => s + l.cuota, 0)
     const pagar  = active.filter(l => l.tipo === 'pagar')
     const cobrar = active.filter(l => l.tipo === 'cobrar')
-    return { pagar, cobrar, totalPagar, totalCobrar }
+    return {
+      pagar,
+      cobrar,
+      totalPagar:  pagar.reduce((s, l) => s + l.cuota, 0),
+      totalCobrar: cobrar.reduce((s, l) => s + l.cuota, 0),
+    }
   } catch {
     return { pagar: [], cobrar: [], totalPagar: 0, totalCobrar: 0 }
   }
 }
 
 function EntryForm({ label, onAdd, color }) {
-  const [desc, setDesc] = useState('')
+  const [desc, setDesc]     = useState('')
   const [amount, setAmount] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    const n = parseFloat(amount.replace(/[.,]/g, m => m === '.' && amount.includes(',') ? '' : m === ',' ? '.' : ''))
-    if (!desc.trim() || isNaN(n) || n <= 0) return
+    const n = parseAmt(amount)
+    if (!desc.trim() || n <= 0) return
     onAdd({ id: Date.now(), description: desc.trim(), amount: n })
     setDesc('')
     setAmount('')
@@ -46,27 +76,15 @@ function EntryForm({ label, onAdd, color }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 mt-3">
-      <input
-        type="text"
-        placeholder="Descripción"
-        value={desc}
+      <input type="text" placeholder="Descripción" value={desc}
         onChange={e => setDesc(e.target.value)}
-        className="flex-1 min-w-0 text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-      />
-      <input
-        type="text"
-        inputMode="decimal"
-        placeholder="Monto"
-        value={amount}
+        className="flex-1 min-w-0 text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
+      <input type="text" inputMode="decimal" placeholder="Monto" value={amount}
         onChange={e => setAmount(e.target.value)}
-        className="w-32 text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600"
-      />
-      <button
-        type="submit"
-        className={`flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium text-white transition-colors ${color}`}
-      >
-        <Plus size={14} />
-        {label}
+        className="w-32 text-sm px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
+      <button type="submit"
+        className={`flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium text-white transition-colors ${color}`}>
+        <Plus size={14} /> {label}
       </button>
     </form>
   )
@@ -74,56 +92,55 @@ function EntryForm({ label, onAdd, color }) {
 
 export default function BalancePanel({ transactions }) {
   const [entries, setEntries] = useState(loadEntries)
-  const [loans, setLoans] = useState(loadLoansSnapshot)
+  const [loans, setLoans]     = useState(loadLoansSnapshot)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
   }, [entries])
 
-  // Re-read loans whenever this tab becomes active (storage may have changed)
   useEffect(() => {
     const onStorage = () => setLoans(loadLoansSnapshot())
     window.addEventListener('storage', onStorage)
-    // Also refresh on mount
     setLoans(loadLoansSnapshot())
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  // Card totals grouped by source
   const bySource = {}
   for (const t of transactions) {
     if (t.type === 'credit') continue
     bySource[t.source] = (bySource[t.source] || 0) + t.amount
   }
-  const cardEntries = Object.entries(bySource).sort((a, b) => b[1] - a[1])
-  const cardTotal = cardEntries.reduce((s, [, v]) => s + v, 0)
+  const cardEntries  = Object.entries(bySource).sort((a, b) => b[1] - a[1])
+  const cardTotal    = cardEntries.reduce((s, [, v]) => s + v, 0)
 
-  const manualExpenseTotal = entries.expenses.reduce((s, e) => s + e.amount, 0)
-  const incomeTotal = entries.incomes.reduce((s, e) => s + e.amount, 0)
-  const totalExpenses = cardTotal + manualExpenseTotal + loans.totalPagar
-  const totalIncomesWithLoans = incomeTotal + loans.totalCobrar
-  const balance = totalIncomesWithLoans - totalExpenses
-  const balancePositive = balance >= 0
+  const fixedTotal    = FIXED_EXPENSES.reduce((s, f) => s + parseAmt(entries.fixedExpenses[f.key]), 0)
+  const extraTotal    = entries.expenses.reduce((s, e) => s + e.amount, 0)
+  const manualTotal   = fixedTotal + extraTotal
+  const incomeTotal   = entries.incomes.reduce((s, e) => s + e.amount, 0)
+  const totalExpenses = cardTotal + manualTotal + loans.totalPagar
+  const totalIncomes  = incomeTotal + loans.totalCobrar
+  const balance       = totalIncomes - totalExpenses
+  const isPositive    = balance >= 0
 
-  const addExpense = entry => setEntries(prev => ({ ...prev, expenses: [...prev.expenses, entry] }))
-  const addIncome  = entry => setEntries(prev => ({ ...prev, incomes:  [...prev.incomes,  entry] }))
-  const removeExpense = id => setEntries(prev => ({ ...prev, expenses: prev.expenses.filter(e => e.id !== id) }))
-  const removeIncome  = id => setEntries(prev => ({ ...prev, incomes:  prev.incomes.filter(e => e.id !== id)  }))
+  const setFixed      = (key, val) => setEntries(prev => ({ ...prev, fixedExpenses: { ...prev.fixedExpenses, [key]: val } }))
+  const addExpense    = entry => setEntries(prev => ({ ...prev, expenses: [...prev.expenses, entry] }))
+  const addIncome     = entry => setEntries(prev => ({ ...prev, incomes:  [...prev.incomes,  entry] }))
+  const removeExpense = id   => setEntries(prev => ({ ...prev, expenses: prev.expenses.filter(e => e.id !== id) }))
+  const removeIncome  = id   => setEntries(prev => ({ ...prev, incomes:  prev.incomes.filter(e => e.id !== id) }))
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
-      {/* Balance summary card */}
-      <div className={`rounded-2xl p-5 border-2 ${balancePositive
+      {/* Balance summary */}
+      <div className={`rounded-2xl p-5 border-2 ${isPositive
         ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800'
         : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800'}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Scale size={18} className={balancePositive ? 'text-emerald-600' : 'text-red-500'} />
-          <h2 className={`text-base font-bold ${balancePositive ? 'text-emerald-800 dark:text-emerald-200' : 'text-red-800 dark:text-red-200'}`}>
+          <Scale size={18} className={isPositive ? 'text-emerald-600' : 'text-red-500'} />
+          <h2 className={`text-base font-bold ${isPositive ? 'text-emerald-800 dark:text-emerald-200' : 'text-red-800 dark:text-red-200'}`}>
             Balance del período
           </h2>
         </div>
-
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Total egresos</div>
@@ -134,15 +151,15 @@ export default function BalancePanel({ transactions }) {
           </div>
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Total ingresos</div>
-            <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{fmt(totalIncomesWithLoans)}</div>
+            <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{fmt(totalIncomes)}</div>
             {loans.totalCobrar > 0 && (
               <div className="text-[10px] text-emerald-400 dark:text-emerald-500 mt-0.5">incl. {fmt(loans.totalCobrar)} préstamos</div>
             )}
           </div>
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Balance</div>
-            <div className={`text-2xl font-extrabold ${balancePositive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
-              {balancePositive ? '+' : ''}{fmt(balance)}
+            <div className={`text-2xl font-extrabold ${isPositive ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+              {isPositive ? '+' : ''}{fmt(balance)}
             </div>
           </div>
         </div>
@@ -200,9 +217,7 @@ export default function BalancePanel({ transactions }) {
                   <li key={l.id} className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900/40">
                     <div>
                       <span className="text-sm text-slate-700 dark:text-slate-300">{l.acreedor}</span>
-                      <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">
-                        cuota {l.mesesPagados}/{l.plazo}
-                      </span>
+                      <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">cuota {l.mesesPagados}/{l.plazo}</span>
                     </div>
                     <span className="text-sm font-semibold text-red-600 dark:text-red-400 shrink-0">{fmt(l.cuota)}/mes</span>
                   </li>
@@ -211,36 +226,69 @@ export default function BalancePanel({ transactions }) {
             </div>
           )}
 
-          {/* Manual expenses */}
+          {/* Gastos no incluidos en tarjetas */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Gastos manuales</span>
-              {entries.expenses.length > 0 && (
-                <span className="text-xs font-bold text-red-500">{fmt(manualExpenseTotal)}</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                Gastos no incluidos en tarjetas
+              </span>
+              {manualTotal > 0 && (
+                <span className="text-xs font-bold text-red-500">{fmt(manualTotal)}</span>
               )}
             </div>
-            {entries.expenses.length > 0 ? (
-              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+
+            <ul className="divide-y divide-slate-100 dark:divide-slate-700/50">
+              {FIXED_EXPENSES.map(f => {
+                const val    = entries.fixedExpenses[f.key]
+                const active = parseAmt(val) > 0
+                return (
+                  <li key={f.key} className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-900/40">
+                    <span className="text-base w-6 text-center shrink-0">{f.icon}</span>
+                    <span className={`flex-1 text-sm truncate ${active
+                      ? 'text-slate-700 dark:text-slate-200 font-medium'
+                      : 'text-slate-400 dark:text-slate-500'}`}>
+                      {f.label}
+                    </span>
+                    <div className="relative shrink-0">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">$</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={val}
+                        placeholder="0"
+                        onChange={e => setFixed(f.key, e.target.value)}
+                        className={`w-28 pl-6 pr-2 py-1.5 text-sm rounded-lg border text-right transition-colors
+                          focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600
+                          ${active
+                            ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 font-semibold'
+                            : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {entries.expenses.length > 0 && (
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-700">
                 {entries.expenses.map(e => (
                   <li key={e.id} className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900/40 group">
                     <span className="text-sm text-slate-700 dark:text-slate-300 truncate mr-3">{e.description}</span>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{fmt(e.amount)}</span>
-                      <button
-                        onClick={() => removeExpense(e.id)}
-                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all"
-                      >
+                      <button onClick={() => removeExpense(e.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all">
                         <Trash2 size={13} />
                       </button>
                     </div>
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="px-4 py-4 text-sm text-slate-400 dark:text-slate-500">Sin gastos manuales aún.</p>
             )}
-            <div className="px-4 pb-4 pt-1 bg-white dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
-              <EntryForm label="Gasto" onAdd={addExpense} color="bg-red-500 hover:bg-red-600" />
+
+            <div className="px-4 pb-4 pt-2 bg-white dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">Agregar otro gasto no listado arriba</p>
+              <EntryForm label="Agregar" onAdd={addExpense} color="bg-red-500 hover:bg-red-600" />
             </div>
           </div>
         </div>
@@ -250,7 +298,7 @@ export default function BalancePanel({ transactions }) {
           <div className="flex items-center gap-2">
             <TrendingUp size={17} className="text-emerald-500" />
             <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">Ingresos</h3>
-            <span className="ml-auto text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmt(incomeTotal)}</span>
+            <span className="ml-auto text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalIncomes)}</span>
           </div>
 
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -267,10 +315,8 @@ export default function BalancePanel({ transactions }) {
                     <span className="text-sm text-slate-700 dark:text-slate-300 truncate mr-3">{e.description}</span>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{fmt(e.amount)}</span>
-                      <button
-                        onClick={() => removeIncome(e.id)}
-                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all"
-                      >
+                      <button onClick={() => removeIncome(e.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -285,7 +331,6 @@ export default function BalancePanel({ transactions }) {
             </div>
           </div>
 
-          {/* Loans to collect */}
           {loans.cobrar.length > 0 && (
             <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 overflow-hidden">
               <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
@@ -300,9 +345,7 @@ export default function BalancePanel({ transactions }) {
                   <li key={l.id} className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900/40">
                     <div>
                       <span className="text-sm text-slate-700 dark:text-slate-300">{l.acreedor}</span>
-                      <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">
-                        cuota {l.mesesPagados}/{l.plazo}
-                      </span>
+                      <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">cuota {l.mesesPagados}/{l.plazo}</span>
                     </div>
                     <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">{fmt(l.cuota)}/mes</span>
                   </li>
@@ -311,7 +354,6 @@ export default function BalancePanel({ transactions }) {
             </div>
           )}
 
-          {/* Tip box */}
           <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/60 dark:bg-indigo-950/30 px-4 py-3">
             <div className="flex items-start gap-2">
               <Wallet size={14} className="text-indigo-400 mt-0.5 shrink-0" />
