@@ -1,4 +1,5 @@
 export const CATEGORIES = {
+  mercadopago:   { label: 'Pagos con MercadoPago', color: '#00b1ea', icon: '💙' },
   alimentacion:    { label: 'Alimentación',         color: '#f59e0b', icon: '🍔' },
   supermercado:    { label: 'Supermercado',          color: '#10b981', icon: '🛒' },
   transporte:      { label: 'Transporte',            color: '#3b82f6', icon: '🚗' },
@@ -24,6 +25,12 @@ export const CATEGORIES = {
 // Order matters: first match wins. More specific patterns come before broad ones.
 
 const RULES = [
+  // ── MercadoPago / MercadoLibre ───────────────────────────────────────────────
+  { cat: 'mercadopago', kw: [
+    'mercadopago', 'mercado pago', 'mercadolibre', 'mercado libre',
+    'merpago', 'mercpago', 'meli ',
+  ]},
+
   // ── Donaciones ───────────────────────────────────────────────────────────────
   { cat: 'donaciones', kw: [
     'garrahan', 'fund garrahan', 'fundgarrahan', 'fundacion', 'fund ',
@@ -217,7 +224,6 @@ const RULES = [
 
   // ── Tecnología ────────────────────────────────────────────────────────────────
   { cat: 'tecnologia', kw: [
-    'mercadolibre', 'mercado libre', 'meli',
     'amazon ', 'ebay ', 'aliexpress', 'wish ',
     'app store', 'appstore', 'compranet',
     'dell ', 'hp ', 'lenovo', 'asus ', 'intel ', 'amd ', 'nvidia',
@@ -240,7 +246,6 @@ const RULES = [
     'comision bancaria', 'mantenimiento cuenta',
     'seguro de vida', 'seguro de tarjeta',
     'retiro atm', 'extraccion cajero',
-    'mercado pago', 'mercadopago',
     'brubank', 'uala ', 'naranja x', 'naranja ', 'prex ', 'lemon ',
     'cuenta dolar', 'fci ', 'fondo comun', 'cauciones', 'plazo fijo',
     'mobbex', 'todopago', 'todo pago', 'pomelo',

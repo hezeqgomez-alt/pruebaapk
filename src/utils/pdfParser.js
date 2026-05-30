@@ -294,7 +294,18 @@ function buildCardInfo(suffix, rawName) {
   if (rawName) {
     const trimmed = rawName.trim().replace(/\s*[\d.,]+\s*$/, '').trim()
     if (trimmed.length >= 2) {
-      const given = trimmed.includes('/') ? trimmed.split('/').pop().trim() : trimmed
+      let given
+      if (trimmed.includes('/')) {
+        const parts = trimmed.split('/')
+        const afterSlash = parts[parts.length - 1].trim()
+        // If post-slash is a single word it's likely a family surname prefix;
+        // use the pre-slash portion which holds the actual given name(s).
+        given = afterSlash.split(/\s+/).filter(Boolean).length === 1
+          ? parts.slice(0, -1).join('/').trim()
+          : afterSlash
+      } else {
+        given = trimmed
+      }
       holder = given.split(/\s+/).filter(Boolean)
         .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
       if (holder.length < 2) holder = null
@@ -341,6 +352,10 @@ function extractCardInfo(text) {
   // P3 · Visa/MC adicional con número enmascarado largo — "TARJETA ADICIONAL **** **** **** 4521 PEREZ"
   m = text.match(/tarjeta\s+adicional\s+(?:[\d*X\s]{6,18})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40})/i)
   if (m) return buildCardInfo(m[1], m[2])
+
+  // P2b · "TARJETA ADICIONAL CANDELA RODRIGUEZ" — sin número de tarjeta, requiere ≥2 palabras
+  m = text.match(/tarjeta\s+adicional\s+([A-ZÁÉÍÓÚÑA-Z]{2,}(?:\s+[A-ZÁÉÍÓÚÑA-Z]{2,})+)/i)
+  if (m) return buildCardInfo(null, m[1])
 
   // P4 · Galicia / HSBC / Santander — "TERMINADA EN 4521 - PEREZ JUAN" o sin nombre
   m = text.match(/terminada\s+en\s+(\d{4})(?:\s*[-–·:,]?\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40}))?/i)
