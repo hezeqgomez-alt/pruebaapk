@@ -110,10 +110,24 @@ export default function App() {
           setToast(`⚠️ Sin movimientos en "${file.name}" (banco: ${result.bank})`)
         } else {
           setTransactions(prev => {
-            const existingKeys = new Set(prev.map(t => t.date + '|' + t.amount + '|' + t.description + '|' + t.source))
-            const newOnes = result.transactions.filter(
-              t => !existingKeys.has(t.date + '|' + t.amount + '|' + t.description + '|' + t.source)
-            )
+            // Count-based dedup: allow a transaction from this batch if it appears
+            // more times in result.transactions than it already does in prev.
+            // This preserves legitimate same-key duplicates (e.g. two NEUMEN cuotas
+            // with identical date/amount/description) while still blocking true
+            // cross-upload duplicates.
+            const txKey = t => `${t.date}|${t.amount}|${t.description}|${t.source}`
+            const existingCounts = new Map()
+            for (const t of prev) {
+              const k = txKey(t)
+              existingCounts.set(k, (existingCounts.get(k) ?? 0) + 1)
+            }
+            const seenInBatch = new Map()
+            const newOnes = result.transactions.filter(t => {
+              const k = txKey(t)
+              const batchCount = (seenInBatch.get(k) ?? 0) + 1
+              seenInBatch.set(k, batchCount)
+              return batchCount > (existingCounts.get(k) ?? 0)
+            })
             const debCnt = newOnes.filter(t => t.type !== 'credit').length
             const creCnt = newOnes.filter(t => t.type === 'credit').length
             const ocrTag = result.ocr ? ' (OCR)' : ''
