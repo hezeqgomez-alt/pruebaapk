@@ -32,7 +32,8 @@ export default function AddTransactionModal({ onAdd, onClose, triggerRef }) {
 
   // Restore focus to trigger on unmount
   useEffect(() => {
-    return () => { triggerRef?.current?.focus() }
+    const el = triggerRef?.current
+    return () => { el?.focus() }
   }, [triggerRef])
 
   // Focus trap: cycle Tab inside dialog only
