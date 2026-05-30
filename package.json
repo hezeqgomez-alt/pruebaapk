@@ -1,7 +1,7 @@
 {
   "name": "easyresumen",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "Analizador de resúmenes de tarjeta de crédito",
   "author": {
