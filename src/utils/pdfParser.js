@@ -354,10 +354,11 @@ function extractCardInfo(text) {
   m = text.match(/cuenta\s+adicional\s+(?:[\dX*-]+\s+)?([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
   if (m) return buildCardInfo(null, m[1])
 
-  // P6 · Genérico — "TITULAR: PEREZ JUAN" / "TITULAR ADICIONAL: JUAN" / "NOMBRE DEL TITULAR: JUAN"
-  // Note: "de la cuenta" excluded to avoid matching account-holder headers like "TITULAR DE CUENTA: GOMEZ"
+  // P6 · Genérico — "TITULAR ADICIONAL: PEREZ JUAN" / "NOMBRE DEL TITULAR: JUAN PEREZ"
+  // Requires ≥2 words after the colon: prevents single-surname captures like "TITULAR: GOMEZ"
+  // which are account-holder header rows (name in LAST, FIRST format, comma stops capture at 1 word).
   m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal))?\s*[:-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
-  if (m) return buildCardInfo(null, m[1])
+  if (m && m[1].trim().split(/\s+/).filter(Boolean).length >= 2) return buildCardInfo(null, m[1])
 
   // P7 · Numeración ordinal — "ADICIONAL N° 2 - PEREZ JUAN" (Macro, Patagonia, ICBC)
   m = text.match(/\badicional\s+n[°º]?\.?\s*(\d{1,2})\s*[-–·]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
