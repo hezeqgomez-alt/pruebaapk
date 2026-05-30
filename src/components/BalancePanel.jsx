@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Scale } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Scale, Landmark } from 'lucide-react'
 
-const STORAGE_KEY = 'easyresumen_balance'
+const STORAGE_KEY       = 'easyresumen_balance'
+const LOANS_STORAGE_KEY = 'easyresumen_loans'
 
 const fmt = n => n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
 
@@ -12,6 +13,21 @@ function loadEntries() {
     return JSON.parse(raw)
   } catch {
     return { expenses: [], incomes: [] }
+  }
+}
+
+function loadLoansSnapshot() {
+  try {
+    const raw = localStorage.getItem(LOANS_STORAGE_KEY)
+    const loans = raw ? JSON.parse(raw) : []
+    const active = loans.filter(l => l.mesesPagados < l.plazo)
+    const totalPagar  = active.filter(l => l.tipo === 'pagar').reduce((s, l) => s + l.cuota, 0)
+    const totalCobrar = active.filter(l => l.tipo === 'cobrar').reduce((s, l) => s + l.cuota, 0)
+    const pagar  = active.filter(l => l.tipo === 'pagar')
+    const cobrar = active.filter(l => l.tipo === 'cobrar')
+    return { pagar, cobrar, totalPagar, totalCobrar }
+  } catch {
+    return { pagar: [], cobrar: [], totalPagar: 0, totalCobrar: 0 }
   }
 }
 
@@ -58,10 +74,20 @@ function EntryForm({ label, onAdd, color }) {
 
 export default function BalancePanel({ transactions }) {
   const [entries, setEntries] = useState(loadEntries)
+  const [loans, setLoans] = useState(loadLoansSnapshot)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
   }, [entries])
+
+  // Re-read loans whenever this tab becomes active (storage may have changed)
+  useEffect(() => {
+    const onStorage = () => setLoans(loadLoansSnapshot())
+    window.addEventListener('storage', onStorage)
+    // Also refresh on mount
+    setLoans(loadLoansSnapshot())
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   // Card totals grouped by source
   const bySource = {}
@@ -74,8 +100,9 @@ export default function BalancePanel({ transactions }) {
 
   const manualExpenseTotal = entries.expenses.reduce((s, e) => s + e.amount, 0)
   const incomeTotal = entries.incomes.reduce((s, e) => s + e.amount, 0)
-  const totalExpenses = cardTotal + manualExpenseTotal
-  const balance = incomeTotal - totalExpenses
+  const totalExpenses = cardTotal + manualExpenseTotal + loans.totalPagar
+  const totalIncomesWithLoans = incomeTotal + loans.totalCobrar
+  const balance = totalIncomesWithLoans - totalExpenses
   const balancePositive = balance >= 0
 
   const addExpense = entry => setEntries(prev => ({ ...prev, expenses: [...prev.expenses, entry] }))
@@ -99,12 +126,18 @@ export default function BalancePanel({ transactions }) {
 
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Total gastos</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Total egresos</div>
             <div className="text-xl font-extrabold text-red-600 dark:text-red-400">{fmt(totalExpenses)}</div>
+            {loans.totalPagar > 0 && (
+              <div className="text-[10px] text-red-400 dark:text-red-500 mt-0.5">incl. {fmt(loans.totalPagar)} préstamos</div>
+            )}
           </div>
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Total ingresos</div>
-            <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{fmt(incomeTotal)}</div>
+            <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{fmt(totalIncomesWithLoans)}</div>
+            {loans.totalCobrar > 0 && (
+              <div className="text-[10px] text-emerald-400 dark:text-emerald-500 mt-0.5">incl. {fmt(loans.totalCobrar)} préstamos</div>
+            )}
           </div>
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-medium uppercase tracking-wide">Balance</div>
@@ -149,6 +182,32 @@ export default function BalancePanel({ transactions }) {
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 px-4 py-6 text-center text-sm text-slate-400">
               Cargá un resumen PDF para ver los totales por tarjeta
+            </div>
+          )}
+
+          {/* Loans to pay */}
+          {loans.pagar.length > 0 && (
+            <div className="rounded-2xl border border-red-100 dark:border-red-900/40 overflow-hidden">
+              <div className="px-4 py-2.5 bg-red-50 dark:bg-red-950/30 border-b border-red-100 dark:border-red-900/40 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Landmark size={12} className="text-red-400" />
+                  <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide">Préstamos vigentes</span>
+                </div>
+                <span className="text-xs font-bold text-red-500">{fmt(loans.totalPagar)}/mes</span>
+              </div>
+              <ul className="divide-y divide-red-50 dark:divide-red-900/20">
+                {loans.pagar.map(l => (
+                  <li key={l.id} className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900/40">
+                    <div>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{l.acreedor}</span>
+                      <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">
+                        cuota {l.mesesPagados}/{l.plazo}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-red-600 dark:text-red-400 shrink-0">{fmt(l.cuota)}/mes</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -225,6 +284,32 @@ export default function BalancePanel({ transactions }) {
               <EntryForm label="Ingreso" onAdd={addIncome} color="bg-emerald-500 hover:bg-emerald-600" />
             </div>
           </div>
+
+          {/* Loans to collect */}
+          {loans.cobrar.length > 0 && (
+            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 overflow-hidden">
+              <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Landmark size={12} className="text-emerald-400" />
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Préstamos a cobrar</span>
+                </div>
+                <span className="text-xs font-bold text-emerald-500">{fmt(loans.totalCobrar)}/mes</span>
+              </div>
+              <ul className="divide-y divide-emerald-50 dark:divide-emerald-900/20">
+                {loans.cobrar.map(l => (
+                  <li key={l.id} className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900/40">
+                    <div>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{l.acreedor}</span>
+                      <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">
+                        cuota {l.mesesPagados}/{l.plazo}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">{fmt(l.cuota)}/mes</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Tip box */}
           <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/60 dark:bg-indigo-950/30 px-4 py-3">
