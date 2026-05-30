@@ -298,9 +298,9 @@ function buildCardInfo(suffix, rawName) {
       if (trimmed.includes('/')) {
         const parts = trimmed.split('/')
         const afterSlash = parts[parts.length - 1].trim()
-        // If post-slash is a single word it's likely a family surname prefix;
+        // If post-slash is empty or a single word it's likely a family surname prefix;
         // use the pre-slash portion which holds the actual given name(s).
-        given = afterSlash.split(/\s+/).filter(Boolean).length === 1
+        given = afterSlash.split(/\s+/).filter(Boolean).length <= 1
           ? parts.slice(0, -1).join('/').trim()
           : afterSlash
       } else {
