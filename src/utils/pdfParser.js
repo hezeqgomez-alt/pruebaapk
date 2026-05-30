@@ -162,7 +162,6 @@ function findAmounts(text) {
 
 function detectBank(text) {
   const t = text.toLowerCase()
-  // Most specific / branded names first to avoid false positives on generic words
   if (t.includes('american express'))  return 'AMEX'
   if (t.includes('naranja x'))         return 'Naranja X'
   if (t.includes('naranja'))           return 'Naranja X'
@@ -173,8 +172,6 @@ function detectBank(text) {
   if (t.includes('hipotecario'))       return 'Hipotecario'
   if (t.includes('supervielle'))       return 'Supervielle'
   if (t.includes('patagonia'))         return 'Patagonia'
-  if (t.includes('cabal'))             return 'CABAL'
-  if (t.includes('amex'))              return 'AMEX'
   if (t.includes('galicia'))           return 'Galicia'
   if (t.includes('bbva'))              return 'BBVA'
   if (t.includes('santander'))         return 'Santander'
@@ -184,9 +181,18 @@ function detectBank(text) {
   if (t.includes('itaú') || t.includes('itau')) return 'Itaú'
   if (t.includes('nacion') || t.includes('nación') || t.includes('bna')) return 'Banco Nación'
   if (t.includes('ciudad'))            return 'Banco Ciudad'
-  if (t.includes('mastercard'))        return 'Mastercard'
-  if (t.includes('visa'))              return 'Visa'
-  return 'Desconocido'
+  return null
+}
+
+// Detects the card network/brand from any text block.
+function detectCardBrand(text) {
+  const t = text.toLowerCase()
+  if (/\bamerican\s+express\b|\bamex\b/.test(t)) return 'American Express'
+  if (/\bmastercard\b/.test(t))                  return 'Mastercard'
+  if (/\bvisa\b/.test(t))                        return 'Visa'
+  if (/\bcabal\b/.test(t))                       return 'Cabal'
+  if (/\bmaestro\b/.test(t))                     return 'Maestro'
+  return null
 }
 
 // ─── Detect year from PDF text ────────────────────────────────────────────
@@ -303,11 +309,12 @@ function buildCardInfo(suffix, rawName) {
   return (cleanSuffix || holder) ? { suffix: cleanSuffix, holder } : null
 }
 
-function buildSource(bank, filename, card) {
-  const base = (bank && bank !== 'Desconocido') ? bank : filename.replace(/\.[^.]+$/, '')
+function buildSource(bank, docBrand, filename, card) {
+  const bankLabel = (bank && bank !== 'Desconocido') ? bank : filename.replace(/\.[^.]+$/, '')
+  const brand = card?.brand || docBrand
+  const base = brand ? `${bankLabel} Tarjeta ${brand}` : bankLabel
   if (!card) return base
   if (card.suffix) {
-    // Ordinal markers (A1, A2…) from P7 pattern → human-readable "Adicional N"
     const display = /^A\d+$/.test(card.suffix)
       ? `Adicional ${card.suffix.slice(1)}`
       : `*${card.suffix}`
@@ -329,47 +336,51 @@ function isTitularReset(text) {
 
 function extractCardInfo(text) {
   let m
+  const sectionBrand = detectCardBrand(text)
+
+  function wb(ci) {
+    if (!ci) return null
+    return sectionBrand ? { ...ci, brand: sectionBrand } : ci
+  }
 
   // P1 · CABAL / Naranja X — "TARJETA (0085) TOTAL CONSUMOS DE GUIDO/MARIA CANDELA"
   m = text.match(/tarjeta\s*\((\d+)\)[^()]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,50})/i)
-  if (m) return buildCardInfo(m[1], m[2])
+  if (m) { const r = wb(buildCardInfo(m[1], m[2])); if (r) return r }
 
   // P2 · Visa/MC adicional con número corto — "TARJETA ADICIONAL Nro. 4521 PEREZ JUAN"
   m = text.match(/tarjeta\s+adicional\s+(?:nro\.?\s*|n[°º]?\s*)?(?:[*X\s]{0,10})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,40})/i)
-  if (m) return buildCardInfo(m[1], m[2])
+  if (m) { const r = wb(buildCardInfo(m[1], m[2])); if (r) return r }
 
   // P3 · Visa/MC adicional con número enmascarado largo — "TARJETA ADICIONAL **** **** **** 4521 PEREZ"
   m = text.match(/tarjeta\s+adicional\s+(?:[\d*X\s]{6,18})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,40})/i)
-  if (m) return buildCardInfo(m[1], m[2])
+  if (m) { const r = wb(buildCardInfo(m[1], m[2])); if (r) return r }
 
   // P2b · "TARJETA ADICIONAL CANDELA RODRIGUEZ" — sin número de tarjeta, requiere ≥2 palabras
   m = text.match(/tarjeta\s+adicional\s+([A-ZÁÉÍÓÚÑA-Z]{2,}(?:\s+[A-ZÁÉÍÓÚÑA-Z]{2,})+)/i)
-  if (m) return buildCardInfo(null, m[1])
+  if (m) { const r = wb(buildCardInfo(null, m[1])); if (r) return r }
 
   // P4 · Galicia / HSBC / Santander — "TERMINADA EN 4521 - PEREZ JUAN" o sin nombre
   m = text.match(/terminada\s+en\s+(\d{4})(?:\s*[-–·:,]?\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,40}))?/i)
-  if (m) return buildCardInfo(m[1], m[2] || null)
+  if (m) { const r = wb(buildCardInfo(m[1], m[2] || null)); if (r) return r }
 
   // P5 · AMEX — "CUENTA ADICIONAL 3728-XXXXXX JUAN PEREZ"
   m = text.match(/cuenta\s+adicional\s+(?:[\dX*-]+\s+)?([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
-  if (m) return buildCardInfo(null, m[1])
+  if (m) { const r = wb(buildCardInfo(null, m[1])); if (r) return r }
 
   // P6 · Genérico — "TITULAR ADICIONAL: PEREZ JUAN" / "NOMBRE DEL TITULAR: JUAN PEREZ"
-  // Requires ≥2 words after the colon: prevents single-surname captures like "TITULAR: GOMEZ"
-  // which are account-holder header rows (name in LAST, FIRST format, comma stops capture at 1 word).
   m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal))?\s*[:-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
-  if (m && m[1].trim().split(/\s+/).filter(Boolean).length >= 2) return buildCardInfo(null, m[1])
+  if (m && m[1].trim().split(/\s+/).filter(Boolean).length >= 2) { const r = wb(buildCardInfo(null, m[1])); if (r) return r }
 
   // P7 · Numeración ordinal — "ADICIONAL N° 2 - PEREZ JUAN" (Macro, Patagonia, ICBC)
   m = text.match(/\badicional\s+n[°º]?\.?\s*(\d{1,2})\s*[-–·]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
-  if (m) return buildCardInfo(`A${m[1]}`, m[2])
+  if (m) { const r = wb(buildCardInfo(`A${m[1]}`, m[2])); if (r) return r }
 
   return null
 }
 
 // ─── Core row-based parser ───────────────────────────────────────────────────
 
-function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
+function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand = null) {
   const transactions = []
   let currentCard = null
   let pendingRetroactive = []
@@ -386,7 +397,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
       const isEndOfSection = /\btotal\s+consumos\b/i.test(row.text)
       if (isEndOfSection && pendingRetroactive.length > 0) {
         for (const t of pendingRetroactive) {
-          t.source = buildSource(bank, filename, cardInfo)
+          t.source = buildSource(bank, docBrand, filename, cardInfo)
           if (cardInfo.holder) t.cardHolder = cardInfo.holder
           else delete t.cardHolder
           t.category = categorize(t.description)
@@ -442,7 +453,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
       type,
       installment,
       category: categorize(desc),
-      source: buildSource(bank, filename, currentCard),
+      source: buildSource(bank, docBrand, filename, currentCard),
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     }
@@ -455,7 +466,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
 
 // ─── Column-aware parser (for PDFs with clearly separated columns) ───────────
 
-function parseColumnar(rows, filename, refYear, bank = '') {
+function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
   const transactions = []
   let currentCard = null
   let pendingRetroactive = []
@@ -470,7 +481,7 @@ function parseColumnar(rows, filename, refYear, bank = '') {
       const isEndOfSection = /\btotal\s+consumos\b/i.test(text)
       if (isEndOfSection && pendingRetroactive.length > 0) {
         for (const t of pendingRetroactive) {
-          t.source = buildSource(bank, filename, cardInfo)
+          t.source = buildSource(bank, docBrand, filename, cardInfo)
           if (cardInfo.holder) t.cardHolder = cardInfo.holder
           else delete t.cardHolder
           t.category = categorize(t.description)
@@ -524,7 +535,7 @@ function parseColumnar(rows, filename, refYear, bank = '') {
       type: amount < 0 ? 'credit' : 'debit',
       installment,
       category: categorize(desc),
-      source: buildSource(bank, filename, currentCard),
+      source: buildSource(bank, docBrand, filename, currentCard),
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     }
@@ -649,10 +660,11 @@ export async function parsePDF(file, { onProgress } = {}) {
       // Parse OCR text as a single synthetic page
       const ocrItems = ocrTextToItems(ocrText)
       const bank = detectBank(ocrText)
+      const docBrand = detectCardBrand(ocrText)
       const refYear = detectYear(ocrText)
       const rows = groupIntoRows(ocrItems)
-      const colTxs = parseColumnar(rows, file.name, refYear, bank)
-      const rowTxs = parseRows(rows, file.name, refYear, true, bank)
+      const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand)
+      const rowTxs = parseRows(rows, file.name, refYear, true, bank, docBrand)
       let transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
       return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
     } catch (e) {
@@ -661,6 +673,7 @@ export async function parsePDF(file, { onProgress } = {}) {
   }
 
   const bank = detectBank(allText)
+  const docBrand = detectCardBrand(allText)
   const refYear = detectYear(allText)
 
   let pageErrors = 0
@@ -682,8 +695,8 @@ export async function parsePDF(file, { onProgress } = {}) {
   }
   allPageRows.sort((a, b) => b.y - a.y)
 
-  const colTxs = parseColumnar(allPageRows, file.name, refYear, bank)
-  const rowTxs = parseRows(allPageRows, file.name, refYear, false, bank)
+  const colTxs = parseColumnar(allPageRows, file.name, refYear, bank, docBrand)
+  const rowTxs = parseRows(allPageRows, file.name, refYear, false, bank, docBrand)
   const transactions = colTxs.length >= rowTxs.length ? colTxs : rowTxs
 
   return {
