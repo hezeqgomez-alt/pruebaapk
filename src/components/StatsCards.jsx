@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, CreditCard, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, CreditCard, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 

@@ -104,7 +104,6 @@ function kpiCard(doc, x, y, w, h, label, value, sub, accentRgb) {
 export async function generateReport({ transactions, chartDonutRef, chartBarRef }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pw = doc.internal.pageSize.getWidth()
-  const ph = doc.internal.pageSize.getHeight()
 
   const debits  = transactions.filter(t => t.type !== 'credit')
   const credits = transactions.filter(t => t.type === 'credit')

@@ -134,7 +134,7 @@ export async function importFromXLSX(file) {
 
 export function importFromCSV(text) {
   // Strip UTF-8 BOM if present
-  const clean = text.replace(/^﻿/, '')
+  const clean = text.replace(/^\uFEFF/, '')
   const lines = clean.split(/\r?\n/).filter(l => l.trim())
   if (lines.length < 2) return []
 

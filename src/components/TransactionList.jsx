@@ -102,16 +102,27 @@ function InlineNote({ value, onSave }) {
   )
 }
 
+function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
+  return (
+    <th
+      className={`pb-3 pr-4 text-slate-400 dark:text-slate-500 font-medium cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 whitespace-nowrap text-xs uppercase tracking-wide ${className}`}
+      onClick={() => onSort(field)}
+    >
+      <span className="flex items-center gap-1">{children}<SortIcon field={field} sortBy={sortBy} sortDir={sortDir} /></span>
+    </th>
+  )
+}
+
 export default function TransactionList({ transactions, onUpdate, onFilteredChange }) {
-  const _prefs                          = useRef(loadFilterPrefs())
-  const [searchInput, setSearchInput] = useState(_prefs.current.search || '')
-  const [search, setSearch]           = useState(_prefs.current.search || '')
+  const [_p] = useState(loadFilterPrefs)
+  const [searchInput, setSearchInput] = useState(_p.search || '')
+  const [search, setSearch]           = useState(_p.search || '')
   const searchTimer                   = useRef(null)
-  const [filterCat, setFilterCat]     = useState(_prefs.current.filterCat || '')
-  const [filterSource, setFilterSource] = useState(_prefs.current.filterSource || '')
-  const [dateFrom, setDateFrom]       = useState(_prefs.current.dateFrom || '')
-  const [dateTo, setDateTo]           = useState(_prefs.current.dateTo || '')
-  const [filterType, setFilterType]   = useState(_prefs.current.filterType || '')
+  const [filterCat, setFilterCat]     = useState(_p.filterCat || '')
+  const [filterSource, setFilterSource] = useState(_p.filterSource || '')
+  const [dateFrom, setDateFrom]       = useState(_p.dateFrom || '')
+  const [dateTo, setDateTo]           = useState(_p.dateTo || '')
+  const [filterType, setFilterType]   = useState(_p.filterType || '')
   const [page, setPage]               = useState(1)
   const [sortBy, setSortBy]           = useState('date')
   const [sortDir, setSortDir]         = useState('desc')
@@ -243,15 +254,6 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   }
 
   if (transactions.length === 0) return null
-
-  const Th = ({ field, children, className = '' }) => (
-    <th
-      className={`pb-3 pr-4 text-slate-400 dark:text-slate-500 font-medium cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 whitespace-nowrap text-xs uppercase tracking-wide ${className}`}
-      onClick={() => toggleSort(field)}
-    >
-      <span className="flex items-center gap-1">{children}<SortIcon field={field} sortBy={sortBy} sortDir={sortDir} /></span>
-    </th>
-  )
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -391,9 +393,9 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                 <input type="checkbox" checked={allPageSelected} onChange={toggleSelectAll}
                   className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" title="Seleccionar todos" />
               </th>
-              <Th field="date">Fecha</Th>
-              <Th field="desc">Descripción</Th>
-              <Th field="cat">Categoría</Th>
+              <Th field="date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>Fecha</Th>
+              <Th field="desc" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>Descripción</Th>
+              <Th field="cat" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>Categoría</Th>
               <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">Nota</th>
               <th className="pb-3 pr-4 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap hidden lg:table-cell">
                 <span className="flex items-center gap-1">
@@ -401,7 +403,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                   <Info size={11} className="opacity-50" title="Filtrá por tarjeta usando el botón Filtros ↑" />
                 </span>
               </th>
-              <Th field="amount" className="text-right">Importe</Th>
+              <Th field="amount" className="text-right" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}>Importe</Th>
               <th className="pb-3 w-8" />
             </tr>
           </thead>

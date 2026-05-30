@@ -4,19 +4,6 @@ import { categorize } from './categorizer'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
-// ─── Text extraction ────────────────────────────────────────────────────────
-
-async function extractPages(file) {
-  const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-  const pages = []
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const content = await page.getTextContent()
-    pages.push(content.items)
-  }
-  return pages
-}
 
 // Normalize unicode minus signs / dashes to ASCII hyphen
 function norm(str) {
@@ -93,7 +80,7 @@ function parseDate(str, refYear) {
   const yr = refYear || new Date().getFullYear()
 
   // dd/mm/yyyy or dd-mm-yyyy
-  let m = s.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/)
+  let m = s.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})\b/)
   if (m) {
     const y  = m[3].length === 2 ? 2000 + parseInt(m[3]) : parseInt(m[3])
     const mo = parseInt(m[2])
@@ -111,7 +98,7 @@ function parseDate(str, refYear) {
       return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
   // dd/mm (sin año)
-  m = s.match(/\b(\d{1,2})[\/\-](\d{1,2})\b/)
+  m = s.match(/\b(\d{1,2})[-/](\d{1,2})\b/)
   if (m) {
     const mo = parseInt(m[2])
     const dy = parseInt(m[1])
@@ -131,7 +118,7 @@ function parseDate(str, refYear) {
 
 function detectInstallment(text) {
   // Require explicit keyword prefix: CTA, CUOTA, C. — avoid false positives on dates
-  const m = text.match(/\b(?:cta|cuota|ct)\.?\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})\b/i)
+  const m = text.match(/\b(?:cta|cuota|ct)\.?\s*(\d{1,2})\s*[-/]\s*(\d{1,2})\b/i)
     || text.match(/\bC\.\s*(\d{1,2})\s*\/\s*(\d{1,2})\b/)
   if (!m) return null
   const current = parseInt(m[1])
@@ -215,7 +202,7 @@ function cleanDesc(raw) {
   // Normalize unicode dashes to ASCII so all regex patterns work uniformly
   let desc = norm(raw)
     // Remove date formats
-    .replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '')
+    .replace(/\b\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?\b/g, '')
     .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, '')
     .replace(/\b\d{1,2}\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\s+\d{2,4}\b/gi, '')
     // Remove exchange rate references (e.g. "1078.774,71 TC1415,000")
@@ -229,7 +216,7 @@ function cleanDesc(raw) {
     .trim()
 
   // Remove leading/trailing noise chars (including underscores and parens)
-  desc = desc.replace(/^[\s\-\.\|\/\_\(\)]+|[\s\-\.\|\/\_\(\)]+$/g, '').trim()
+  desc = desc.replace(/^[\s\-.|/_()]+|[\s\-.|/_()]+$/g, '').trim()
 
   // Strip leading comprobante/voucher codes: 4-7 digits + letter (e.g. "645184*", "005067K", "1998C")
   desc = desc.replace(/^\d{4,7}[A-Z*K]\s*/i, '').trim()
@@ -266,17 +253,17 @@ function shouldSkipDesc(desc) {
   // Address fragments
   if (/\bvilla\s+adelina\b/i.test(desc)) return true
   // Installment schedule rows: 2+ "Month/YY" or "Month-YY" tokens (e.g. "ENE/25 FEB/25")
-  if ((desc.match(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)[\/\-]\d{2}\b/gi) || []).length >= 2) return true
+  if ((desc.match(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)[-/]\d{2}\b/gi) || []).length >= 2) return true
   // Argentine CC fiscal/fee rows: interest, taxes, commissions — not merchant purchases
   if (/^(interes\w*\s+(?:(?:de|por|s\/)\s+)?financ|iibb\b|iva\s+rg|db\.?\s*iva|db\.?rg\b|com\.adm|transferencia\s+deuda|percep[^a-z])/i.test(desc)) return true
   // Bank administrative cargo rows (e.g. "CARGO COM.ADM", "CARGO FINANCIERO", "CARGO RENOVACION ANUAL")
   if (/^cargo\s+(?:com\.?\s*adm|financiero|renovaci[oó]n|administrativo|mantenimiento|anual\b)/i.test(desc)) return true
   // OCR garbage: description is just digits, colons or very few letters after cleaning
-  if (/^[\d\s:.,\/\-]+$/.test(desc)) return true
+  if (/^[\d\s:.,/-]+$/.test(desc)) return true
   // Extremely short residual (allow 3-letter merchants like YPF, OCA, ACA)
   if (desc.replace(/\s/g, '').length < 3) return true
   // Description contains only month names/abbreviations + digits/symbols → pure schedule row (e.g. "ENE/25")
-  const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?|prox(?:imo)?s?|meses?)\b/gi, '').replace(/[\d\s\/\-,.:|()%$]+/g, '')
+  const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?|prox(?:imo)?s?|meses?)\b/gi, '').replace(/[\d\s/,.:|()%$-]+/g, '')
   if (nonMonth.trim().length === 0) return true
   return false
 }
@@ -342,15 +329,15 @@ function extractCardInfo(text) {
   let m
 
   // P1 · CABAL / Naranja X — "TARJETA (0085) TOTAL CONSUMOS DE GUIDO/MARIA CANDELA"
-  m = text.match(/tarjeta\s*\((\d+)\)[^()]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,50})/i)
+  m = text.match(/tarjeta\s*\((\d+)\)[^()]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,50})/i)
   if (m) return buildCardInfo(m[1], m[2])
 
   // P2 · Visa/MC adicional con número corto — "TARJETA ADICIONAL Nro. 4521 PEREZ JUAN"
-  m = text.match(/tarjeta\s+adicional\s+(?:nro\.?\s*|n[°º]?\s*)?(?:[*X\s]{0,10})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40})/i)
+  m = text.match(/tarjeta\s+adicional\s+(?:nro\.?\s*|n[°º]?\s*)?(?:[*X\s]{0,10})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,40})/i)
   if (m) return buildCardInfo(m[1], m[2])
 
   // P3 · Visa/MC adicional con número enmascarado largo — "TARJETA ADICIONAL **** **** **** 4521 PEREZ"
-  m = text.match(/tarjeta\s+adicional\s+(?:[\d*X\s]{6,18})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40})/i)
+  m = text.match(/tarjeta\s+adicional\s+(?:[\d*X\s]{6,18})?(\d{4})\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,40})/i)
   if (m) return buildCardInfo(m[1], m[2])
 
   // P2b · "TARJETA ADICIONAL CANDELA RODRIGUEZ" — sin número de tarjeta, requiere ≥2 palabras
@@ -358,19 +345,19 @@ function extractCardInfo(text) {
   if (m) return buildCardInfo(null, m[1])
 
   // P4 · Galicia / HSBC / Santander — "TERMINADA EN 4521 - PEREZ JUAN" o sin nombre
-  m = text.match(/terminada\s+en\s+(\d{4})(?:\s*[-–·:,]?\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{2,40}))?/i)
+  m = text.match(/terminada\s+en\s+(\d{4})(?:\s*[-–·:,]?\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,40}))?/i)
   if (m) return buildCardInfo(m[1], m[2] || null)
 
   // P5 · AMEX — "CUENTA ADICIONAL 3728-XXXXXX JUAN PEREZ"
-  m = text.match(/cuenta\s+adicional\s+(?:[\dX*\-]+\s+)?([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{4,40})/i)
+  m = text.match(/cuenta\s+adicional\s+(?:[\dX*-]+\s+)?([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
   if (m) return buildCardInfo(null, m[1])
 
   // P6 · Genérico — "TITULAR: PEREZ JUAN" / "TITULAR ADICIONAL: JUAN" / "NOMBRE DEL TITULAR: JUAN"
-  m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal|de\s+la\s+cuenta))?\s*[:\-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{4,40})/i)
+  m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal|de\s+la\s+cuenta))?\s*[:-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
   if (m) return buildCardInfo(null, m[1])
 
   // P7 · Numeración ordinal — "ADICIONAL N° 2 - PEREZ JUAN" (Macro, Patagonia, ICBC)
-  m = text.match(/\badicional\s+n[°º]?\.?\s*(\d{1,2})\s*[-–·]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z\/\s]{4,40})/i)
+  m = text.match(/\badicional\s+n[°º]?\.?\s*(\d{1,2})\s*[-–·]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
   if (m) return buildCardInfo(`A${m[1]}`, m[2])
 
   return null
@@ -595,7 +582,7 @@ export async function parsePDF(file, { onProgress } = {}) {
       }
     }
   } catch (e) {
-    throw new Error(`No se pudo leer el PDF: ${e.message}`)
+    throw new Error(`No se pudo leer el PDF: ${e.message}`, { cause: e })
   }
 
   const allText = pages.flat().map(i => i.str).join(' ')

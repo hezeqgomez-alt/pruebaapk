@@ -43,7 +43,7 @@ function Toast({ msg, onDone }) {
   return (
     <div className={style}>
       <Icon size={16} className={`${iconColor} shrink-0 mt-0.5`} />
-      <span className="flex-1 leading-snug">{msg.replace(/^[✅❌⚠️📄📥🗑️ℹ️]\s*/, '')}</span>
+      <span className="flex-1 leading-snug">{msg.replace(/^(?:✅|❌|⚠️|📄|📥|🗑️|ℹ️)\s*/, '')}</span>
       <button onClick={onDone} className="opacity-40 hover:opacity-70 transition-opacity ml-1">
         <X size={14} />
       </button>
@@ -52,7 +52,10 @@ function Toast({ msg, onDone }) {
 }
 
 export default function App() {
-  const [transactions, setTransactions]           = useState([])
+  const [transactions, setTransactions]           = useState(() => {
+    const saved = loadData()
+    return saved.transactions?.length > 0 ? saved.transactions : []
+  })
   const [loading, setLoading]                     = useState([])
   const [toast, setToast]                         = useState(null)
   const [activeTab, setActiveTab]                 = useState('dashboard')
@@ -72,11 +75,6 @@ export default function App() {
     document.documentElement.classList.toggle('dark', darkMode)
     saveDarkMode(darkMode)
   }, [darkMode])
-
-  useEffect(() => {
-    const saved = loadData()
-    if (saved.transactions?.length > 0) setTransactions(saved.transactions)
-  }, [])
 
   useEffect(() => {
     saveData({ transactions })

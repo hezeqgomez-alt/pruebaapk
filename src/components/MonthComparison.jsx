@@ -86,7 +86,7 @@ const MonthComparison = forwardRef(function MonthComparison({ transactions }, re
   }
 
   // ── Table rows ────────────────────────────────────────────────────────────────
-  const tableRows = keys.map((k, i) => {
+  const tableRows = keys.map((k) => {
     const total = Object.values(byKeyCat[k] || {}).reduce((s, v) => s + v, 0)
     const count = debits.filter(t => (isAnnual ? t.date.startsWith(k) : t.date.startsWith(k))).length
     const label = isAnnual

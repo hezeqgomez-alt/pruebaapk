@@ -3,7 +3,6 @@ import { Target, Edit3, Check, X, AlertTriangle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CATEGORIES } from '../utils/categorizer'
-import { saveBudgets } from '../utils/storage'
 
 function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
