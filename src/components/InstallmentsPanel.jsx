@@ -45,7 +45,9 @@ export default function InstallmentsPanel({ transactions }) {
     }).sort((a, b) => a.remaining - b.remaining)
   }, [transactions])
 
-  // Projection of installments for the next 3 calendar months from today
+  // Projection of installments for the next 3 calendar months from today.
+  // Uses remaining count directly: a plan with R remaining payments will pay
+  // in months +1 through +R from today, regardless of purchase date.
   const nextMonths = useMemo(() => {
     const today = new Date()
     const todayIdx = today.getFullYear() * 12 + today.getMonth()
@@ -55,21 +57,10 @@ export default function InstallmentsPanel({ transactions }) {
       const year  = Math.floor(absMonth / 12)
       const month = absMonth % 12
 
-      const plans = []
-      let total = 0
+      const activePlans = groups.filter(g => g.remaining >= offset)
+      const total = activePlans.reduce((s, g) => s + g.perCuota, 0)
 
-      for (const g of groups) {
-        const lastDateStr = g.dates[g.dates.length - 1]
-        const lastDate = new Date(lastDateStr + 'T12:00:00')
-        const planLastIdx = lastDate.getFullYear() * 12 + lastDate.getMonth()
-        const paymentOffset = absMonth - planLastIdx
-        if (paymentOffset >= 1 && paymentOffset <= g.remaining) {
-          plans.push(g)
-          total += g.perCuota
-        }
-      }
-
-      return { label: `${MONTH_NAMES[month]} ${year}`, month, year, plans, total }
+      return { label: `${MONTH_NAMES[month]} ${year}`, month, year, plans: activePlans, total }
     })
   }, [groups])
 
