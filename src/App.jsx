@@ -12,6 +12,7 @@ import InsightsPanel from './components/InsightsPanel'
 import TransactionList from './components/TransactionList'
 import BudgetPanel from './components/BudgetPanel'
 import InstallmentsPanel from './components/InstallmentsPanel'
+import BalancePanel from './components/BalancePanel'
 import AddTransactionModal from './components/AddTransactionModal'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
@@ -259,6 +260,7 @@ export default function App() {
     { id: 'movimientos',  label: 'Movimientos', count: (filteredForReport && filteredForReport.length < transactions.length) ? filteredForReport.length : transactions.length },
     { id: 'presupuesto',  label: 'Presupuesto' },
     ...(hasInstallments ? [{ id: 'cuotas', label: 'Cuotas' }] : []),
+    { id: 'balance',      label: 'Balance' },
     { id: 'insights',     label: 'Alertas',
       count: findings.filter(f => f.type !== 'lastInstallment').length,
       countGreen: findings.filter(f => f.type === 'lastInstallment').length },
@@ -458,6 +460,10 @@ export default function App() {
 
             {activeTab === 'cuotas' && (
               <InstallmentsPanel transactions={transactions} />
+            )}
+
+            {activeTab === 'balance' && (
+              <BalancePanel transactions={transactions} />
             )}
 
             {activeTab === 'insights' && (
