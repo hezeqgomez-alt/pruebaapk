@@ -426,7 +426,7 @@ export function detectUnnecessary(transactions) {
   for (const t of Object.values(byPlan)) {
     if (t.installment.current !== t.installment.total) continue
     const ageDays = (new Date(mostRecentDate) - new Date(t.date)) / 86400000
-    if (ageDays > 60) continue
+    if (ageDays > 365) continue
     findings.push({
       type: 'lastInstallment',
       label: '¡Última cuota pagada!',

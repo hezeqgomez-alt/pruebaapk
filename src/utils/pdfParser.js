@@ -616,7 +616,11 @@ export async function parsePDF(file, { onProgress } = {}) {
     }
   }
 
-  const bank = detectBank(allText.slice(0, 3000))
+  // Scan start + end: bank names often appear in page footers, outside first 3000 chars
+  const bankText = allText.length > 5000
+    ? allText.slice(0, 3000) + ' ' + allText.slice(-2000)
+    : allText
+  const bank = detectBank(bankText)
   const refYear = detectYear(allText)
 
   let transactions = []
