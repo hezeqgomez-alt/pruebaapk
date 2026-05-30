@@ -633,8 +633,6 @@ export async function parsePDF(file, { onProgress } = {}) {
     }
   }
 
-  transactions = dedupe(transactions)
-
   return {
     bank,
     transactions,
