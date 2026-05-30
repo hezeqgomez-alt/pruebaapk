@@ -265,6 +265,8 @@ function shouldSkipDesc(desc) {
   // Description contains only month names/abbreviations + digits/symbols → pure schedule row (e.g. "ENE/25")
   const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?|prox(?:imo)?s?|meses?)\b/gi, '').replace(/[\d\s/,.:|()%$-]+/g, '')
   if (nonMonth.trim().length === 0) return true
+  // Notification letter / legal boilerplate embedded in some PDFs
+  if (/^(buenos\s+aires|dichos\s+cambios|le\s+inform|le\s+comuni|estimado\s+asociad|condiciones\s+vigentes|la\s+presente|en\s+virtud|a\s+partir\s+del\s+pr|por\s+ello\s+le)/i.test(desc)) return true
   return false
 }
 
@@ -353,7 +355,8 @@ function extractCardInfo(text) {
   if (m) return buildCardInfo(null, m[1])
 
   // P6 · Genérico — "TITULAR: PEREZ JUAN" / "TITULAR ADICIONAL: JUAN" / "NOMBRE DEL TITULAR: JUAN"
-  m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal|de\s+la\s+cuenta))?\s*[:-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
+  // Note: "de la cuenta" excluded to avoid matching account-holder headers like "TITULAR DE CUENTA: GOMEZ"
+  m = text.match(/(?:nombre\s+del\s+)?titular(?:\s+(?:adicional|principal))?\s*[:-]\s*([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{4,40})/i)
   if (m) return buildCardInfo(null, m[1])
 
   // P7 · Numeración ordinal — "ADICIONAL N° 2 - PEREZ JUAN" (Macro, Patagonia, ICBC)
@@ -368,14 +371,33 @@ function extractCardInfo(text) {
 function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
   const transactions = []
   let currentCard = null
+  let pendingRetroactive = []
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
 
     // Detect card section headers before date check (they have no parseable date)
-    if (isTitularReset(row.text)) { currentCard = null; continue }
+    if (isTitularReset(row.text)) { currentCard = null; pendingRetroactive = []; continue }
     const cardInfo = extractCardInfo(row.text)
-    if (cardInfo) { currentCard = cardInfo; continue }
+    if (cardInfo) {
+      // CABAL-style: "TARJETA (nnnn) TOTAL CONSUMOS DE NAME" appears at END of each section.
+      // Retroactively assign card info to preceding untagged transactions.
+      const isEndOfSection = /\btotal\s+consumos\b/i.test(row.text)
+      if (isEndOfSection && pendingRetroactive.length > 0) {
+        for (const t of pendingRetroactive) {
+          t.source = buildSource(bank, filename, cardInfo)
+          if (cardInfo.holder) t.cardHolder = cardInfo.holder
+          else delete t.cardHolder
+          t.category = categorize(t.description)
+        }
+        pendingRetroactive = []
+        currentCard = null
+      } else if (!isEndOfSection) {
+        currentCard = cardInfo
+        pendingRetroactive = []
+      }
+      continue
+    }
 
     const date = parseDate(row.text, refYear)
     if (!date) continue
@@ -411,7 +433,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
     const installment = detectInstallment(row.text)
     const fx = detectForeignCurrency(row.text)
 
-    transactions.push({
+    const tx = {
       id: crypto.randomUUID(),
       date,
       description: desc,
@@ -422,7 +444,9 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
       source: buildSource(bank, filename, currentCard),
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
-    })
+    }
+    transactions.push(tx)
+    if (!currentCard) pendingRetroactive.push(tx)
   }
 
   return transactions
@@ -433,14 +457,31 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '') {
 function parseColumnar(rows, filename, refYear, bank = '') {
   const transactions = []
   let currentCard = null
+  let pendingRetroactive = []
 
   for (let i = 0; i < rows.length; i++) {
     const { cols, text } = rows[i]
 
     // Detect card section headers
-    if (isTitularReset(text)) { currentCard = null; continue }
+    if (isTitularReset(text)) { currentCard = null; pendingRetroactive = []; continue }
     const cardInfo = extractCardInfo(text)
-    if (cardInfo) { currentCard = cardInfo; continue }
+    if (cardInfo) {
+      const isEndOfSection = /\btotal\s+consumos\b/i.test(text)
+      if (isEndOfSection && pendingRetroactive.length > 0) {
+        for (const t of pendingRetroactive) {
+          t.source = buildSource(bank, filename, cardInfo)
+          if (cardInfo.holder) t.cardHolder = cardInfo.holder
+          else delete t.cardHolder
+          t.category = categorize(t.description)
+        }
+        pendingRetroactive = []
+        currentCard = null
+      } else if (!isEndOfSection) {
+        currentCard = cardInfo
+        pendingRetroactive = []
+      }
+      continue
+    }
 
     if (cols.length < 2) continue
 
@@ -474,7 +515,7 @@ function parseColumnar(rows, filename, refYear, bank = '') {
 
     const installment = detectInstallment(text)
     const fx = detectForeignCurrency(text)
-    transactions.push({
+    const tx = {
       id: crypto.randomUUID(),
       date,
       description: desc,
@@ -485,7 +526,9 @@ function parseColumnar(rows, filename, refYear, bank = '') {
       source: buildSource(bank, filename, currentCard),
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
-    })
+    }
+    transactions.push(tx)
+    if (!currentCard) pendingRetroactive.push(tx)
   }
 
   return transactions
@@ -616,26 +659,31 @@ export async function parsePDF(file, { onProgress } = {}) {
     }
   }
 
-  // Scan start + end: bank names often appear in page footers, outside first 3000 chars
-  const bankText = allText.length > 5000
-    ? allText.slice(0, 3000) + ' ' + allText.slice(-2000)
-    : allText
-  const bank = detectBank(bankText)
+  const bank = detectBank(allText)
   const refYear = detectYear(allText)
 
-  let transactions = []
   let pageErrors = 0
 
-  for (const items of pages) {
+  // Single-pass: combine all pages with Y offset to preserve cross-page card attribution
+  // (CABAL puts "TOTAL CONSUMOS" at end of card sections, which may span page boundaries)
+  const allPageRows = []
+  for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
     try {
-      const rows = groupIntoRows(items)
-      const colTxs = parseColumnar(rows, file.name, refYear, bank)
-      const rowTxs = parseRows(rows, file.name, refYear, false, bank)
-      transactions.push(...(colTxs.length >= rowTxs.length ? colTxs : rowTxs))
+      const rows = groupIntoRows(pages[pageIdx])
+      // Higher offset for earlier pages keeps top-to-bottom, page-by-page document order
+      const yOffset = (pages.length - 1 - pageIdx) * 100000
+      for (const row of rows) {
+        allPageRows.push({ ...row, y: row.y + yOffset })
+      }
     } catch {
       pageErrors++
     }
   }
+  allPageRows.sort((a, b) => b.y - a.y)
+
+  const colTxs = parseColumnar(allPageRows, file.name, refYear, bank)
+  const rowTxs = parseRows(allPageRows, file.name, refYear, false, bank)
+  const transactions = colTxs.length >= rowTxs.length ? colTxs : rowTxs
 
   return {
     bank,
