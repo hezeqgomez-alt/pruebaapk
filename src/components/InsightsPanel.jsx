@@ -57,8 +57,17 @@ const TYPE_CONFIG = {
   },
 }
 
+function formatCompletedDate(dateStr) {
+  if (!dateStr) return ''
+  try {
+    return new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(dateStr + 'T12:00:00'))
+  } catch { return dateStr.slice(0, 7) }
+}
+
 function FreedCapitalSummary({ findings }) {
-  const completed = findings.filter(f => f.type === 'lastInstallment')
+  const [dismissed, setDismissed] = useState(new Set())
+  const completed = findings
+    .filter(f => f.type === 'lastInstallment' && !dismissed.has(f.transactions[0].description))
   if (completed.length === 0) return null
   const totalFreed = completed.reduce((s, f) => s + f.total, 0)
   return (
@@ -86,12 +95,19 @@ function FreedCapitalSummary({ findings }) {
                 {f.transactions[0].description}
               </div>
               <div className="text-xs text-slate-400 dark:text-slate-500">
-                {f.transactions[0].installment.total} cuotas · plan completado ✓
+                {f.transactions[0].installment.total} cuotas · completado {formatCompletedDate(f.completedDate)}
               </div>
             </div>
             <div className="text-sm font-bold text-teal-700 dark:text-teal-300 shrink-0">
               {fmt(f.total)}/mes
             </div>
+            <button
+              onClick={() => setDismissed(d => new Set([...d, f.transactions[0].description]))}
+              title="Descartar"
+              className="w-5 h-5 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+            >
+              <X size={11} />
+            </button>
           </div>
         ))}
       </div>
@@ -187,7 +203,7 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
       body: f.type === 'subscription'
         ? `"${f.description.slice(0, 30)}" se repite ${f.count} veces — ${fmt(f.total)} en total`
         : f.type === 'lastInstallment'
-        ? `${f.transactions[0].description} · cuota ${f.transactions[0].installment.current}/${f.transactions[0].installment.total} · ${fmt(f.total)}/mes liberado`
+        ? `Cuota ${f.transactions[0].installment.total}/${f.transactions[0].installment.total} · completado ${formatCompletedDate(f.completedDate)} · libera ${fmt(f.total)}/mes`
         : f.description,
       amount: f.total ? fmt(f.total) : null,
     })),

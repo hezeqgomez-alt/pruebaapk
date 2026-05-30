@@ -245,7 +245,9 @@ export default function App() {
     { id: 'movimientos',  label: 'Movimientos', count: (filteredForReport && filteredForReport.length < transactions.length) ? filteredForReport.length : transactions.length },
     { id: 'presupuesto',  label: 'Presupuesto' },
     ...(hasInstallments ? [{ id: 'cuotas', label: 'Cuotas' }] : []),
-    { id: 'insights',     label: 'Alertas', count: findings.length },
+    { id: 'insights',     label: 'Alertas',
+      count: findings.filter(f => f.type !== 'lastInstallment').length,
+      countGreen: findings.filter(f => f.type === 'lastInstallment').length },
   ]
 
   return (
@@ -409,6 +411,11 @@ export default function App() {
                         : 'bg-slate-200 text-slate-500 dark:bg-slate-600 dark:text-slate-300'
                     }`}>
                       {tab.count}
+                    </span>
+                  )}
+                  {tab.countGreen > 0 && (
+                    <span className="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-200">
+                      {tab.countGreen}
                     </span>
                   )}
                 </button>
