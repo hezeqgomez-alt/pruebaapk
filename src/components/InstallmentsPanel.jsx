@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
-import { CreditCard, TrendingDown } from 'lucide-react'
+import { CreditCard, TrendingDown, CalendarDays } from 'lucide-react'
+
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -10,14 +12,12 @@ export default function InstallmentsPanel({ transactions }) {
     const map = {}
     for (const t of transactions) {
       if (!t.installment || t.type === 'credit') continue
-      // Group by description (normalized)
       const key = t.description.toLowerCase().trim().slice(0, 35)
       if (!map[key]) map[key] = []
       map[key].push(t)
     }
 
     return Object.values(map).map(txs => {
-      // Use the transaction with the highest installment number (most recent)
       const latest = txs.reduce((a, b) =>
         b.installment.current > a.installment.current ? b : a
       )
@@ -42,8 +42,36 @@ export default function InstallmentsPanel({ transactions }) {
         remaining,
         dates: txs.map(t => t.date).sort(),
       }
-    }).sort((a, b) => a.remaining - b.remaining)  // Most urgent first
+    }).sort((a, b) => a.remaining - b.remaining)
   }, [transactions])
+
+  // Projection of installments for the next 3 calendar months from today
+  const nextMonths = useMemo(() => {
+    const today = new Date()
+    const todayIdx = today.getFullYear() * 12 + today.getMonth()
+
+    return [1, 2, 3].map(offset => {
+      const absMonth = todayIdx + offset
+      const year  = Math.floor(absMonth / 12)
+      const month = absMonth % 12
+
+      const plans = []
+      let total = 0
+
+      for (const g of groups) {
+        const lastDateStr = g.dates[g.dates.length - 1]
+        const lastDate = new Date(lastDateStr + 'T12:00:00')
+        const planLastIdx = lastDate.getFullYear() * 12 + lastDate.getMonth()
+        const paymentOffset = absMonth - planLastIdx
+        if (paymentOffset >= 1 && paymentOffset <= g.remaining) {
+          plans.push(g)
+          total += g.perCuota
+        }
+      }
+
+      return { label: `${MONTH_NAMES[month]} ${year}`, month, year, plans, total }
+    })
+  }, [groups])
 
   const totalDeuda = groups.reduce((s, g) => s + g.restante, 0)
   const totalCuotas = groups.length
@@ -87,6 +115,71 @@ export default function InstallmentsPanel({ transactions }) {
             {totalCuotas > 0 ? fmt(groups.reduce((s, g) => s + g.perCuota, 0) / totalCuotas) : '—'}
           </div>
           <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">por mes</div>
+        </div>
+      </div>
+
+      {/* Next 3 months projection */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-950 flex items-center justify-center">
+            <CalendarDays size={16} className="text-violet-600 dark:text-violet-400" />
+          </div>
+          <h3 className="font-semibold text-slate-700 dark:text-slate-200">Proyección próximos 3 meses</h3>
+          <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">Gasto fijo mensual en cuotas</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700">
+          {nextMonths.map((nm, i) => {
+            const accent = i === 0 ? 'violet' : i === 1 ? 'indigo' : 'sky'
+            const accentHeader = i === 0
+              ? 'bg-violet-500'
+              : i === 1 ? 'bg-indigo-500' : 'bg-sky-500'
+            const accentText = i === 0
+              ? 'text-violet-600 dark:text-violet-400'
+              : i === 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-sky-600 dark:text-sky-400'
+            const accentBg = i === 0
+              ? 'bg-violet-50 dark:bg-violet-950/40'
+              : i === 1 ? 'bg-indigo-50 dark:bg-indigo-950/40' : 'bg-sky-50 dark:bg-sky-950/40'
+
+            return (
+              <div key={i} className="p-4">
+                {/* Month header */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`w-2 h-2 rounded-full ${accentHeader}`} />
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{nm.label}</span>
+                </div>
+
+                {/* Total amount */}
+                <div className={`rounded-xl px-3 py-2 mb-3 ${accentBg}`}>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Total cuotas</div>
+                  <div className={`text-xl font-extrabold ${nm.total > 0 ? accentText : 'text-slate-300 dark:text-slate-600'}`}>
+                    {nm.total > 0 ? fmt(nm.total) : '—'}
+                  </div>
+                  {nm.plans.length > 0 && (
+                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      {nm.plans.length} {nm.plans.length === 1 ? 'plan activo' : 'planes activos'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Plan breakdown */}
+                {nm.plans.length === 0 ? (
+                  <p className="text-xs text-slate-300 dark:text-slate-600 text-center py-2">Sin cuotas este mes</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {nm.plans.map((g, j) => (
+                      <div key={j} className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate leading-tight">{g.description}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{g.source}</p>
+                        </div>
+                        <span className="shrink-0 text-xs font-semibold text-slate-700 dark:text-slate-200">{fmt(g.perCuota)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
