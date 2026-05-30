@@ -411,29 +411,57 @@ export function detectUnnecessary(transactions) {
     }
   }
 
-  // Completed installment plans — last cuota paid, amount freed next period
-  const byPlan = {}
+  // Completed installment plans — last cuota paid, amount freed next period.
+  // Use slot-based tracking: each distinct purchase gets its own slot, even when
+  // two purchases share the same merchant, amount and installment count (e.g. two
+  // NEUMEN C.6/6 at $44,530 each). A transaction updates an existing slot only
+  // if that slot has a lower installment number (same plan, later month); otherwise
+  // it opens a new slot (different purchase).
+  const planSlots = [] // { descKey, amount, total, current, t }
   for (const t of transactions) {
     if (!t.installment || t.type === 'credit' || t.installment.total < 2) continue
-    const key = normalize(t.description).slice(0, 35)
-    if (!byPlan[key] || t.installment.current > byPlan[key].installment.current) {
-      byPlan[key] = t
+    const descKey = normalize(t.description).slice(0, 35)
+    let updated = false
+    for (const s of planSlots) {
+      if (s.descKey === descKey &&
+          Math.abs(s.amount - t.amount) < 1 &&
+          s.total === t.installment.total &&
+          s.current < t.installment.current) {
+        s.current = t.installment.current
+        s.t = t
+        updated = true
+        break
+      }
+    }
+    if (!updated) {
+      planSlots.push({ descKey, amount: t.amount, total: t.installment.total, current: t.installment.current, t })
     }
   }
   const mostRecentDate = transactions.reduce(
     (max, t) => (t.date > max ? t.date : max), '0000-00-00'
   )
-  for (const t of Object.values(byPlan)) {
-    if (t.installment.current !== t.installment.total) continue
-    const ageDays = (new Date(mostRecentDate) - new Date(t.date)) / 86400000
+  // Group completed slots by description and sum freed amounts
+  const completedByDesc = new Map()
+  for (const s of planSlots) {
+    if (s.current !== s.total) continue
+    const ageDays = (new Date(mostRecentDate) - new Date(s.t.date)) / 86400000
     if (ageDays > 365) continue
+    if (!completedByDesc.has(s.descKey)) {
+      completedByDesc.set(s.descKey, { t: s.t, totalAmount: 0, txs: [] })
+    }
+    const entry = completedByDesc.get(s.descKey)
+    entry.totalAmount += s.amount
+    entry.txs.push(s.t)
+    if (s.t.date > entry.t.date) entry.t = s.t
+  }
+  for (const { t, totalAmount, txs } of completedByDesc.values()) {
     findings.push({
       type: 'lastInstallment',
       label: '¡Última cuota pagada!',
       description: `"${t.description}" — ${t.installment.total} cuotas completadas. Ya no aparece en el próximo resumen.`,
-      total: t.amount,
+      total: totalAmount,
       completedDate: t.date,
-      transactions: [t],
+      transactions: txs,
     })
   }
 
