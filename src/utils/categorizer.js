@@ -411,5 +411,26 @@ export function detectUnnecessary(transactions) {
     }
   }
 
+  // Completed installment plans — last cuota paid, amount freed next period
+  const byPlan = {}
+  for (const t of transactions) {
+    if (!t.installment || t.type === 'credit') continue
+    const key = normalize(t.description).slice(0, 35)
+    if (!byPlan[key] || t.installment.current > byPlan[key].installment.current) {
+      byPlan[key] = t
+    }
+  }
+  for (const t of Object.values(byPlan)) {
+    if (t.installment.current === t.installment.total) {
+      findings.push({
+        type: 'lastInstallment',
+        label: '¡Última cuota pagada!',
+        description: `"${t.description}" — ${t.installment.total} cuotas completadas. Ya no aparece en el próximo resumen.`,
+        total: t.amount,
+        transactions: [t],
+      })
+    }
+  }
+
   return findings
 }

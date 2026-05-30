@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, RefreshCw, TrendingUp, Zap, CheckCircle2, PiggyBank, X } from 'lucide-react'
+import { AlertTriangle, RefreshCw, TrendingUp, Zap, CheckCircle2, PiggyBank, X, PartyPopper } from 'lucide-react'
 import { CATEGORIES } from '../utils/categorizer'
 
 function fmt(n) {
@@ -47,6 +47,59 @@ const TYPE_CONFIG = {
     text: 'text-emerald-700 dark:text-emerald-300',
     badge: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-200',
   },
+  lastInstallment: {
+    icon: PartyPopper,
+    gradient: 'from-teal-400 to-emerald-500',
+    bg: 'bg-teal-50 dark:bg-teal-900/20',
+    border: 'border-teal-100 dark:border-teal-800',
+    text: 'text-teal-700 dark:text-teal-300',
+    badge: 'bg-teal-100 text-teal-600 dark:bg-teal-800 dark:text-teal-200',
+  },
+}
+
+function FreedCapitalSummary({ findings }) {
+  const completed = findings.filter(f => f.type === 'lastInstallment')
+  if (completed.length === 0) return null
+  const totalFreed = completed.reduce((s, f) => s + f.total, 0)
+  return (
+    <div className="mb-5 rounded-2xl border border-teal-200 dark:border-teal-800 bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm">
+          <PartyPopper size={16} className="text-white" />
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold text-teal-800 dark:text-teal-200">Capital liberado próximo resumen</h4>
+          <p className="text-xs text-teal-600 dark:text-teal-400">
+            {completed.length === 1 ? '1 plan de cuotas completado' : `${completed.length} planes de cuotas completados`}
+          </p>
+        </div>
+        <div className="ml-auto text-right">
+          <div className="text-lg font-extrabold text-teal-700 dark:text-teal-300">{fmt(totalFreed)}</div>
+          <div className="text-xs text-teal-500 dark:text-teal-400">menos por mes</div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {completed.map((f, i) => (
+          <div key={i} className="flex items-center gap-3 bg-white/70 dark:bg-white/10 rounded-xl px-3 py-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                {f.transactions[0].description}
+              </div>
+              <div className="text-xs text-slate-400 dark:text-slate-500">
+                {f.transactions[0].installment.total} cuotas · plan completado ✓
+              </div>
+            </div>
+            <div className="text-sm font-bold text-teal-700 dark:text-teal-300 shrink-0">
+              {fmt(f.total)}/mes
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-teal-600/70 dark:text-teal-500 mt-3 text-center">
+        El próximo resumen será {fmt(totalFreed)} más liviano 🎉
+      </p>
+    </div>
+  )
 }
 
 function SavingsCalculator({ findings, transactions }) {
@@ -133,6 +186,8 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
       title: f.label,
       body: f.type === 'subscription'
         ? `"${f.description.slice(0, 30)}" se repite ${f.count} veces — ${fmt(f.total)} en total`
+        : f.type === 'lastInstallment'
+        ? `${f.transactions[0].description} · cuota ${f.transactions[0].installment.current}/${f.transactions[0].installment.total} · ${fmt(f.total)}/mes liberado`
         : f.description,
       amount: f.total ? fmt(f.total) : null,
     })),
@@ -185,6 +240,8 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
           </button>
         </div>
       </div>
+
+      <FreedCapitalSummary findings={findings} />
 
       <div className="grid sm:grid-cols-2 gap-3">
         {insights.map((item, i) => {
