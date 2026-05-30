@@ -17,6 +17,9 @@ const FIXED_EXPENSES = [
   { key: 'seguroAuto',      label: 'Seguro Auto',                     icon: '🚗' },
   { key: 'seguroHogar',     label: 'Seguro Hogar',                    icon: '🛡️' },
   { key: 'empleadosCasa',   label: 'Empleados de casas particulares', icon: '🧹' },
+  { key: 'prepagaObraSoc',  label: 'Prepagas / Obra Social',          icon: '🏥' },
+  { key: 'cuotaColegio',    label: 'Cuota Colegio',                   icon: '🎒' },
+  { key: 'cuotaClub',       label: 'Cuota Clubes',                    icon: '🏊' },
 ]
 
 const EMPTY_FIXED = Object.fromEntries(FIXED_EXPENSES.map(f => [f.key, '']))
