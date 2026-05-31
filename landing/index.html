@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyResumen — Analizá tus resúmenes de tarjeta en segundos</title>
+  <meta name="description" content="Subí tu resumen de tarjeta o banco en PDF y EasyResumen detecta automáticamente banco, marca, cuotas, categorías y proyección de gastos futuros. Sin suscripción. Sin nube." />
+  <link rel="icon" href="https://raw.githubusercontent.com/hezeqgomez-alt/pruebaapk/main/public/icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    .gradient-text { background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-bg { background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,.12) 0%, transparent 60%); }
+  </style>
+</head>
+<body class="bg-white text-slate-800 antialiased">
+
+  <!-- NAV -->
+  <nav class="border-b border-slate-100 sticky top-0 bg-white/90 backdrop-blur z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-3 3 3 3-3 3 3 3-3V2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/></svg>
+        </div>
+        <span class="font-extrabold text-lg tracking-tight gradient-text">EasyResumen</span>
+      </div>
+      <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-500">
+        <a href="#features" class="hover:text-slate-800 transition-colors">Funciones</a>
+        <a href="#banks"    class="hover:text-slate-800 transition-colors">Bancos</a>
+        <a href="#pricing"  class="hover:text-slate-800 transition-colors">Precio</a>
+      </div>
+      <a href="#pricing" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
+        Descargar gratis →
+      </a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-bg pt-24 pb-20 px-6">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-6 border border-indigo-100">
+        ✨ Gratis 30 días · Sin tarjeta
+      </div>
+      <h1 class="text-5xl sm:text-6xl font-black tracking-tight leading-tight mb-6">
+        Entendé tus gastos<br/><span class="gradient-text">en segundos</span>
+      </h1>
+      <p class="text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+        Subí cualquier resumen de tarjeta o banco argentino en PDF y EasyResumen lo analiza automáticamente: categorías, cuotas pendientes, proyección de gastos y más. Todo en tu PC, sin internet.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#pricing" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar gratis
+        </a>
+        <span class="text-sm text-slate-400">Windows · 30 días sin límites</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS BAR -->
+  <section class="border-y border-slate-100 bg-slate-50 py-8 px-6">
+    <div class="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+      <div><div class="text-3xl font-black text-indigo-600">15+</div><div class="text-sm text-slate-500 mt-1">Bancos argentinos</div></div>
+      <div><div class="text-3xl font-black text-indigo-600">100%</div><div class="text-sm text-slate-500 mt-1">Offline, sin nube</div></div>
+      <div><div class="text-3xl font-black text-indigo-600">30"</div><div class="text-sm text-slate-500 mt-1">Para analizar un PDF</div></div>
+      <div><div class="text-3xl font-black text-indigo-600">USD 25</div><div class="text-sm text-slate-500 mt-1">Pago único, para siempre</div></div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="py-24 px-6">
+    <div class="max-w-5xl mx-auto">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-center mb-4">Todo lo que necesitás saber de tus finanzas</h2>
+      <p class="text-center text-slate-500 mb-16 max-w-xl mx-auto">Sin planillas de Excel. Sin cargar datos manualmente. Solo subís el PDF y EasyResumen hace el resto.</p>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Feature cards -->
+        <div class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-indigo-50 transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center mb-4 text-xl">🏦</div>
+          <h3 class="font-bold text-slate-800 mb-2">Multi-banco</h3>
+          <p class="text-sm text-slate-500">Credicoop, Galicia, BBVA, Santander, Macro, Banco Ciudad, Nación, HSBC, Supervielle, Naranja X y más.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-indigo-50 transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center mb-4 text-xl">💳</div>
+          <h3 class="font-bold text-slate-800 mb-2">Visa · Mastercard · Cabal · AMEX</h3>
+          <p class="text-sm text-slate-500">Detecta automáticamente el banco y la marca de tarjeta. Separa titular de adicionales.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-indigo-50 transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center mb-4 text-xl">📊</div>
+          <h3 class="font-bold text-slate-800 mb-2">Categorías automáticas</h3>
+          <p class="text-sm text-slate-500">Supermercados, combustible, restaurantes, suscripciones, MercadoPago y 20+ categorías reconocidas.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-indigo-50 transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mb-4 text-xl">📅</div>
+          <h3 class="font-bold text-slate-800 mb-2">Proyección de cuotas</h3>
+          <p class="text-sm text-slate-500">Ves exactamente cuánto vas a pagar en cuotas los próximos 3 meses. Sin sorpresas.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-indigo-50 transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center mb-4 text-xl">⚖️</div>
+          <h3 class="font-bold text-slate-800 mb-2">Balance mensual</h3>
+          <p class="text-sm text-slate-500">Cargá ingresos, gastos fijos (alquiler, luz, gas, seguros...) y préstamos. Ve tu saldo real.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:shadow-indigo-50 transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center mb-4 text-xl">🔒</div>
+          <h3 class="font-bold text-slate-800 mb-2">100% privado</h3>
+          <p class="text-sm text-slate-500">Todo se procesa en tu PC. Ningún dato sale a internet. Tus resúmenes no los ve nadie más.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BANKS -->
+  <section id="banks" class="py-16 px-6 bg-slate-50">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-2xl font-extrabold mb-2">Bancos y tarjetas compatibles</h2>
+      <p class="text-slate-500 text-sm mb-10">Si tu banco no está, contactanos — lo agregamos.</p>
+      <div class="flex flex-wrap justify-center gap-3">
+        {['Banco Credicoop', 'Banco Galicia', 'BBVA', 'Santander', 'Banco Macro', 'Banco Ciudad', 'Banco Nación', 'HSBC', 'Supervielle', 'Banco Patagonia', 'ICBC', 'Brubank', 'Ualá', 'Naranja X', 'Mercado Pago'].map(b => `
+        <span class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-700 shadow-sm">${b}</span>
+        `).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="py-24 px-6">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl sm:text-4xl font-extrabold mb-4">Un precio justo, para siempre</h2>
+      <p class="text-slate-500 mb-16">Sin suscripciones. Pagás una vez y usás para siempre. Actualizaciones incluidas el primer año.</p>
+
+      <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+
+        <!-- Free trial -->
+        <div class="rounded-2xl border-2 border-slate-200 p-8 text-left">
+          <div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Prueba gratuita</div>
+          <div class="text-4xl font-black mb-1">Gratis</div>
+          <div class="text-sm text-slate-500 mb-6">30 días completos</div>
+          <ul class="space-y-3 text-sm text-slate-600 mb-8">
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Acceso completo 30 días</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Todos los bancos</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Sin tarjeta de crédito</li>
+            <li class="flex items-center gap-2"><span class="text-slate-300">–</span> Sin actualizaciones futuras</li>
+          </ul>
+          <a id="download-btn" href="#" onclick="downloadApp(event)"
+            class="block w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold text-center transition-colors">
+            Descargar gratis →
+          </a>
+        </div>
+
+        <!-- Paid -->
+        <div class="rounded-2xl border-2 border-indigo-500 p-8 text-left relative overflow-hidden">
+          <div class="absolute top-4 right-4 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-lg">RECOMENDADO</div>
+          <div class="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4">Licencia permanente</div>
+          <div class="text-4xl font-black mb-1">USD <span class="gradient-text">25</span></div>
+          <div class="text-sm text-slate-500 mb-6">Pago único · IVA incluido</div>
+          <ul class="space-y-3 text-sm text-slate-600 mb-8">
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Uso ilimitado para siempre</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Actualizaciones 12 meses</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Soporte por email</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Todos los bancos futuros</li>
+          </ul>
+          <a href="mailto:hezeq.gomez@gmail.com?subject=Compra EasyResumen&body=Hola, quiero comprar una licencia de EasyResumen."
+            class="block w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold text-center transition-colors shadow-lg shadow-indigo-200">
+            Comprar licencia →
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-100 py-10 px-6 text-center text-sm text-slate-400">
+    <div class="flex items-center justify-center gap-2 mb-3">
+      <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-3 3 3 3-3 3 3 3-3V2z"/></svg>
+      </div>
+      <span class="font-bold text-slate-600">EasyResumen</span>
+    </div>
+    <p>© 2025 EasyResumen · <a href="mailto:hezeq.gomez@gmail.com" class="hover:text-slate-600">hezeq.gomez@gmail.com</a></p>
+    <p class="mt-1">Software para uso personal · Hecho en Argentina 🇦🇷</p>
+  </footer>
+
+  <script>
+    // Download button: detects OS and links to correct installer
+    function downloadApp(e) {
+      e.preventDefault()
+      const ua = navigator.userAgent
+      let url
+      if (ua.includes('Win')) {
+        url = 'https://github.com/hezeqgomez-alt/pruebaapk/releases/latest/download/EasyResumen-Setup.exe'
+      } else {
+        url = 'https://github.com/hezeqgomez-alt/pruebaapk/releases/latest/download/EasyResumen.AppImage'
+      }
+      window.location.href = url
+    }
+
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'))
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }) }
+      })
+    })
+
+    // Render bank tags (template literal workaround)
+    document.querySelectorAll('#banks-list span').forEach(() => {})
+  </script>
+</body>
+</html>

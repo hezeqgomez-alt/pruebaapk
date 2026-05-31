@@ -15,6 +15,7 @@ import InstallmentsPanel from './components/InstallmentsPanel'
 import BalancePanel from './components/BalancePanel'
 import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
+import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
 import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
@@ -67,10 +68,17 @@ export default function App() {
   const [showAddModal, setShowAddModal]           = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
+  const [licenseStatus, setLicenseStatus]         = useState(null)
 
   const chartDonutRef = useRef(null)
   const chartBarRef   = useRef(null)
   const addBtnRef     = useRef(null)
+
+  // License check on mount
+  useEffect(() => {
+    if (!window.electronAPI) return
+    window.electronAPI.getLicenseStatus().then(setLicenseStatus)
+  }, [])
 
   // Apply / remove dark class on <html>
   useEffect(() => {
@@ -268,8 +276,15 @@ export default function App() {
       countGreen: findings.filter(f => f.type === 'lastInstallment').length },
   ]
 
+  const refreshLicense = () => window.electronAPI?.getLicenseStatus().then(setLicenseStatus)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/40">
+
+      {/* ── License gates ── */}
+      {licenseStatus?.status === 'expired' && <ExpiredGate onActivated={refreshLicense} />}
+      {licenseStatus?.status === 'trial'   && <TrialBanner daysLeft={licenseStatus.daysLeft} onActivated={refreshLicense} />}
+      <UpdateToast />
 
       {/* ── Header ── */}
       <header className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 sticky top-0 z-40 shadow-sm">

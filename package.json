@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:build": "vite build && electron-builder --linux AppImage deb --x64",
-    "electron:build:win": "vite build && electron-builder --win --x64"
+    "electron:build:win": "vite build && electron-builder --win --x64",
+    "keygen": "node tools/keygen.cjs"
   },
   "build": {
     "appId": "com.gastotracker.app",
@@ -30,6 +31,12 @@
       "dist/**/*",
       "node_modules/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "hezeqgomez-alt",
+      "repo": "pruebaapk",
+      "private": true
+    },
     "extraMetadata": {
       "main": "electron/main.cjs"
     },
@@ -71,6 +78,7 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "date-fns": "^4.3.0",
+    "electron-updater": "^6.8.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
