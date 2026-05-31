@@ -57,6 +57,7 @@ function registerIPC() {
 
   ipcMain.handle('license:status',   ()       => license.getStatus(userDataPath))
   ipcMain.handle('license:activate', (_, key) => license.activate(userDataPath, key))
+  ipcMain.handle('license:trackpdf', ()       => license.trackPDF(userDataPath))
 
   ipcMain.handle('updater:check',   () => autoUpdater.checkForUpdates().catch(() => null))
   ipcMain.handle('updater:install', () => autoUpdater.quitAndInstall(false, true))

@@ -97,6 +97,17 @@ export default function App() {
 
   const handleFiles = useCallback(async (files) => {
     for (const file of files) {
+      // Check PDF limit for trial users before parsing
+      if (window.electronAPI) {
+        const check = await window.electronAPI.trackPDF()
+        if (!check.allowed) {
+          setToast(`❌ Límite de prueba: ya analizaste ${check.pdfLimit} resúmenes. Activá tu licencia para continuar.`)
+          setLicenseStatus(s => s ? { ...s, pdfCount: check.pdfCount } : s)
+          continue
+        }
+        setLicenseStatus(s => s?.status === 'trial' ? { ...s, pdfCount: check.pdfCount } : s)
+      }
+
       setLoading(l => [...l, file.name])
       try {
         const result = await parsePDF(file, {
@@ -283,7 +294,7 @@ export default function App() {
 
       {/* ── License gates ── */}
       {licenseStatus?.status === 'expired' && <ExpiredGate onActivated={refreshLicense} />}
-      {licenseStatus?.status === 'trial'   && <TrialBanner daysLeft={licenseStatus.daysLeft} onActivated={refreshLicense} />}
+      {licenseStatus?.status === 'trial'   && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} pdfLimit={licenseStatus.pdfLimit} onActivated={refreshLicense} />}
       <UpdateToast />
 
       {/* ── Header ── */}

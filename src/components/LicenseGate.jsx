@@ -91,17 +91,19 @@ function ActivationForm({ onActivated }) {
 
 // ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
-export function TrialBanner({ daysLeft, onActivated }) {
+export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated }) {
   const [showModal, setShowModal] = useState(false)
-  const urgent = daysLeft <= 5
+  const urgent = daysLeft <= 5 || pdfCount >= pdfLimit
 
   return (
     <>
       <div className={`flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-medium ${urgent ? 'bg-red-500' : 'bg-amber-500'} text-white`}>
         <Clock size={12} />
         <span>
-          Período de prueba:{' '}
-          <strong>{daysLeft} {daysLeft === 1 ? 'día' : 'días'} restante{daysLeft !== 1 ? 's' : ''}</strong>
+          Prueba gratis:{' '}
+          <strong>{daysLeft} {daysLeft === 1 ? 'día' : 'días'}</strong>
+          {' · '}
+          <strong>{pdfCount}/{pdfLimit} resúmenes</strong> usados
         </span>
         <button
           onClick={() => setShowModal(true)}

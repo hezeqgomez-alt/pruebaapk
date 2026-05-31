@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // License
   getLicenseStatus:  ()    => ipcRenderer.invoke('license:status'),
   activateLicense:   (key) => ipcRenderer.invoke('license:activate', key),
+  trackPDF:          ()    => ipcRenderer.invoke('license:trackpdf'),
 
   // Auto-update
   checkForUpdates:   ()    => ipcRenderer.invoke('updater:check'),

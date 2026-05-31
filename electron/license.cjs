@@ -13,6 +13,7 @@ const path   = require('path')
 
 const SECRET     = 'ER2025-easyresumen-7f3a8e2bc4d14f6a9e5c2b8d-private'
 const TRIAL_DAYS = 30
+const PDF_LIMIT  = 3
 const FILE       = 'license.json'
 
 function generateKey(licenseId) {
@@ -53,7 +54,7 @@ function getStatus(userDataPath) {
   const today = new Date().toISOString().slice(0, 10)
 
   if (!data) {
-    data = { firstLaunch: today, key: null }
+    data = { firstLaunch: today, key: null, pdfCount: 0 }
     writeData(userDataPath, data)
   }
 
@@ -61,11 +62,24 @@ function getStatus(userDataPath) {
     return { status: 'activated', key: data.key }
   }
 
-  const elapsed  = Math.floor((Date.now() - new Date(data.firstLaunch)) / 86400000)
-  const daysLeft = Math.max(0, TRIAL_DAYS - elapsed)
+  const elapsed   = Math.floor((Date.now() - new Date(data.firstLaunch)) / 86400000)
+  const daysLeft  = Math.max(0, TRIAL_DAYS - elapsed)
+  const pdfCount  = data.pdfCount || 0
   return daysLeft > 0
-    ? { status: 'trial', daysLeft }
-    : { status: 'expired', daysLeft: 0 }
+    ? { status: 'trial', daysLeft, pdfCount, pdfLimit: PDF_LIMIT }
+    : { status: 'expired', daysLeft: 0, pdfCount, pdfLimit: PDF_LIMIT }
+}
+
+// Called before parsing each PDF. Returns { allowed, pdfCount, pdfLimit }.
+// Increments counter only when within limit; activated users always get allowed=true.
+function trackPDF(userDataPath) {
+  const data = readData(userDataPath) || {}
+  if (data.key && validateKey(data.key)) return { allowed: true }
+  const count = data.pdfCount || 0
+  if (count >= PDF_LIMIT) return { allowed: false, pdfCount: count, pdfLimit: PDF_LIMIT }
+  data.pdfCount = count + 1
+  writeData(userDataPath, data)
+  return { allowed: true, pdfCount: data.pdfCount, pdfLimit: PDF_LIMIT }
 }
 
 function activate(userDataPath, key) {
@@ -79,4 +93,4 @@ function activate(userDataPath, key) {
   return { success: true }
 }
 
-module.exports = { generateKey, validateKey, getStatus, activate }
+module.exports = { generateKey, validateKey, getStatus, activate, trackPDF }
