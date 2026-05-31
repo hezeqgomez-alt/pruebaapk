@@ -185,13 +185,16 @@ function detectBank(text) {
 }
 
 // Detects the card network/brand from any text block.
+// Order matters: check more specific/Argentine-specific networks first so
+// a CABAL statement that also mentions VISA/MASTERCARD in adjacent sections
+// is not incorrectly labelled as Mastercard.
 function detectCardBrand(text) {
   const t = text.toLowerCase()
   if (/\bamerican\s+express\b|\bamex\b/.test(t)) return 'American Express'
-  if (/\bmastercard\b/.test(t))                  return 'Mastercard'
-  if (/\bvisa\b/.test(t))                        return 'Visa'
   if (/\bcabal\b/.test(t))                       return 'Cabal'
   if (/\bmaestro\b/.test(t))                     return 'Maestro'
+  if (/\bmastercard\b/.test(t))                  return 'Mastercard'
+  if (/\bvisa\b/.test(t))                        return 'Visa'
   return null
 }
 
@@ -660,7 +663,13 @@ export async function parsePDF(file, { onProgress } = {}) {
       // Parse OCR text as a single synthetic page
       const ocrItems = ocrTextToItems(ocrText)
       const bank = detectBank(ocrText)
-      const docBrand = detectCardBrand(ocrText)
+      const docBrand = detectCardBrand(ocrText.slice(0, 2000)) || (() => {
+        const found = ['American Express', 'Cabal', 'Maestro', 'Mastercard', 'Visa'].filter(b => {
+          const re = b === 'American Express' ? /\bamerican\s+express\b|\bamex\b/ : new RegExp(`\\b${b}\\b`, 'i')
+          return re.test(ocrText)
+        })
+        return found.length === 1 ? found[0] : null
+      })()
       const refYear = detectYear(ocrText)
       const rows = groupIntoRows(ocrItems)
       const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand)
@@ -673,7 +682,16 @@ export async function parsePDF(file, { onProgress } = {}) {
   }
 
   const bank = detectBank(allText)
-  const docBrand = detectCardBrand(allText)
+  // Prefer first-page header for brand detection — avoids picking up brand names
+  // from adjacent card sections or merchant descriptions later in the document.
+  // Fall back to full text only when a single unambiguous brand is present.
+  const docBrand = detectCardBrand(allText.slice(0, 2000)) || (() => {
+    const found = ['American Express', 'Cabal', 'Maestro', 'Mastercard', 'Visa'].filter(b => {
+      const re = b === 'American Express' ? /\bamerican\s+express\b|\bamex\b/ : new RegExp(`\\b${b}\\b`, 'i')
+      return re.test(allText)
+    })
+    return found.length === 1 ? found[0] : null
+  })()
   const refYear = detectYear(allText)
 
   let pageErrors = 0
