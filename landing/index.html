@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyResumen — Analizá tus resúmenes de tarjeta en segundos</title>
-  <meta name="description" content="Subí tu resumen de tarjeta o banco en PDF y EasyResumen detecta automáticamente banco, marca, cuotas, categorías y proyección de gastos futuros. Sin suscripción. Sin nube." />
+  <meta name="description" content="Subí tu resumen de tarjeta o banco en PDF y EasyResumen detecta automáticamente banco, marca, cuotas, categorías y proyección de gastos futuros. 30 días gratis, luego USD 2/mes. 100% offline." />
   <link rel="icon" href="https://raw.githubusercontent.com/hezeqgomez-alt/pruebaapk/main/public/icon.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -51,7 +51,7 @@
   <section class="hero-bg pt-24 pb-20 px-6">
     <div class="max-w-4xl mx-auto text-center">
       <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-6 border border-indigo-100">
-        ✨ Gratis 30 días · Hasta 3 resúmenes · Sin tarjeta
+        ✨ 30 días gratis · Sin tarjeta · Luego USD 2/mes
       </div>
       <h1 class="text-5xl sm:text-6xl font-black tracking-tight leading-tight mb-6">
         Entendé tus gastos<br/><span class="gradient-text">en segundos</span>
@@ -64,7 +64,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Descargar gratis
         </a>
-        <span class="text-sm text-slate-400">Windows · 30 días · hasta 3 resúmenes</span>
+        <span class="text-sm text-slate-400">30 días gratis · luego USD 2/mes · cancelás cuando querés</span>
       </div>
     </div>
   </section>
@@ -75,7 +75,7 @@
       <div><div class="text-3xl font-black text-indigo-600">15+</div><div class="text-sm text-slate-500 mt-1">Bancos argentinos</div></div>
       <div><div class="text-3xl font-black text-indigo-600">100%</div><div class="text-sm text-slate-500 mt-1">Offline, sin nube</div></div>
       <div><div class="text-3xl font-black text-indigo-600">30"</div><div class="text-sm text-slate-500 mt-1">Para analizar un PDF</div></div>
-      <div><div class="text-3xl font-black text-indigo-600">USD 25</div><div class="text-sm text-slate-500 mt-1">Pago único, para siempre</div></div>
+      <div><div class="text-3xl font-black text-indigo-600">USD 2</div><div class="text-sm text-slate-500 mt-1">Por mes, cancelás cuando querés</div></div>
     </div>
   </section>
 
@@ -147,48 +147,44 @@
   </section>
 
   <!-- PRICING -->
-  <section id="pricing" class="py-24 px-6">
-    <div class="max-w-4xl mx-auto text-center">
-      <h2 class="text-3xl sm:text-4xl font-extrabold mb-4">Un precio justo, para siempre</h2>
-      <p class="text-slate-500 mb-16">Sin suscripciones. Pagás una vez y usás para siempre. Actualizaciones incluidas el primer año.</p>
+  <section id="pricing" class="py-24 px-6 bg-slate-50">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="text-3xl sm:text-4xl font-extrabold mb-4">Simple y sin sorpresas</h2>
+      <p class="text-slate-500 mb-16 max-w-xl mx-auto">Probalo gratis 30 días. Si te sirve, seguís por USD 2 al mes. Si no, cancelás con un click.</p>
 
-      <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+      <!-- Single plan card -->
+      <div class="relative rounded-3xl border-2 border-indigo-500 bg-white p-10 max-w-md mx-auto shadow-xl shadow-indigo-100 text-left">
+        <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full tracking-wide">30 DÍAS GRATIS PARA EMPEZAR</div>
 
-        <!-- Free trial -->
-        <div class="rounded-2xl border-2 border-slate-200 p-8 text-left">
-          <div class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Prueba gratuita</div>
-          <div class="text-4xl font-black mb-1">Gratis</div>
-          <div class="text-sm text-slate-500 mb-6">30 días completos</div>
-          <ul class="space-y-3 text-sm text-slate-600 mb-8">
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> 30 días completos</li>
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Hasta 3 resúmenes</li>
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Todos los bancos</li>
-            <li class="flex items-center gap-2"><span class="text-slate-300">–</span> Sin actualizaciones futuras</li>
-          </ul>
-          <a id="download-btn" href="#" onclick="downloadApp(event)"
-            class="block w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold text-center transition-colors">
-            Descargar gratis →
-          </a>
+        <div class="mt-2 mb-6">
+          <div class="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3">Suscripción mensual</div>
+          <div class="flex items-end gap-2 mb-1">
+            <span class="text-5xl font-black">USD <span class="gradient-text">2</span></span>
+            <span class="text-slate-500 text-base mb-2">/mes</span>
+          </div>
+          <div class="text-sm text-slate-400">después del período de prueba · cancelás cuando querés</div>
         </div>
 
-        <!-- Paid -->
-        <div class="rounded-2xl border-2 border-indigo-500 p-8 text-left relative overflow-hidden">
-          <div class="absolute top-4 right-4 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-lg">RECOMENDADO</div>
-          <div class="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-4">Licencia permanente</div>
-          <div class="text-4xl font-black mb-1">USD <span class="gradient-text">25</span></div>
-          <div class="text-sm text-slate-500 mb-6">Pago único · IVA incluido</div>
-          <ul class="space-y-3 text-sm text-slate-600 mb-8">
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Uso ilimitado para siempre</li>
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Actualizaciones 12 meses</li>
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Soporte por email</li>
-            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Todos los bancos futuros</li>
-          </ul>
-          <a href="mailto:hezeq.gomez@gmail.com?subject=Compra EasyResumen&body=Hola, quiero comprar una licencia de EasyResumen."
-            class="block w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold text-center transition-colors shadow-lg shadow-indigo-200">
-            Comprar licencia →
-          </a>
-        </div>
+        <ul class="space-y-3 text-sm text-slate-600 mb-8">
+          <li class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span> Resúmenes ilimitados desde el primer día</li>
+          <li class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span> Todos los bancos y marcas de tarjeta</li>
+          <li class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span> Actualizaciones automáticas incluidas</li>
+          <li class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span> 100% offline — tus datos nunca salen de tu PC</li>
+          <li class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span> Cancelás cuando querés, sin preguntas</li>
+        </ul>
 
+        <a id="download-btn" href="#" onclick="downloadApp(event)"
+          class="block w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold text-center transition-all shadow-lg shadow-indigo-200 hover:-translate-y-0.5">
+          Empezar gratis →
+        </a>
+        <p class="text-center text-xs text-slate-400 mt-3">Sin tarjeta requerida para el período de prueba</p>
+      </div>
+
+      <!-- Trust signals -->
+      <div class="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-slate-500">
+        <div class="flex items-center gap-2">🔒 <span>Pago seguro vía Gumroad</span></div>
+        <div class="flex items-center gap-2">🖥️ <span>Windows · macOS · Linux</span></div>
+        <div class="flex items-center gap-2">🇦🇷 <span>Hecho en Argentina</span></div>
       </div>
     </div>
   </section>
