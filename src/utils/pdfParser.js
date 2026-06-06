@@ -565,7 +565,7 @@ function dedupe(txs) {
 
 // ─── OCR for scanned PDFs ───────────────────────────────────────────────────
 
-async function renderPageToCanvas(pdfPage, scale = 2.0) {
+async function renderPageToCanvas(pdfPage, scale = 1.5) {
   const viewport = pdfPage.getViewport({ scale })
   const canvas = document.createElement('canvas')
   canvas.width  = viewport.width
@@ -575,39 +575,47 @@ async function renderPageToCanvas(pdfPage, scale = 2.0) {
   return canvas
 }
 
-async function ocrPages(arrayBuffer, numPages, onProgress) {
+// Worker singleton: se inicializa una vez y se reutiliza entre PDFs
+let _ocrWorker = null
+let _ocrWorkerReady = false
+
+async function getOcrWorker(base, onProgress, numPages) {
   const { createWorker } = await import('tesseract.js')
-  // Use local assets (public/) so OCR works offline in Electron
-  const base = window.location.origin
-  // Point corePath to the exact file to skip SIMD detection (avoids DotProductSSE crash)
-  let currentPage = 0
-  const worker = await createWorker('spa', 1, {
+  if (_ocrWorker && _ocrWorkerReady) {
+    // Actualizar el logger para este nuevo lote de páginas
+    return _ocrWorker
+  }
+  _ocrWorkerReady = false
+  _ocrWorker = await createWorker('spa', 1, {
     workerPath: `${base}/tesseract/worker.min.js`,
     langPath:   `${base}/lang`,
     corePath:   `${base}/tesseract-core/tesseract-core-lstm.wasm.js`,
-    logger: m => {
-      if (m.status === 'recognizing text') {
-        onProgress?.({ stage: 'ocr', progress: m.progress, page: currentPage, total: numPages, pct: ((currentPage - 1 + m.progress) / numPages) * 100 })
-      }
-    },
+    logger: () => {},
   })
+  _ocrWorkerReady = true
+  return _ocrWorker
+}
 
-  // Re-open with pdfjs to render pages
+async function ocrPages(arrayBuffer, numPages, onProgress) {
+  const base = window.location.origin
+  const worker = await getOcrWorker(base)
+
+  // Re-open con pdfjs para renderizar páginas
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
   let fullText = ''
 
   for (let i = 1; i <= numPages; i++) {
-    currentPage = i
     onProgress?.({ stage: 'ocr', page: i, total: numPages, pct: ((i - 1) / numPages) * 100 })
     try {
       const page = await pdf.getPage(i)
       const canvas = await renderPageToCanvas(page)
       const { data: { text } } = await worker.recognize(canvas)
       fullText += text + '\n'
+      onProgress?.({ stage: 'ocr', page: i, total: numPages, pct: (i / numPages) * 100 })
     } catch { /* skip unrenderable page */ }
   }
 
-  await worker.terminate()
+  // No terminamos el worker — lo reutilizamos la próxima vez
   return fullText
 }
 

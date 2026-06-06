@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   X, FileBarChart2, FileSpreadsheet, Download, Upload,
   Plus, Trash2, Moon, Sun, LogOut, RefreshCw,
   LayoutDashboard, List, PiggyBank, CreditCard, Landmark, BarChart2, AlertTriangle,
+  FileText,
 } from 'lucide-react'
 
 const NAV_ICONS = {
@@ -20,12 +21,13 @@ export default function MobileDrawer({
   tabs, activeTab, onTab,
   hasData, generating,
   onReport, onExcelExport, onCSVExport, onClear,
-  onImport,
+  onImport, onPDFFiles,
   darkMode, onDarkMode,
   user, onSignOut,
   filteredCount, totalCount,
   isSupabaseConfigured,
 }) {
+  const pdfInputRef = useRef(null)
   // Bloquear scroll del body cuando el drawer está abierto
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -61,6 +63,30 @@ export default function MobileDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 space-y-6 px-4">
+
+          {/* ── Subir PDF ── */}
+          <div>
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept=".pdf"
+              multiple
+              className="hidden"
+              onChange={e => {
+                const files = Array.from(e.target.files || [])
+                if (files.length) onPDFFiles(files)
+                e.target.value = ''
+                onClose()
+              }}
+            />
+            <button
+              onClick={() => pdfInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all"
+            >
+              <FileText size={16} />
+              Subir resumen PDF
+            </button>
+          </div>
 
           {/* ── Navegación ── */}
           {hasData && tabs.length > 0 && (

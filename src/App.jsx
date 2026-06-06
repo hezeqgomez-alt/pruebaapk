@@ -338,6 +338,7 @@ export default function App() {
         onCSVExport={exportCSV}
         onClear={handleClearAll}
         onImport={handleImportFile}
+        onPDFFiles={handleFiles}
         darkMode={darkMode}
         onDarkMode={() => setDarkMode(d => !d)}
         user={user}
