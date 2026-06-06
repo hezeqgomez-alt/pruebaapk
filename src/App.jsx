@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu,
 } from 'lucide-react'
+import MobileDrawer from './components/MobileDrawer'
 import UploadZone from './components/UploadZone'
 import OnboardingTooltip from './components/OnboardingTooltip'
 import StatsCards from './components/StatsCards'
@@ -71,6 +72,7 @@ export default function App() {
   const [showAddModal, setShowAddModal]           = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
+  const [drawerOpen, setDrawerOpen]               = useState(false)
   const { user, trialStatus, trackPDF: webTrackPDF, refreshTrial, signOut } = useAuth()
 
   // In Electron: use electronAPI license. On web: use auth context.
@@ -322,6 +324,29 @@ export default function App() {
       {licenseStatus?.status === 'trial'   && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} pdfLimit={licenseStatus.pdfLimit} onActivated={refreshLicense} />}
       <UpdateToast />
 
+      {/* ── Mobile Drawer ── */}
+      <MobileDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTab={setActiveTab}
+        hasData={hasData}
+        generating={generating}
+        onReport={handleGenerateReport}
+        onExcelExport={handleExportXLSX}
+        onCSVExport={exportCSV}
+        onClear={handleClearAll}
+        onImport={handleImportFile}
+        darkMode={darkMode}
+        onDarkMode={() => setDarkMode(d => !d)}
+        user={user}
+        onSignOut={signOut}
+        filteredCount={filteredForReport?.length}
+        totalCount={transactions.length}
+        isSupabaseConfigured={isSupabaseConfigured}
+      />
+
       {/* ── Header ── */}
       <header className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -339,8 +364,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* Desktop actions */}
+          <div className="hidden lg:flex items-center gap-2">
             {hasData && (
               <>
                 <button
@@ -348,86 +373,57 @@ export default function App() {
                   disabled={generating}
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-medium shadow-sm shadow-indigo-200 dark:shadow-indigo-900 transition-all disabled:opacity-60"
                 >
-                  {generating
-                    ? <RefreshCw size={14} className="animate-spin" />
-                    : <FileBarChart2 size={14} />}
-                  <span className="hidden sm:inline">{generating ? 'Generando…' : 'Informe PDF'}</span>
+                  {generating ? <RefreshCw size={14} className="animate-spin" /> : <FileBarChart2 size={14} />}
+                  {generating ? 'Generando…' : 'Informe PDF'}
                 </button>
-
                 <button
                   onClick={handleExportXLSX}
-                  title={filteredForReport && filteredForReport.length < transactions.length ? `Exportar ${filteredForReport.length} movimientos filtrados` : 'Exportar Excel'}
                   className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
                 >
                   <FileSpreadsheet size={14} />
-                  <span className="hidden sm:inline">
-                    Excel{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
-                  </span>
+                  Excel{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
                   {filteredForReport && filteredForReport.length < transactions.length && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
                   )}
                 </button>
-
                 <button
                   onClick={exportCSV}
-                  title={filteredForReport && filteredForReport.length < transactions.length ? `Exportar ${filteredForReport.length} movimientos filtrados` : 'Exportar CSV'}
                   className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
                 >
                   <Download size={14} />
-                  <span className="hidden sm:inline">
-                    CSV{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
-                  </span>
+                  CSV{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
                   {filteredForReport && filteredForReport.length < transactions.length && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
                   )}
                 </button>
-
                 <button
                   onClick={handleClearAll}
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-red-200 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 font-medium transition-colors"
                 >
                   <Trash2 size={14} />
-                  <span className="hidden sm:inline">Borrar</span>
+                  Borrar
                 </button>
               </>
             )}
-
-            {/* Import Excel/CSV */}
-            <label
-              title="Importar Excel o CSV exportado previamente"
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium transition-colors cursor-pointer"
-            >
+            <label className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium transition-colors cursor-pointer">
               <Upload size={14} />
-              <span className="hidden sm:inline">Importar</span>
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="hidden"
-                onChange={handleImportFile}
-              />
+              Importar
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
             </label>
-
-            {/* Add transaction */}
             <button
               ref={addBtnRef}
               onClick={() => setShowAddModal(true)}
-              title="Agregar movimiento manual"
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
             >
               <Plus size={14} />
-              <span className="hidden sm:inline">Agregar</span>
+              Agregar
             </button>
-
-            {/* Dark mode toggle */}
             <button
               onClick={() => setDarkMode(d => !d)}
-              title={darkMode ? 'Modo claro' : 'Modo oscuro'}
               className="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors"
             >
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-
-            {/* Web logout */}
             {isSupabaseConfigured && !window.electronAPI && user && (
               <button
                 onClick={signOut}
@@ -437,6 +433,23 @@ export default function App() {
                 <LogOut size={15} />
               </button>
             )}
+          </div>
+
+          {/* Mobile actions */}
+          <div className="flex lg:hidden items-center gap-2">
+            <button
+              ref={addBtnRef}
+              onClick={() => setShowAddModal(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900"
+            >
+              <Plus size={17} />
+            </button>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-300 transition-colors"
+            >
+              <Menu size={18} />
+            </button>
           </div>
         </div>
       </header>
@@ -471,8 +484,8 @@ export default function App() {
           <>
             <StatsCards transactions={transactions} />
 
-            {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100/80 dark:bg-slate-800 rounded-2xl p-1 w-fit overflow-x-auto">
+            {/* Tabs — solo desktop */}
+            <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-slate-800 rounded-2xl p-1 w-fit overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
