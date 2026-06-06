@@ -96,33 +96,36 @@ const CategoryChart = forwardRef(function CategoryChart({ transactions }, ref) {
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 flex flex-col">
       <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Gastos por categoría</h3>
 
-      <div className="flex gap-5 items-start flex-1">
-        {/* Donut — center label drawn on canvas via plugin, tooltip always on top */}
-        <div className="shrink-0" style={{ width: 180, height: 180 }}>
+      {/* Mobile: donut arriba centrado + leyenda en 2 columnas. Desktop: lado a lado */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start flex-1">
+        {/* Donut */}
+        <div className="shrink-0 mx-auto sm:mx-0" style={{ width: 160, height: 160 }}>
           <Doughnut ref={ref} data={data} options={options} plugins={[centerPlugin]} />
         </div>
 
-        {/* Legend list */}
-        <div className="flex-1 space-y-1.5 overflow-y-auto" style={{ maxHeight: 180 }}>
+        {/* Legend — 2 columnas en mobile para aprovechar el ancho */}
+        <div className="w-full grid grid-cols-2 sm:grid-cols-1 gap-x-3 gap-y-1.5 sm:overflow-y-auto" style={{ maxHeight: undefined }}>
           {sorted.map(([key, val]) => {
             const pct = (val / total) * 100
             return (
-              <div key={key}>
-                <div className="flex items-center gap-2 text-sm mb-0.5">
+              <div key={key} className="min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className="w-2 h-2 rounded-full shrink-0"
                     style={{ background: CATEGORIES[key]?.color || '#94a3b8' }}
                   />
                   <span className="flex-1 text-slate-600 dark:text-slate-300 truncate text-xs">
                     {CATEGORIES[key]?.icon} {CATEGORIES[key]?.label || key}
                   </span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-xs whitespace-nowrap">{fmt(val)}</span>
                 </div>
-                <div className="ml-4 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${pct}%`, background: CATEGORIES[key]?.color || '#94a3b8' }}
-                  />
+                <div className="flex items-center gap-1.5 ml-3.5">
+                  <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${pct}%`, background: CATEGORIES[key]?.color || '#94a3b8' }}
+                    />
+                  </div>
+                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-[10px] whitespace-nowrap shrink-0">{fmt(val)}</span>
                 </div>
               </div>
             )

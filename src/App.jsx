@@ -483,7 +483,7 @@ export default function App() {
 
         {hasData && (
           <>
-            <StatsCards transactions={transactions} />
+            <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} />
 
             {/* Tabs — solo desktop */}
             <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-slate-800 rounded-2xl p-1 w-fit overflow-x-auto">
