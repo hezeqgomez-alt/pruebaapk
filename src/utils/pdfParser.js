@@ -201,8 +201,16 @@ function detectCardBrand(text) {
 // ─── Detect year from PDF text ────────────────────────────────────────────
 
 function detectYear(allText) {
-  const m = allText.match(/\b(20[2-4]\d)\b/)
-  return m ? parseInt(m[1]) : new Date().getFullYear()
+  const currentYear = new Date().getFullYear()
+  const matches = [...allText.matchAll(/\b(20[2-4]\d)\b/g)].map(m => parseInt(m[1]))
+  if (!matches.length) return currentYear
+  // Prefer years within ±1 of current year — avoids picking up loan maturity dates (2031, 2048, etc.)
+  const nearby = matches.filter(y => Math.abs(y - currentYear) <= 1)
+  if (nearby.length) return nearby.sort((a, b) => Math.abs(a - currentYear) - Math.abs(b - currentYear))[0]
+  // Fallback: most frequent year in document
+  const freq = {}
+  for (const y of matches) freq[y] = (freq[y] || 0) + 1
+  return parseInt(Object.entries(freq).sort(([, a], [, b]) => b - a)[0][0])
 }
 
 // ─── Shared description cleaner ──────────────────────────────────────────────
@@ -238,6 +246,9 @@ function cleanDesc(raw) {
 
   // Strip stray currency symbols and remaining noise
   desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/[*\-,]+$/g, '').replace(/\s+/g, ' ').trim()
+
+  // Strip trailing CABAL/Credicoop coupon codes (e.g. "MERCHANT 0700" → "MERCHANT")
+  desc = desc.replace(/\s+0\d{3,4}$/, '').trim()
 
   return desc
 }
@@ -506,9 +517,18 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
 
     const date = parseDate(dateCol.text, refYear)
 
-    // Last column: try to find an amount
-    const amtCol = [...cols].reverse().find(c => parseAmount(c.text) !== null)
-    if (!amtCol) continue
+    // Last column: try to find an amount — avoid running balance column
+    const amtCols = [...cols].reverse().filter(c => parseAmount(c.text) !== null)
+    if (!amtCols.length) continue
+    let amtCol = amtCols[0]
+
+    // If the rightmost amount is >5x the next one, it's the running balance — prefer the next
+    if (amtCols.length >= 2) {
+      const lastAmt = parseAmount(amtCols[0].text)
+      const prevAmt = parseAmount(amtCols[1].text)
+      if (lastAmt > 0 && prevAmt > 0 && lastAmt > prevAmt * 5) amtCol = amtCols[1]
+    }
+
     if (amtCol === dateCol) continue
 
     const amount = parseAmount(amtCol.text)
