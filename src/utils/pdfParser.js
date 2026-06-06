@@ -569,6 +569,42 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
   return transactions
 }
 
+// ─── Section slicer: only parse the consumos block ───────────────────────────
+// Detects the start of the transactions section and cuts off before T&C / legal text.
+
+// Rows that mark the START of a consumos/movimientos section
+const CONSUMOS_START_RE = /\b(consumos?\s+del?\s+per[ií]odo|detalle\s+de\s+(?:consumos?|movimientos?)|movimientos?\s+del?\s+per[ií]odo|resumen\s+de\s+(?:consumos?|movimientos?)|actividad\s+de\s+(?:la\s+)?(?:cuenta|tarjeta)|operaciones?\s+realizadas?)\b/i
+
+// Column-header rows (Fecha + at least one other column keyword)
+const CONSUMOS_HEADER_RE = /\bfecha\b.{0,80}\b(?:descripci[oó]n|concepto|establecimiento|comercio|importe|monto|d[eé]bito|cr[eé]dito|cargo|saldo)\b/i
+
+// Rows that mark the END of the consumos section (T&C, legal boilerplate, promo pages)
+const CONSUMOS_END_RE = /\b(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso|del?\s+servicio)|informaci[oó]n\s+importante|aviso\s+legal|nota\s+importante|consideraciones?\s+generales?|comunicaci[oó]n\s+"?[ab]"?\s*\d{3,4}|reglamento\s+de\s+(?:uso|la\s+tarjeta)|est[ií]mado\s+(?:cliente|asociado)|ley\s+(?:n[°º]\s*)?\d{4,5})\b/i
+
+function sliceToConsumosSection(rows) {
+  let startIdx = 0
+  let endIdx = rows.length
+
+  // Find start: first section header or column-header row
+  for (let i = 0; i < rows.length; i++) {
+    if (CONSUMOS_START_RE.test(rows[i].text) || CONSUMOS_HEADER_RE.test(rows[i].text)) {
+      startIdx = i
+      break
+    }
+  }
+
+  // Find end: first T&C / legal marker after the start
+  for (let i = startIdx; i < rows.length; i++) {
+    if (CONSUMOS_END_RE.test(rows[i].text)) {
+      endIdx = i
+      break
+    }
+  }
+
+  // If no start found, still trim T&C at the end
+  return rows.slice(startIdx, endIdx)
+}
+
 // ─── Deduplicate ─────────────────────────────────────────────────────────────
 
 function dedupe(txs) {
@@ -699,7 +735,7 @@ export async function parsePDF(file, { onProgress } = {}) {
         return found.length === 1 ? found[0] : null
       })()
       const refYear = detectYear(ocrText)
-      const rows = groupIntoRows(ocrItems)
+      const rows = sliceToConsumosSection(groupIntoRows(ocrItems))
       const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand)
       const rowTxs = parseRows(rows, file.name, refYear, true, bank, docBrand)
       let transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
@@ -741,8 +777,9 @@ export async function parsePDF(file, { onProgress } = {}) {
   }
   allPageRows.sort((a, b) => b.y - a.y)
 
-  const colTxs = parseColumnar(allPageRows, file.name, refYear, bank, docBrand)
-  const rowTxs = parseRows(allPageRows, file.name, refYear, false, bank, docBrand)
+  const consumosRows = sliceToConsumosSection(allPageRows)
+  const colTxs = parseColumnar(consumosRows, file.name, refYear, bank, docBrand)
+  const rowTxs = parseRows(consumosRows, file.name, refYear, false, bank, docBrand)
   const transactions = colTxs.length >= rowTxs.length ? colTxs : rowTxs
 
   return {
