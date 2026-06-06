@@ -582,24 +582,33 @@ const CONSUMOS_START_RE = /\b(consumos?\s+del?\s+per[ií]odo|detalle\s+de\s+(?:c
 // Column-header: requires "fecha" + a description/merchant keyword (not saldo/importe alone)
 const CONSUMOS_HEADER_RE = /\bfecha\b.{0,80}\b(?:descripci[oó]n|concepto|establecimiento|comercio|detalle|movimiento)\b/i
 
-// End of consumos section
-const CONSUMOS_END_RE = /\b(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso|del?\s+servicio)|informaci[oó]n\s+importante|aviso\s+legal|nota\s+importante|consideraciones?\s+generales?|comunicaci[oó]n\s+"?[ab]"?\s*\d{3,4}|reglamento\s+de\s+(?:uso|la\s+tarjeta)|est[ií]mado\s+(?:cliente|asociado)|ley\s+(?:n[°º]\s*)?\d{4,5})\b/i
+// Reliable end-of-section markers — these ONLY appear as major section headings,
+// never mid-statement. "Información importante" and "nota importante" are excluded
+// because many banks embed them as mid-statement footnotes.
+const CONSUMOS_END_RELIABLE = /\b(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso|del?\s+servicio)|aviso\s+legal|reglamento\s+de\s+(?:uso|la\s+tarjeta)|comunicaci[oó]n\s+"?[ab]"?\s*\d{3,4})\b/i
 
-function sliceToConsumosSection(rows) {
+// Additional end markers used only in OCR mode (where T&C is serialised inline)
+const CONSUMOS_END_OCR = /\b(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso|del?\s+servicio)|informaci[oó]n\s+importante|aviso\s+legal|nota\s+importante|consideraciones?\s+generales?|comunicaci[oó]n\s+"?[ab]"?\s*\d{3,4}|reglamento\s+de\s+(?:uso|la\s+tarjeta)|est[ií]mado\s+(?:cliente|asociado)|ley\s+(?:n[°º]\s*)?\d{4,5})\b/i
+
+function sliceToConsumosSection(rows, { ocrMode = false } = {}) {
   let startIdx = 0
   let endIdx = rows.length
 
-  // Find start using explicit markers
-  for (let i = 0; i < rows.length; i++) {
-    if (CONSUMOS_START_RE.test(rows[i].text) || CONSUMOS_HEADER_RE.test(rows[i].text)) {
-      startIdx = i
-      break
+  // In OCR mode try to detect start as well (T&C can precede transactions in linearised text)
+  if (ocrMode) {
+    for (let i = 0; i < rows.length; i++) {
+      if (CONSUMOS_START_RE.test(rows[i].text) || CONSUMOS_HEADER_RE.test(rows[i].text)) {
+        startIdx = i
+        break
+      }
     }
   }
 
+  const endRE = ocrMode ? CONSUMOS_END_OCR : CONSUMOS_END_RELIABLE
+
   // Find end after start
   for (let i = startIdx; i < rows.length; i++) {
-    if (CONSUMOS_END_RE.test(rows[i].text)) {
+    if (endRE.test(rows[i].text)) {
       endIdx = i
       break
     }
@@ -608,8 +617,7 @@ function sliceToConsumosSection(rows) {
   const sliced = rows.slice(startIdx, endIdx)
 
   // Safety: if the slice is suspiciously small vs the full set, the start marker
-  // matched something wrong (e.g. a summary row late in the doc). Fall back to
-  // just trimming the T&C tail without touching the start.
+  // matched something wrong. Fall back to just trimming the T&C tail.
   if (startIdx > 0 && sliced.length < Math.max(5, rows.length * 0.15)) {
     return rows.slice(0, endIdx)
   }
@@ -754,7 +762,7 @@ export async function parsePDF(file, { onProgress } = {}) {
         return found.length === 1 ? found[0] : null
       })()
       const refYear = detectYear(ocrText)
-      const rows = sliceToConsumosSection(groupIntoRows(ocrItems))
+      const rows = sliceToConsumosSection(groupIntoRows(ocrItems), { ocrMode: true })
       const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand)
       const rowTxs = parseRows(rows, file.name, refYear, true, bank, docBrand)
       const transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
