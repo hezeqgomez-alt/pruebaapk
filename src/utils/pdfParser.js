@@ -265,8 +265,8 @@ function shouldSkipDesc(desc) {
   if (/\bsu\s+pago\b|\bpago\s+en\s+pesos\b|\bpago\s+m[ií]nimo\b|\bpago\s+de\s+tarjeta\b/i.test(desc)) return true
   // "TARJETA (9992) TOTAL CONSUMOS..." subtotal rows
   if (/tarjeta\s*\(?\d+\)?\s*total/i.test(desc)) return true
-  // Summary keywords anywhere in description
-  if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|proximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  // Summary keywords anywhere in description (with/without accents)
+  if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|pr[oó]ximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
   // Page header rows (cardholder name + card type)
   if (/\b(?:visa|mastercard|amex|american\s+express|cabal|naranja)\s+(?:signature|platinum|classic|gold|black|infinite)\b/i.test(desc)) return true
   if (/\bhoja\s+\d+\b/i.test(desc)) return true
@@ -285,8 +285,10 @@ function shouldSkipDesc(desc) {
   // Description contains only month names/abbreviations + digits/symbols → pure schedule row (e.g. "ENE/25")
   const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?|prox(?:imo)?s?|meses?)\b/gi, '').replace(/[\d\s/,.:|()%$-]+/g, '')
   if (nonMonth.trim().length === 0) return true
+  // T&C / legal section headers — backup for when section slicer doesn't cut them
+  if (/^(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso)|informaci[oó]n\s+importante|aviso\s+legal|reglamento\s+de\s+(?:uso|la\s+tarjeta))/i.test(desc)) return true
   // Notification letter / legal boilerplate embedded in some PDFs
-  if (/^(buenos\s+aires|dichos\s+cambios|le\s+inform|le\s+comuni|estimado\s+asociad|condiciones\s+vigentes|la\s+presente|en\s+virtud|a\s+partir\s+del\s+pr|por\s+ello\s+le)/i.test(desc)) return true
+  if (/^(buenos\s+aires|dichos\s+cambios|le\s+inform|le\s+comuni|estimado\s+(?:asociad|cliente|socio|titular)|condiciones\s+vigentes|la\s+presente|en\s+virtud|a\s+partir\s+del\s+pr|por\s+ello\s+le|le\s+recordamos|de\s+acuerdo\s+a|conforme\s+a\s+lo)/i.test(desc)) return true
   return false
 }
 
