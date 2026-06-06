@@ -570,22 +570,24 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
 }
 
 // ─── Section slicer: only parse the consumos block ───────────────────────────
-// Detects the start of the transactions section and cuts off before T&C / legal text.
+// Cuts off T&C / legal boilerplate at the end.
+// Start detection uses only explicit section-title markers to avoid false
+// matches on summary rows like "FECHA DE CIERRE ... SALDO ANTERIOR".
 
-// Rows that mark the START of a consumos/movimientos section
+// Explicit section-title markers (not column headers, which are too generic)
 const CONSUMOS_START_RE = /\b(consumos?\s+del?\s+per[ií]odo|detalle\s+de\s+(?:consumos?|movimientos?)|movimientos?\s+del?\s+per[ií]odo|resumen\s+de\s+(?:consumos?|movimientos?)|actividad\s+de\s+(?:la\s+)?(?:cuenta|tarjeta)|operaciones?\s+realizadas?)\b/i
 
-// Column-header rows (Fecha + at least one other column keyword)
-const CONSUMOS_HEADER_RE = /\bfecha\b.{0,80}\b(?:descripci[oó]n|concepto|establecimiento|comercio|importe|monto|d[eé]bito|cr[eé]dito|cargo|saldo)\b/i
+// Column-header: requires "fecha" + a description/merchant keyword (not saldo/importe alone)
+const CONSUMOS_HEADER_RE = /\bfecha\b.{0,80}\b(?:descripci[oó]n|concepto|establecimiento|comercio|detalle|movimiento)\b/i
 
-// Rows that mark the END of the consumos section (T&C, legal boilerplate, promo pages)
+// End of consumos section
 const CONSUMOS_END_RE = /\b(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso|del?\s+servicio)|informaci[oó]n\s+importante|aviso\s+legal|nota\s+importante|consideraciones?\s+generales?|comunicaci[oó]n\s+"?[ab]"?\s*\d{3,4}|reglamento\s+de\s+(?:uso|la\s+tarjeta)|est[ií]mado\s+(?:cliente|asociado)|ley\s+(?:n[°º]\s*)?\d{4,5})\b/i
 
 function sliceToConsumosSection(rows) {
   let startIdx = 0
   let endIdx = rows.length
 
-  // Find start: first section header or column-header row
+  // Find start using explicit markers
   for (let i = 0; i < rows.length; i++) {
     if (CONSUMOS_START_RE.test(rows[i].text) || CONSUMOS_HEADER_RE.test(rows[i].text)) {
       startIdx = i
@@ -593,7 +595,7 @@ function sliceToConsumosSection(rows) {
     }
   }
 
-  // Find end: first T&C / legal marker after the start
+  // Find end after start
   for (let i = startIdx; i < rows.length; i++) {
     if (CONSUMOS_END_RE.test(rows[i].text)) {
       endIdx = i
@@ -601,8 +603,16 @@ function sliceToConsumosSection(rows) {
     }
   }
 
-  // If no start found, still trim T&C at the end
-  return rows.slice(startIdx, endIdx)
+  const sliced = rows.slice(startIdx, endIdx)
+
+  // Safety: if the slice is suspiciously small vs the full set, the start marker
+  // matched something wrong (e.g. a summary row late in the doc). Fall back to
+  // just trimming the T&C tail without touching the start.
+  if (startIdx > 0 && sliced.length < Math.max(5, rows.length * 0.15)) {
+    return rows.slice(0, endIdx)
+  }
+
+  return sliced
 }
 
 // ─── Deduplicate ─────────────────────────────────────────────────────────────
