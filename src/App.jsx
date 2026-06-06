@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut,
 } from 'lucide-react'
 import UploadZone from './components/UploadZone'
 import OnboardingTooltip from './components/OnboardingTooltip'
@@ -16,6 +16,9 @@ import BalancePanel from './components/BalancePanel'
 import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
 import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
+import AuthGate from './components/AuthGate'
+import { useAuth } from './context/AuthContext'
+import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
 import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
@@ -68,16 +71,20 @@ export default function App() {
   const [showAddModal, setShowAddModal]           = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
-  const [licenseStatus, setLicenseStatus]         = useState(null)
+  const { user, trialStatus, trackPDF: webTrackPDF, refreshTrial, signOut } = useAuth()
+
+  // In Electron: use electronAPI license. On web: use auth context.
+  const [electronLicense, setElectronLicense] = useState(null)
+  const licenseStatus = window.electronAPI ? electronLicense : trialStatus
 
   const chartDonutRef = useRef(null)
   const chartBarRef   = useRef(null)
   const addBtnRef     = useRef(null)
 
-  // License check on mount
+  // Electron-only license check on mount
   useEffect(() => {
     if (!window.electronAPI) return
-    window.electronAPI.getLicenseStatus().then(setLicenseStatus)
+    window.electronAPI.getLicenseStatus().then(setElectronLicense)
   }, [])
 
   // Apply / remove dark class on <html>
@@ -102,10 +109,16 @@ export default function App() {
         const check = await window.electronAPI.trackPDF()
         if (!check.allowed) {
           setToast(`❌ Límite de prueba: ya analizaste ${check.pdfLimit} resúmenes. Activá tu licencia para continuar.`)
-          setLicenseStatus(s => s ? { ...s, pdfCount: check.pdfCount } : s)
+          setElectronLicense(s => s ? { ...s, pdfCount: check.pdfCount } : s)
           continue
         }
-        setLicenseStatus(s => s?.status === 'trial' ? { ...s, pdfCount: check.pdfCount } : s)
+        setElectronLicense(s => s?.status === 'trial' ? { ...s, pdfCount: check.pdfCount } : s)
+      } else if (isSupabaseConfigured && user) {
+        const check = await webTrackPDF()
+        if (!check.allowed) {
+          setToast(`❌ Límite de prueba: ya analizaste ${check.pdfLimit} resúmenes. Suscribite para continuar.`)
+          continue
+        }
       }
 
       setLoading(l => [...l, file.name])
@@ -287,7 +300,19 @@ export default function App() {
       countGreen: findings.filter(f => f.type === 'lastInstallment').length },
   ]
 
-  const refreshLicense = () => window.electronAPI?.getLicenseStatus().then(setLicenseStatus)
+  const refreshLicense = () => {
+    if (window.electronAPI) {
+      window.electronAPI.getLicenseStatus().then(setElectronLicense)
+    } else {
+      refreshTrial()
+    }
+  }
+
+  // Web auth gate: show login/register when Supabase is configured and user is not logged in
+  // user===undefined means still loading; null means no session
+  if (isSupabaseConfigured && !window.electronAPI && user === null) {
+    return <AuthGate />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/40">
@@ -401,6 +426,17 @@ export default function App() {
             >
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
+
+            {/* Web logout */}
+            {isSupabaseConfigured && !window.electronAPI && user && (
+              <button
+                onClick={signOut}
+                title={`Cerrar sesión (${user.email})`}
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              >
+                <LogOut size={15} />
+              </button>
+            )}
           </div>
         </div>
       </header>

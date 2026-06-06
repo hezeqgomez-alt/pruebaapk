@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock } from 'lucide-react'
 
-const BUY_URL = 'https://easyresumen.com/#pricing'
+const BUY_URL      = 'https://easyresumen.com/#pricing'
+const IS_WEB       = !window.electronAPI
 
 function formatKey(raw) {
   const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 24)
@@ -95,6 +96,11 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
   const [showModal, setShowModal] = useState(false)
   const urgent = daysLeft <= 5 || pdfCount >= pdfLimit
 
+  const ctaLabel  = IS_WEB ? 'Ver planes' : 'Activar licencia'
+  const ctaAction = IS_WEB
+    ? () => window.open(BUY_URL, '_blank')
+    : () => setShowModal(true)
+
   return (
     <>
       <div className={`flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-medium ${urgent ? 'bg-red-500' : 'bg-amber-500'} text-white`}>
@@ -105,15 +111,12 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
           {' · '}
           <strong>{pdfCount}/{pdfLimit} resúmenes</strong> usados
         </span>
-        <button
-          onClick={() => setShowModal(true)}
-          className="underline font-semibold hover:no-underline"
-        >
-          Activar licencia
+        <button onClick={ctaAction} className="underline font-semibold hover:no-underline">
+          {ctaLabel}
         </button>
       </div>
 
-      {showModal && (
+      {showModal && !IS_WEB && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-7 w-full max-w-sm">
             <div className="flex items-center gap-3 mb-5">
@@ -137,6 +140,28 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
 // ─── Expired gate (blocking) ──────────────────────────────────────────────────
 
 export function ExpiredGate({ onActivated }) {
+  if (IS_WEB) {
+    return (
+      <div className="fixed inset-0 bg-slate-900/95 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+          <img src="/icon.png" alt="EasyResumen" className="w-16 h-16 mx-auto mb-4 rounded-2xl" onError={e => { e.target.style.display='none' }} />
+          <h1 className="text-xl font-extrabold text-slate-800 mb-1">Período de prueba finalizado</h1>
+          <p className="text-sm text-slate-500 mb-6">
+            Gracias por probar EasyResumen. Suscribite para seguir accediendo.
+          </p>
+          <a
+            href={BUY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+          >
+            Ver planes <ExternalLink size={14} />
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 bg-slate-900 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">

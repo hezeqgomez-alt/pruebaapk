@@ -27,7 +27,8 @@ function pdfjsWorkerPolyfill() {
 
 export default defineConfig({
   plugins: [react(), pdfjsWorkerPolyfill()],
-  base: './',
+  // './' para Electron (rutas relativas en el .exe), '/' para Vercel/web
+  base: process.env.ELECTRON_BUILD ? './' : '/',
   optimizeDeps: {
     exclude: ['pdfjs-dist'],
   },

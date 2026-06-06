@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
 
 // Polyfill for Chromium < 136 (e.g. Electron 42) — pdfjs-dist v5.7 uses these
 if (!Map.prototype.getOrInsertComputed) {
@@ -19,6 +20,8 @@ if (!Map.prototype.getOrInsert) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )
