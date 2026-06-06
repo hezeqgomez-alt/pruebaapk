@@ -42,10 +42,10 @@ function parseAmount(str) {
   // Remove currency symbols and non-numeric prefix
   s = s.replace(/^[A-Z$€£¥]{1,3}\.?/, '')
 
-  // Argentine: 1.234.567,89
+  // Argentine: 1.234.567,89 (dots = thousands, comma = decimal)
   if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) {
     s = s.replace(/\./g, '').replace(',', '.')
-  // Argentine no-thousands: 1234,89
+  // Argentine no-thousands: 1234,89 or 1234,8
   } else if (/^\d+(,\d{1,2})$/.test(s)) {
     s = s.replace(',', '.')
   // US: 1,234,567.89
@@ -145,7 +145,7 @@ function detectForeignCurrency(text) {
 
 // Monto válido: separador de miles (1.234), coma decimal (1234,56),
 // signo $ delante, 5+ dígitos, o trailing dash para créditos (553.343,47-).
-const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?-?\)?|-?\(?\d+,\d{2}-?\)?|-?\(?\d{5,}-?\)?)(?=\s|$)/g
+const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?-?\)?|-?\(?\d+,\d{1,2}-?\)?|-?\(?\d{5,}-?\)?)(?=\s|$)/g
 
 function findAmounts(text) {
   const results = []
@@ -434,9 +434,9 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
     if (amountVal < 0 && amounts.length > 1 && amounts.every(a => a.val < 0)) {
       amountVal = amounts.reduce((min, a) => a.val < min.val ? a : min).val
     }
-    // OCR mode: the last amount may be a running balance, not the transaction amount.
-    // When it's 5× larger than the first positive amount on the row, prefer the first.
-    if (ocrMode && amounts.length >= 2) {
+    // The last amount may be a running balance (date | desc | importe | saldo).
+    // When it's 5× larger than the first positive amount on the same row, prefer the first.
+    if (amounts.length >= 2 && amountVal > 0) {
       const firstPos = amounts.find(a => a.val > 0)
       if (firstPos && amountVal > firstPos.val * 5) amountVal = firstPos.val
     }

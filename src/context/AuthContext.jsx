@@ -84,12 +84,22 @@ export function AuthProvider({ children }) {
   }, [])
 
   const trackPDF = useCallback(async () => {
-    if (!isSupabaseConfigured || !user) return { allowed: true }
+    if (!isSupabaseConfigured) return { allowed: true }
 
-    const meta = user.user_metadata || {}
+    // Always fetch fresh data — avoids stale closure when multiple PDFs are uploaded in sequence
+    const { data: fresh } = await supabase.auth.getUser()
+    const freshUser = fresh?.user
+    if (!freshUser) return { allowed: true }
+
+    const meta = freshUser.user_metadata || {}
     if (meta.plan === 'paid') return { allowed: true }
 
     const currentCount = meta.pdf_count || 0
+
+    // Sync state with fresh data in case it diverged
+    setUser(freshUser)
+    setTrialStatus(computeTrialStatus(freshUser))
+
     if (currentCount >= PDF_LIMIT) {
       return { allowed: false, pdfCount: currentCount, pdfLimit: PDF_LIMIT }
     }
@@ -105,7 +115,7 @@ export function AuthProvider({ children }) {
     }
 
     return { allowed: true, pdfCount: newCount, pdfLimit: PDF_LIMIT }
-  }, [user])
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, trialStatus, signIn, signUp, signOut, trackPDF, refreshTrial }}>
