@@ -633,7 +633,7 @@ function dedupe(txs) {
 
 // ─── OCR for scanned PDFs ───────────────────────────────────────────────────
 
-async function renderPageToCanvas(pdfPage, scale = 1.5) {
+async function renderPageToCanvas(pdfPage, scale = 2.0) {
   const viewport = pdfPage.getViewport({ scale })
   const canvas = document.createElement('canvas')
   canvas.width  = viewport.width
@@ -722,8 +722,16 @@ export async function parsePDF(file, { onProgress } = {}) {
   const allText = pages.flat().map(i => i.str).join(' ')
   const textItems = pages.flat().filter(i => i.str.trim()).length
 
-  // Scanned / image-only PDF → try OCR
-  if (textItems < 10) {
+  // Detect whether the extracted text contains actual transaction data.
+  // PDFs with < 50 text items that don't have a date+amount pattern are
+  // considered scanned even if pdfjs found some metadata text items.
+  const hasDatePattern   = /\b\d{1,2}[-/.]\d{1,2}(?:[-/.]\d{2,4})?\b/.test(allText)
+  const hasAmountPattern = /\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d{1,3},\d{2}/.test(allText)
+  const hasTransactionText = hasDatePattern && hasAmountPattern
+  const needsOCR = textItems < 10 || (textItems < 80 && !hasTransactionText)
+
+  // Helper: run OCR and parse result
+  async function runOCR() {
     if (!onProgress) {
       return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true }
     }
@@ -736,7 +744,6 @@ export async function parsePDF(file, { onProgress } = {}) {
         return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true, ocrFailed: true }
       }
 
-      // Parse OCR text as a single synthetic page
       const ocrItems = ocrTextToItems(ocrText)
       const bank = detectBank(ocrText)
       const docBrand = detectCardBrand(ocrText.slice(0, 2000)) || (() => {
@@ -750,12 +757,14 @@ export async function parsePDF(file, { onProgress } = {}) {
       const rows = sliceToConsumosSection(groupIntoRows(ocrItems))
       const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand)
       const rowTxs = parseRows(rows, file.name, refYear, true, bank, docBrand)
-      let transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
+      const transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
       return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
     } catch (e) {
       return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true, ocrFailed: true, ocrError: e.message }
     }
   }
+
+  if (needsOCR) return runOCR()
 
   const bank = detectBank(allText)
   // Prefer first-page header for brand detection — avoids picking up brand names
@@ -793,6 +802,13 @@ export async function parsePDF(file, { onProgress } = {}) {
   const colTxs = parseColumnar(consumosRows, file.name, refYear, bank, docBrand)
   const rowTxs = parseRows(consumosRows, file.name, refYear, false, bank, docBrand)
   const transactions = colTxs.length >= rowTxs.length ? colTxs : rowTxs
+
+  // Fallback: if text parsing found nothing on a small PDF, try OCR.
+  // Covers PDFs that pdfjs partially extracts (metadata only) but are
+  // actually scanned images for their transaction content.
+  if (transactions.length === 0 && pages.length <= 20 && onProgress) {
+    return runOCR()
+  }
 
   return {
     bank,
