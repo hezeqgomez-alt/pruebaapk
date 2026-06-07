@@ -364,14 +364,16 @@ export default function App() {
 
           {/* Brand */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-indigo-900">
-              <ReceiptText size={18} className="text-white" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 dark:shadow-indigo-500/20 shrink-0">
+              <ReceiptText size={20} className="text-white" />
             </div>
-            <div className="leading-none">
-              <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
                 EasyResumen
               </h1>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">100% local · sin IA</p>
+              <span className="hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-400/20 tracking-wide">
+                100% local
+              </span>
             </div>
           </div>
 
