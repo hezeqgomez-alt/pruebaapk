@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react'
-import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock } from 'lucide-react'
+import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
+const MP_PLAN_ID   = '65b536a45d974b038219887643100785'
 const BUY_URL      = 'https://easyresumen.com/#pricing'
 const IS_WEB       = !window.electronAPI
+
+function getMpCheckoutUrl(userId) {
+  const base = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}`
+  return userId ? `${base}&external_reference=${userId}` : base
+}
 
 function formatKey(raw) {
   const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 24)
@@ -94,11 +101,12 @@ function ActivationForm({ onActivated }) {
 
 export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
   const [showModal, setShowModal] = useState(false)
+  const { user } = useAuth()
   const urgent = daysLeft <= 5
 
-  const ctaLabel  = IS_WEB ? 'Ver planes' : 'Activar licencia'
+  const ctaLabel  = IS_WEB ? 'Suscribirme' : 'Activar licencia'
   const ctaAction = IS_WEB
-    ? () => window.open(BUY_URL, '_blank')
+    ? () => window.open(getMpCheckoutUrl(user?.id), '_blank')
     : () => setShowModal(true)
 
   return (
@@ -139,23 +147,63 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
 // ─── Expired gate (blocking) ──────────────────────────────────────────────────
 
 export function ExpiredGate({ onActivated }) {
+  const { user, refreshTrial } = useAuth()
+  const [checking, setChecking] = useState(false)
+  const [checked,  setChecked]  = useState(false)
+
+  async function handleAlreadySubscribed() {
+    setChecking(true)
+    await refreshTrial()
+    setChecking(false)
+    setChecked(true)
+    setTimeout(() => setChecked(false), 3000)
+  }
+
   if (IS_WEB) {
     return (
-      <div className="fixed inset-0 bg-slate-900/95 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-          <img src="/icon.png" alt="EasyResumen" className="w-16 h-16 mx-auto mb-4 rounded-2xl" onError={e => { e.target.style.display='none' }} />
-          <h1 className="text-xl font-extrabold text-slate-800 mb-1">Período de prueba finalizado</h1>
-          <p className="text-sm text-slate-500 mb-6">
-            Gracias por probar EasyResumen. Suscribite para seguir accediendo.
+      <div className="fixed inset-0 bg-[#0f0f1a]/98 flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[120px]" />
+        </div>
+        <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-md text-center shadow-2xl shadow-black/40">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-indigo-500/30">
+            <KeyRound size={28} className="text-white" />
+          </div>
+          <h1 className="text-xl font-extrabold text-white mb-2">Período de prueba finalizado</h1>
+          <p className="text-sm text-slate-400 mb-7 leading-relaxed">
+            Gracias por probar EasyResumen.<br />
+            Suscribite para seguir analizando tus resúmenes sin límites.
           </p>
-          <a
-            href={BUY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-          >
-            Ver planes <ExternalLink size={14} />
-          </a>
+
+          <div className="space-y-3">
+            <a
+              href={getMpCheckoutUrl(user?.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
+            >
+              Suscribirme <ExternalLink size={14} />
+            </a>
+
+            <button
+              onClick={handleAlreadySubscribed}
+              disabled={checking}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20 text-sm transition-all disabled:opacity-50"
+            >
+              {checking ? (
+                <><RefreshCw size={14} className="animate-spin" /> Verificando...</>
+              ) : checked ? (
+                <><CheckCircle2 size={14} className="text-emerald-400" /> Verificado</>
+              ) : (
+                <><RefreshCw size={14} /> Ya me suscribí</>
+              )}
+            </button>
+          </div>
+
+          <p className="mt-5 text-xs text-slate-600">
+            Después de suscribirte, hacé clic en "Ya me suscribí" para activar tu cuenta.
+          </p>
         </div>
       </div>
     )
