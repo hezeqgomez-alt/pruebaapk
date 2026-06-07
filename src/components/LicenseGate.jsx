@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react'
-import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, Loader2 } from 'lucide-react'
+import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, Loader2, Zap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+
+// ─── PRO badge ────────────────────────────────────────────────────────────────
+
+export function ProBadge() {
+  const { trialStatus } = useAuth()
+  if (trialStatus?.status !== 'active') return null
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[10px] font-extrabold tracking-wide shadow-sm shadow-amber-200 dark:shadow-amber-900 select-none">
+      <Zap size={9} className="fill-white" />
+      PRO
+    </span>
+  )
+}
 
 const MP_PLAN_ID = '65b536a45d974b038219887643100785'
 const IS_WEB     = !window.electronAPI

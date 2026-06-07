@@ -16,7 +16,7 @@ import InstallmentsPanel from './components/InstallmentsPanel'
 import BalancePanel from './components/BalancePanel'
 import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
-import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
+import { TrialBanner, ExpiredGate, UpdateToast, ProBadge } from './components/LicenseGate'
 import AuthGate from './components/AuthGate'
 import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -358,9 +358,12 @@ export default function App() {
               <ReceiptText size={18} className="text-white" />
             </div>
             <div className="leading-none">
-              <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                EasyResumen
-              </h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                  EasyResumen
+                </h1>
+                <ProBadge />
+              </div>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">100% local · sin IA</p>
             </div>
           </div>
