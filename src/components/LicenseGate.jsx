@@ -3,7 +3,6 @@ import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw }
 import { useAuth } from '../context/AuthContext'
 
 const MP_PLAN_ID   = '65b536a45d974b038219887643100785'
-const BUY_URL      = 'https://easyresumen.com/#pricing'
 const IS_WEB       = !window.electronAPI
 
 function getMpCheckoutUrl(userId) {
@@ -87,7 +86,7 @@ function ActivationForm({ onActivated }) {
         ¿No tenés una clave?{' '}
         <button
           type="button"
-          onClick={() => window.electronAPI?.openExternal(BUY_URL)}
+          onClick={() => window.electronAPI?.openExternal('https://www.easyresumen.com.ar')}
           className="text-indigo-600 hover:underline font-medium inline-flex items-center gap-0.5"
         >
           Comprá EasyResumen <ExternalLink size={10} />
