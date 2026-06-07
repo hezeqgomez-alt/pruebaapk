@@ -1,4 +1,5 @@
 export const CATEGORIES = {
+  intereses:     { label: 'Intereses Financieros', color: '#f43f5e', icon: '💸' },
   mercadopago:   { label: 'Pagos con MercadoPago', color: '#00b1ea', icon: '💙' },
   alimentacion:    { label: 'Alimentación',         color: '#f59e0b', icon: '🍔' },
   supermercado:    { label: 'Supermercado',          color: '#10b981', icon: '🛒' },
@@ -25,6 +26,17 @@ export const CATEGORIES = {
 // Order matters: first match wins. More specific patterns come before broad ones.
 
 const RULES = [
+  // ── Intereses Financieros ─────────────────────────────────────────────────────
+  { cat: 'intereses', kw: [
+    'interes financiero', 'intereses financieros',
+    'interes por financiacion', 'intereses por financiacion',
+    'interes s/ saldo', 'intereses s/ saldo', 'interes s/saldo',
+    'cargo financiero', 'financiacion automatica', 'financiacion automat',
+    'interes mora', 'intereses mora', 'recargo financiero',
+    'costo financiero', 'interes punitorio', 'intereses punitorios',
+    'interes compra', 'intereses compra',
+  ]},
+
   // ── MercadoPago / MercadoLibre ───────────────────────────────────────────────
   { cat: 'mercadopago', kw: [
     'mercadopago', 'mercado pago', 'mercadolibre', 'mercado libre',

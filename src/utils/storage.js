@@ -71,7 +71,8 @@ export function saveFilterPrefs(prefs) {
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 
 export function loadDarkMode() {
-  return localStorage.getItem(KEY_DARK) === 'true'
+  const val = localStorage.getItem(KEY_DARK)
+  return val === null ? true : val === 'true'
 }
 
 export function saveDarkMode(val) {

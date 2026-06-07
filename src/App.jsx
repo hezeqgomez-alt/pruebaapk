@@ -317,7 +317,17 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/40">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:bg-[#0f0f1a] dark:bg-none relative overflow-x-hidden">
+
+      {/* ── Dark mode animated background ── */}
+      <div className="hidden dark:block fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-15%] left-[-8%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[130px]" />
+        <div className="absolute bottom-[-15%] right-[-8%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[130px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-indigo-900/5 rounded-full blur-[80px]" />
+        <div className="absolute inset-0 opacity-[0.02]"
+          style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '48px 48px' }}
+        />
+      </div>
 
       {/* ── License gates ── */}
       {licenseStatus?.status === 'expired' && <ExpiredGate onActivated={refreshLicense} />}
@@ -349,7 +359,7 @@ export default function App() {
       />
 
       {/* ── Header ── */}
-      <header className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 sticky top-0 z-40 shadow-sm">
+      <header className="bg-white/90 dark:bg-white/5 backdrop-blur-md dark:backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10 sticky top-0 z-40 shadow-sm dark:shadow-black/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
 
           {/* Brand */}
@@ -486,15 +496,15 @@ export default function App() {
             <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} />
 
             {/* Tabs — solo desktop */}
-            <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-slate-800 rounded-2xl p-1 w-fit overflow-x-auto">
+            <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-white/5 dark:border dark:border-white/10 rounded-2xl p-1 w-fit overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                      ? 'bg-white dark:bg-white/10 text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-white/5'
                   }`}
                 >
                   {tab.label}
@@ -561,7 +571,7 @@ export default function App() {
 
         {!hasData && !loading.length && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900 dark:to-violet-900 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:bg-white/5 dark:border dark:border-white/10 dark:bg-none flex items-center justify-center mx-auto mb-4">
               <ReceiptText size={28} className="text-indigo-400" />
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium">Cargá un PDF de resumen para comenzar</p>
