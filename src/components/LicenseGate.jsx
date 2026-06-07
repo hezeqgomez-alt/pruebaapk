@@ -99,14 +99,33 @@ function ActivationForm({ onActivated }) {
 // ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
 export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
-  const [showModal, setShowModal] = useState(false)
-  const { user } = useAuth()
+  const [showModal,   setShowModal]   = useState(false)
+  const [showVerify,  setShowVerify]  = useState(false)
+  const [checking,    setChecking]    = useState(false)
+  const [verifyMsg,   setVerifyMsg]   = useState('')
+  const { user, refreshTrial } = useAuth()
   const urgent = daysLeft <= 5
 
   const ctaLabel  = IS_WEB ? 'Suscribirme' : 'Activar licencia'
   const ctaAction = IS_WEB
-    ? () => window.open(getMpCheckoutUrl(user?.id), '_blank')
+    ? () => { window.open(getMpCheckoutUrl(user?.id), '_blank'); setShowVerify(true) }
     : () => setShowModal(true)
+
+  async function handleVerify() {
+    setChecking(true)
+    setVerifyMsg('')
+    try {
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, email: user?.email }),
+      })
+      const data = await res.json()
+      if (!data.found) setVerifyMsg('No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.')
+    } catch { /* fall through */ }
+    await refreshTrial()
+    setChecking(false)
+  }
 
   return (
     <>
@@ -134,7 +153,19 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
         >
           {ctaLabel} →
         </button>
+        {IS_WEB && showVerify && (
+          <button
+            onClick={handleVerify}
+            disabled={checking}
+            className="ml-1 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 transition-all disabled:opacity-50"
+          >
+            {checking ? <RefreshCw size={11} className="inline animate-spin" /> : '✓ Ya me suscribí'}
+          </button>
+        )}
       </div>
+      {verifyMsg && (
+        <div className="text-center text-xs py-1 bg-amber-600 text-white px-4">{verifyMsg}</div>
+      )}
 
       {showModal && !IS_WEB && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
