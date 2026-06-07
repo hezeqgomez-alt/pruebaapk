@@ -163,13 +163,28 @@ export function ExpiredGate({ onActivated }) {
   const { user, refreshTrial } = useAuth()
   const [checking, setChecking] = useState(false)
   const [checked,  setChecked]  = useState(false)
+  const [errMsg,   setErrMsg]   = useState('')
 
   async function handleAlreadySubscribed() {
     setChecking(true)
+    setErrMsg('')
+    try {
+      // First try to verify + activate via MP API
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, email: user?.email }),
+      })
+      const data = await res.json()
+      if (!data.found) {
+        setErrMsg('No encontramos una suscripción activa. Si acabás de pagar, esperá unos minutos e intentá de nuevo.')
+      }
+    } catch { /* network error — fall through to refreshTrial */ }
+    // Always refresh from Supabase after attempt
     await refreshTrial()
     setChecking(false)
     setChecked(true)
-    setTimeout(() => setChecked(false), 3000)
+    setTimeout(() => setChecked(false), 4000)
   }
 
   if (IS_WEB) {
@@ -220,6 +235,11 @@ export function ExpiredGate({ onActivated }) {
             </button>
           </div>
 
+          {errMsg && (
+            <p className="mt-3 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-left">
+              ⚠️ {errMsg}
+            </p>
+          )}
           <p className="mt-4 text-xs text-slate-600 leading-relaxed">
             Después de suscribirte en MercadoPago, volvé acá y hacé clic en <strong className="text-slate-500">"Ya me suscribí"</strong>.
           </p>

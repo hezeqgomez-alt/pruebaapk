@@ -421,9 +421,15 @@ export default function App() {
               <h1 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
                 EasyResumen
               </h1>
-              <span className="hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-400/20 tracking-wide">
-                100% local
-              </span>
+              {licenseStatus?.status === 'active' ? (
+                <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white tracking-wide shadow-sm shadow-indigo-500/30">
+                  PRO
+                </span>
+              ) : (
+                <span className="hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-400/20 tracking-wide">
+                  100% local
+                </span>
+              )}
             </div>
           </div>
 
