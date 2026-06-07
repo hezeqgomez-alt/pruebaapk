@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react'
-import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock } from 'lucide-react'
+import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, Loader2 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
-const BUY_URL      = 'https://easyresumen.com/#pricing'
-const IS_WEB       = !window.electronAPI
+const MP_PLAN_ID = '65b536a45d974b038219887643100785'
+const IS_WEB     = !window.electronAPI
+
+function getMpCheckoutUrl(userId) {
+  return `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}&external_reference=${userId}`
+}
+
+// ─── Activation form (Electron only) ─────────────────────────────────────────
 
 function formatKey(raw) {
   const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 24)
   const groups = []
   for (let i = 0; i < clean.length; i += 5) groups.push(clean.slice(i, i + 5))
-  // Always prefix EASY if user didn't type it
   if (groups.length && groups[0] !== 'EASY') groups.unshift('EASY')
   return groups.slice(0, 5).join('-')
 }
@@ -80,7 +86,7 @@ function ActivationForm({ onActivated }) {
         ¿No tenés una clave?{' '}
         <button
           type="button"
-          onClick={() => window.electronAPI?.openExternal(BUY_URL)}
+          onClick={() => window.electronAPI?.openExternal('https://www.easyresumen.com.ar/#pricing')}
           className="text-indigo-600 hover:underline font-medium inline-flex items-center gap-0.5"
         >
           Comprá EasyResumen <ExternalLink size={10} />
@@ -90,16 +96,79 @@ function ActivationForm({ onActivated }) {
   )
 }
 
+// ─── "Ya me suscribí" button (web only) ──────────────────────────────────────
+
+function VerifyButton({ onActivated }) {
+  const { user, refreshTrial } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [msg,     setMsg]     = useState('')
+  const [ok,      setOk]      = useState(false)
+
+  const handleVerify = async () => {
+    if (!user) return
+    setLoading(true)
+    setMsg('')
+    try {
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+      const data = await res.json()
+      if (data.ok && data.activated) {
+        setOk(true)
+        await refreshTrial()
+        setTimeout(() => onActivated?.(), 1500)
+      } else {
+        setMsg('No encontramos una suscripción activa todavía. Si acabás de pagar, esperá unos minutos e intentá de nuevo.')
+      }
+    } catch {
+      setMsg('Error de conexión. Intentá de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (ok) {
+    return (
+      <p className="text-center text-sm text-green-600 font-semibold flex items-center justify-center gap-1.5">
+        <CheckCircle2 size={16} /> ¡Plan PRO activado!
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={handleVerify}
+        disabled={loading}
+        className="w-full py-2 rounded-xl border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+      >
+        {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+        Ya me suscribí
+      </button>
+      {msg && <p className="text-xs text-slate-500 text-center leading-snug">{msg}</p>}
+    </div>
+  )
+}
+
 // ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
 export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated }) {
-  const [showModal, setShowModal] = useState(false)
+  const { user } = useAuth()
+  const [checkoutOpened, setCheckoutOpened] = useState(false)
+  const [showModal,      setShowModal]      = useState(false)
   const urgent = daysLeft <= 5 || pdfCount >= pdfLimit
 
-  const ctaLabel  = IS_WEB ? 'Ver planes' : 'Activar licencia'
-  const ctaAction = IS_WEB
-    ? () => window.open(BUY_URL, '_blank')
-    : () => setShowModal(true)
+  const handleWebCTA = () => {
+    if (!user) return
+    const url = getMpCheckoutUrl(user.id)
+    window.open(url, '_blank')
+    setCheckoutOpened(true)
+  }
+
+  const ctaLabel  = IS_WEB ? 'Suscribirse — $2.999/mes' : 'Activar licencia'
+  const ctaAction = IS_WEB ? handleWebCTA : () => setShowModal(true)
 
   return (
     <>
@@ -111,9 +180,12 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
           {' · '}
           <strong>{pdfCount}/{pdfLimit} resúmenes</strong> usados
         </span>
-        <button onClick={ctaAction} className="underline font-semibold hover:no-underline">
+        <button onClick={ctaAction} className="underline font-semibold hover:no-underline whitespace-nowrap">
           {ctaLabel}
         </button>
+        {IS_WEB && checkoutOpened && (
+          <VerifyInlineBanner onActivated={onActivated} />
+        )}
       </div>
 
       {showModal && !IS_WEB && (
@@ -137,26 +209,90 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
   )
 }
 
+// Inline "Ya me suscribí" dentro del banner (pequeño)
+function VerifyInlineBanner({ onActivated }) {
+  const { user, refreshTrial } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [ok,      setOk]      = useState(false)
+
+  const handleVerify = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+      const data = await res.json()
+      if (data.ok && data.activated) {
+        setOk(true)
+        await refreshTrial()
+        setTimeout(() => onActivated?.(), 1500)
+      }
+    } catch { /* silent */ } finally {
+      setLoading(false)
+    }
+  }
+
+  if (ok) return <span className="font-semibold">¡PRO activado!</span>
+
+  return (
+    <button
+      onClick={handleVerify}
+      disabled={loading}
+      className="underline font-semibold hover:no-underline opacity-90 disabled:opacity-50 flex items-center gap-1"
+    >
+      {loading ? <Loader2 size={10} className="animate-spin" /> : null}
+      Ya me suscribí
+    </button>
+  )
+}
+
 // ─── Expired gate (blocking) ──────────────────────────────────────────────────
 
 export function ExpiredGate({ onActivated }) {
+  const { user } = useAuth()
+  const [checkoutOpened, setCheckoutOpened] = useState(false)
+
   if (IS_WEB) {
+    const handleCheckout = () => {
+      if (!user) return
+      const url = getMpCheckoutUrl(user.id)
+      window.open(url, '_blank')
+      setCheckoutOpened(true)
+    }
+
     return (
       <div className="fixed inset-0 bg-slate-900/95 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-          <img src="/icon.png" alt="EasyResumen" className="w-16 h-16 mx-auto mb-4 rounded-2xl" onError={e => { e.target.style.display='none' }} />
+          <img
+            src="/icon.png"
+            alt="EasyResumen"
+            className="w-16 h-16 mx-auto mb-4 rounded-2xl"
+            onError={e => { e.target.style.display = 'none' }}
+          />
           <h1 className="text-xl font-extrabold text-slate-800 mb-1">Período de prueba finalizado</h1>
-          <p className="text-sm text-slate-500 mb-6">
+          <p className="text-sm text-slate-500 mb-2">
             Gracias por probar EasyResumen. Suscribite para seguir accediendo.
           </p>
-          <a
-            href={BUY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-          >
-            Ver planes <ExternalLink size={14} />
-          </a>
+          <p className="text-2xl font-extrabold text-indigo-600 mb-6">$2.999<span className="text-base font-normal text-slate-400">/mes</span></p>
+
+          <div className="space-y-3">
+            <button
+              onClick={handleCheckout}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+            >
+              Suscribirme con MercadoPago <ExternalLink size={14} />
+            </button>
+
+            {checkoutOpened && <VerifyButton onActivated={onActivated} />}
+          </div>
+
+          <p className="mt-4 text-xs text-slate-400">
+            ¿Tenés problemas? Escribinos a{' '}
+            <a href="mailto:soporte@easyresumen.com.ar" className="underline">soporte@easyresumen.com.ar</a>
+          </p>
         </div>
       </div>
     )
@@ -179,7 +315,7 @@ export function ExpiredGate({ onActivated }) {
 // ─── Update notification (toast) ─────────────────────────────────────────────
 
 export function UpdateToast() {
-  const [state, setState] = useState(null) // null | 'available' | 'downloading' | 'ready'
+  const [state, setState] = useState(null)
   const [pct,   setPct]   = useState(0)
 
   useEffect(() => {
