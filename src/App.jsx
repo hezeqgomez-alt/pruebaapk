@@ -127,7 +127,7 @@ export default function App() {
     if (window.electronAPI || !user?.id) return
     const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }), 2000)
     return () => clearTimeout(t)
-  }, [transactions, budgets, user?.id])
+  }, [transactions, budgets, customCategories, user?.id])
 
   const handleBudgetsChange = useCallback((b) => {
     setBudgets(b)
@@ -222,6 +222,9 @@ export default function App() {
     if (confirm('¿Borrar todos los movimientos cargados?')) {
       setTransactions([])
       clearData()
+      if (user?.id && !window.electronAPI) {
+        cloudSave(user.id, { transactions: [], budgets, customCategories })
+      }
       setToast('🗑️ Datos eliminados')
     }
   }

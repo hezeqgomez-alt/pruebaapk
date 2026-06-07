@@ -5,7 +5,7 @@ export async function cloudLoad(userId) {
   try {
     const { data, error } = await supabase
       .from('user_data')
-      .select('transactions, budgets')
+      .select('transactions, budgets, custom_categories')
       .eq('user_id', userId)
       .maybeSingle()
     if (error) { console.warn('cloudLoad error:', error.message); return null }
