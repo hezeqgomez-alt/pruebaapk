@@ -169,6 +169,9 @@ function detectBank(text) {
   if (t.includes('brubank'))           return 'Brubank'
   if (t.includes('ualá') || t.includes('uala')) return 'Ualá'
   if (t.includes('credicoop'))         return 'Credicoop'
+  // Credicoop statements where the bank name is a graphic: detect by structural fields
+  // unique to Credicoop (CART. = cartera code, LIQ. = liquidación sequence)
+  if (t.includes('cart.') && t.includes('liq.') && t.includes('resumen nro')) return 'Credicoop'
   if (t.includes('hipotecario'))       return 'Hipotecario'
   if (t.includes('supervielle'))       return 'Supervielle'
   if (t.includes('patagonia'))         return 'Patagonia'
@@ -249,6 +252,10 @@ function cleanDesc(raw) {
 
   // Strip trailing CABAL/Credicoop coupon codes (e.g. "MERCHANT 0700" → "MERCHANT")
   desc = desc.replace(/\s+0\d{3,4}$/, '').trim()
+
+  // Strip long embedded reference codes attached directly to a word
+  // (e.g. "SEGURCOOP0256467940000003" → "SEGURCOOP", "AUTOPISTA1234567890" → "AUTOPISTA")
+  desc = desc.replace(/\b([A-Z]{3,})\d{8,}/g, '$1').trim()
 
   return desc
 }
@@ -361,6 +368,11 @@ function extractCardInfo(text) {
 
   // P1 · CABAL / Naranja X — "TARJETA (0085) TOTAL CONSUMOS DE GUIDO/MARIA CANDELA"
   m = text.match(/tarjeta\s*\((\d+)\)[^()]*de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,50})/i)
+  if (m) { const r = wb(buildCardInfo(m[1], m[2])); if (r) return r }
+
+  // P1b · Credicoop Visa (no-parens) — "TARJETA 2554 Total Consumos de HERNAN E GOMEZ"
+  // or "Tarjeta 3544 Total Consumos de HERNAN E GOMEZ"
+  m = text.match(/tarjeta\s+(\d{4})\s+total\s+consumos\s+de\s+([A-ZÁÉÍÓÚÑA-Z][A-ZÁÉÍÓÚÑA-Z/\s]{2,50})/i)
   if (m) { const r = wb(buildCardInfo(m[1], m[2])); if (r) return r }
 
   // P2 · Visa/MC adicional con número corto — "TARJETA ADICIONAL Nro. 4521 PEREZ JUAN"

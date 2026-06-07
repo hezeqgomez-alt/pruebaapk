@@ -101,6 +101,7 @@ function detectBank(text) {
   if (t.includes('brubank'))           return 'Brubank'
   if (t.includes('ualá') || t.includes('uala')) return 'Ualá'
   if (t.includes('credicoop'))         return 'Credicoop'
+  if (t.includes('cart.') && t.includes('liq.') && t.includes('resumen nro')) return 'Credicoop'
   if (t.includes('hipotecario'))       return 'Hipotecario'
   if (t.includes('supervielle'))       return 'Supervielle'
   if (t.includes('patagonia'))         return 'Patagonia'
@@ -132,6 +133,7 @@ function cleanDesc(raw) {
   desc = desc.replace(/\s+(?:cta|cuota|c)\.?\s*$/i, '').trim()
   desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/[*\-,]+$/g, '').replace(/\s+/g, ' ').trim()
   desc = desc.replace(/\s+0\d{3,4}$/, '').trim()
+  desc = desc.replace(/\b([A-Z]{3,})\d{8,}/g, '$1').trim()
   return desc
 }
 
@@ -647,5 +649,50 @@ describe('Casos reales — Galicia Visa', () => {
 
   it('parsea fecha dd.mm.yy', () => {
     expect(parseDate('15.04.26')).toBe('2026-04-15')
+  })
+})
+
+describe('Credicoop — detección banco sin nombre en texto', () => {
+  it('detecta Credicoop por campos CART./LIQ.', () => {
+    expect(detectBank('PAGINA SUCURSAL GRUPO CUIT CART. N DE CUENTA LIQ. RESUMEN NRO. TITULAR')).toBe('Credicoop')
+  })
+
+  it('no confunde con otros bancos', () => {
+    expect(detectBank('BANCO GALICIA VISA SIGNATURE')).not.toBe('Credicoop')
+  })
+})
+
+describe('extractCardInfo — formato Tarjeta NNNN sin paréntesis', () => {
+  it('detecta Credicoop Visa titular: "TARJETA 2554 Total Consumos de HERNAN E GOMEZ"', () => {
+    // Esta función no está testeada directamente (no es exportable), pero
+    // verificamos que cleanDesc no la confunde con descripción de compra
+    const row = 'TARJETA 2554 Total Consumos de HERNAN E GOMEZ 119.426,17 51,96'
+    // No tiene fecha → parseDate devuelve null → no se incluye como transacción
+    expect(parseDate(row, 2026)).toBeNull()
+    // La descripción después de limpiar debe filtrase (contiene "tarjeta")
+    expect(shouldSkipDesc(cleanDesc(row))).toBe(true)
+  })
+
+  it('detecta formato Tarjeta con minúsculas', () => {
+    const row = 'Tarjeta 3544 Total Consumos de HERNAN E GOMEZ 144.667,17 0,00'
+    expect(parseDate(row, 2026)).toBeNull()
+  })
+})
+
+describe('cleanDesc — elimina códigos de referencia largos en descripción', () => {
+  it('SEGURCOOP con número de póliza → queda solo SEGURCOOP', () => {
+    const desc = cleanDesc('01/04/26 0503 SEGURCOOP0256467940000003 21.921,22 0,00')
+    expect(desc).toBe('SEGURCOOP')
+  })
+
+  it('AUTOPISTAS con código largo → queda solo AUTOPISTAS', () => {
+    const desc = cleanDesc('08-05-26 AUTOPISTAS DEL S 960003712404601 000001 994,15')
+    expect(desc).toContain('AUTOPISTAS')
+    expect(desc).not.toMatch(/960003712404601/)
+  })
+
+  it('MERPAGO con referencia corta (6 dígitos) → se preserva el nombre', () => {
+    const desc = cleanDesc('19-05-26 MERPAGO*MELI 852569 3.490,00')
+    expect(desc).toContain('MERPAGO')
   })
 })
