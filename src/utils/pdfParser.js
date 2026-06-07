@@ -449,9 +449,11 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
     }
     // The last amount may be a running balance (date | desc | importe | saldo).
     // When it's 5× larger than the first positive amount on the same row, prefer the first.
+    // Guard: only apply when firstPos.raw is a formatted amount (has . or ,) — bare integers
+    // like comprobante codes (449917, 008580) must not trigger this heuristic.
     if (amounts.length >= 2 && amountVal > 0) {
       const firstPos = amounts.find(a => a.val > 0)
-      if (firstPos && amountVal > firstPos.val * 5) amountVal = firstPos.val
+      if (firstPos && amountVal > firstPos.val * 5 && /[.,]/.test(firstPos.raw)) amountVal = firstPos.val
     }
     const type = amountVal < 0 ? 'credit' : 'debit'
 
@@ -524,11 +526,13 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
     if (!amtCols.length) continue
     let amtCol = amtCols[0]
 
-    // If the rightmost amount is >5x the next one, it's the running balance — prefer the next
+    // If the rightmost amount is >5x the next one, it's the running balance — prefer the next.
+    // Guard: only apply when amtCols[1] is formatted (has . or ,) — bare integer comprobante
+    // codes must not falsely trigger the balance heuristic.
     if (amtCols.length >= 2) {
       const lastAmt = parseAmount(amtCols[0].text)
       const prevAmt = parseAmount(amtCols[1].text)
-      if (lastAmt > 0 && prevAmt > 0 && lastAmt > prevAmt * 5) amtCol = amtCols[1]
+      if (lastAmt > 0 && prevAmt > 0 && lastAmt > prevAmt * 5 && /[.,]/.test(amtCols[1].text)) amtCol = amtCols[1]
     }
 
     if (amtCol === dateCol) continue

@@ -510,7 +510,7 @@ describe('Heurística de saldo acumulado (5×)', () => {
     let amountVal = amounts[amounts.length - 1].val
     if (amounts.length >= 2 && amountVal > 0) {
       const firstPos = amounts.find(a => a.val > 0)
-      if (firstPos && amountVal > firstPos.val * 5) amountVal = firstPos.val
+      if (firstPos && amountVal > firstPos.val * 5 && /[.,]/.test(firstPos.raw)) amountVal = firstPos.val
     }
     return amountVal
   }
@@ -529,6 +529,15 @@ describe('Heurística de saldo acumulado (5×)', () => {
   it('montos similares (sin saldo acumulado) no se filtran mal', () => {
     // Si el último es solo 2× el primero, no aplica la heurística
     expect(pickAmount('15/04 SUPERMERCADO 5.000,00 10.000,00')).not.toBeNull()
+  })
+
+  it('Banco Nación: comprobante 6 dígitos no activa heurística de saldo', () => {
+    // "008580" es un código de comprobante (entero sin separadores), no saldo
+    expect(pickAmount('25-05-26 008580 LIRNE SA 90.002,00')).toBe(90002)
+    // Caso donde comprobante > monto (ratio inverso, no debería alterar nada)
+    expect(pickAmount('15-05-25 449917 WWW.RODO.COM.AR 9.444,38')).toBe(9444.38)
+    // Comprobante pequeño con monto grande
+    expect(pickAmount('25-05-26 004419 ANTONIO LUQUIN SA 11.666,34')).toBe(11666.34)
   })
 })
 
