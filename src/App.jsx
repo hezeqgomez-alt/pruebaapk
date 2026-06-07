@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2,
 } from 'lucide-react'
 import MobileDrawer from './components/MobileDrawer'
 import UploadZone from './components/UploadZone'
@@ -16,6 +16,7 @@ import InstallmentsPanel from './components/InstallmentsPanel'
 import BalancePanel from './components/BalancePanel'
 import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
+import BankGuideModal from './components/BankGuideModal'
 import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
 import AuthGate from './components/AuthGate'
 import { useAuth } from './context/AuthContext'
@@ -71,6 +72,7 @@ export default function App() {
   const [budgets, setBudgets]                     = useState(() => loadBudgets())
   const [darkMode, setDarkMode]                   = useState(() => loadDarkMode())
   const [showAddModal, setShowAddModal]           = useState(false)
+  const [showBankGuide, setShowBankGuide]         = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
@@ -237,6 +239,21 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
     setToast('📥 CSV exportado')
   }
+
+  const handleShare = useCallback(() => {
+    const txs = filteredForReport ?? transactions
+    const total = txs.filter(t => t.type !== 'credit').reduce((s, t) => s + t.amount, 0)
+    const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+    const months = [...new Set(txs.map(t => t.date.slice(0, 7)))].sort()
+    const period = months.length === 1 ? months[0] : `${months[0]} al ${months[months.length - 1]}`
+    const text = `📊 *Resumen EasyResumen* — ${period}\n💳 Total gastos: ${fmt(total)}\n📦 ${txs.length} movimientos\n\nGenerado en www.easyresumen.com.ar`
+    if (navigator.share) {
+      navigator.share({ title: 'Mi resumen — EasyResumen', text })
+    } else {
+      navigator.clipboard.writeText(text)
+      setToast('✅ Resumen copiado al portapapeles')
+    }
+  }, [transactions, filteredForReport])
 
   const handleExportXLSX = () => {
     try {
@@ -434,6 +451,14 @@ export default function App() {
                   )}
                 </button>
                 <button
+                  onClick={handleShare}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
+                  title="Compartir resumen"
+                >
+                  <Share2 size={14} />
+                  <span className="hidden sm:inline">Compartir</span>
+                </button>
+                <button
                   onClick={handleClearAll}
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-red-200 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 font-medium transition-colors"
                 >
@@ -494,11 +519,23 @@ export default function App() {
       {/* ── Main ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 overflow-x-hidden">
 
-        <UploadZone
-          onFiles={handleFiles}
-          compact={hasData}
-          onRejected={(names) => setToast(`⚠️ Solo se aceptan PDF. Ignorados: ${names.join(', ')}`)}
-        />
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <UploadZone
+              onFiles={handleFiles}
+              compact={hasData}
+              onRejected={(names) => setToast(`⚠️ Solo se aceptan PDF. Ignorados: ${names.join(', ')}`)}
+            />
+          </div>
+          <button
+            onClick={() => setShowBankGuide(true)}
+            title="¿Cómo bajo el PDF de mi banco?"
+            className={`shrink-0 flex items-center gap-2 px-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all text-xs font-medium ${hasData ? 'h-[52px]' : 'h-[52px] self-center'}`}
+          >
+            <HelpCircle size={15} />
+            <span className="hidden sm:inline">¿Cómo bajo el PDF?</span>
+          </button>
+        </div>
         <OnboardingTooltip hasData={hasData} />
 
         {/* Processing indicator */}
@@ -620,6 +657,8 @@ export default function App() {
           triggerRef={addBtnRef}
         />
       )}
+
+      {showBankGuide && <BankGuideModal onClose={() => setShowBankGuide(false)} />}
 
       {toast && <Toast key={toast} msg={toast} onDone={() => setToast(null)} />}
     </div>
