@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag,
 } from 'lucide-react'
 import MobileDrawer from './components/MobileDrawer'
 import UploadZone from './components/UploadZone'
@@ -17,13 +17,14 @@ import BalancePanel from './components/BalancePanel'
 import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
 import BankGuideModal from './components/BankGuideModal'
+import CategoryManagerModal from './components/CategoryManagerModal'
 import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
 import AuthGate from './components/AuthGate'
 import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
-import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
+import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories } from './utils/storage'
 import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
@@ -71,8 +72,10 @@ export default function App() {
   const [generating, setGenerating]               = useState(false)
   const [budgets, setBudgets]                     = useState(() => loadBudgets())
   const [darkMode, setDarkMode]                   = useState(() => loadDarkMode())
+  const [customCategories, setCustomCategories]   = useState(() => loadCustomCategories())
   const [showAddModal, setShowAddModal]           = useState(false)
   const [showBankGuide, setShowBankGuide]         = useState(false)
+  const [showCatManager, setShowCatManager]       = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
@@ -108,8 +111,9 @@ export default function App() {
         setTransactions(valid)
         setToast(`📥 ${valid.length} movimientos cargados desde la nube`)
       }
-      if (cloud.budgets && Object.keys(cloud.budgets).length > 0) {
-        setBudgets(cloud.budgets)
+      if (cloud.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
+      if (cloud.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
+        setCustomCategories(cloud.custom_categories)
       }
     })
   }, [user?.id])
@@ -121,13 +125,18 @@ export default function App() {
 
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
-    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets }), 2000)
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }), 2000)
     return () => clearTimeout(t)
   }, [transactions, budgets, user?.id])
 
   const handleBudgetsChange = useCallback((b) => {
     setBudgets(b)
     saveBudgets(b)
+  }, [])
+
+  const handleCustomCategoriesChange = useCallback((cats) => {
+    setCustomCategories(cats)
+    saveCustomCategories(cats)
   }, [])
 
   const handleFiles = useCallback(async (files) => {
@@ -459,6 +468,14 @@ export default function App() {
                   <span className="hidden sm:inline">Compartir</span>
                 </button>
                 <button
+                  onClick={() => setShowCatManager(true)}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
+                  title="Gestionar categorías"
+                >
+                  <Tag size={14} />
+                  <span className="hidden sm:inline">Categorías</span>
+                </button>
+                <button
                   onClick={handleClearAll}
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-red-200 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 font-medium transition-colors"
                 >
@@ -598,7 +615,7 @@ export default function App() {
 
             {/* Always mounted to preserve page/sort state when switching tabs */}
             <div className={activeTab !== 'movimientos' ? 'hidden' : ''}>
-              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={setFilteredForReport} />
+              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={setFilteredForReport} customCategories={customCategories} />
             </div>
 
             {activeTab === 'presupuesto' && (
@@ -606,6 +623,7 @@ export default function App() {
                 transactions={transactions}
                 budgets={budgets}
                 onBudgetsChange={handleBudgetsChange}
+                customCategories={customCategories}
               />
             )}
 
@@ -659,6 +677,14 @@ export default function App() {
       )}
 
       {showBankGuide && <BankGuideModal onClose={() => setShowBankGuide(false)} />}
+
+      {showCatManager && (
+        <CategoryManagerModal
+          customCategories={customCategories}
+          onChange={handleCustomCategoriesChange}
+          onClose={() => setShowCatManager(false)}
+        />
+      )}
 
       {toast && <Toast key={toast} msg={toast} onDone={() => setToast(null)} />}
     </div>

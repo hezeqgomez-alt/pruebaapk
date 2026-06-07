@@ -13,14 +13,20 @@ export async function cloudLoad(userId) {
   } catch (e) { console.warn('cloudLoad exception:', e); return null }
 }
 
-export async function cloudSave(userId, { transactions, budgets }) {
+export async function cloudSave(userId, { transactions, budgets, customCategories }) {
   if (!isSupabaseConfigured || !supabase || !userId) return
   try {
     const slim = transactions?.map(({ raw, ...t }) => t) ?? []
     const { error } = await supabase
       .from('user_data')
       .upsert(
-        { user_id: userId, transactions: slim, budgets: budgets ?? {}, updated_at: new Date().toISOString() },
+        {
+          user_id: userId,
+          transactions: slim,
+          budgets: budgets ?? {},
+          custom_categories: customCategories ?? {},
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: 'user_id' }
       )
     if (error) console.warn('cloudSave error:', error.message)

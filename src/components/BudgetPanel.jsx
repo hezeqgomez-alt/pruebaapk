@@ -47,8 +47,9 @@ function EditBudget({ value, onSave, onCancel }) {
   )
 }
 
-export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) {
+export default function BudgetPanel({ transactions, budgets, onBudgetsChange, customCategories = {} }) {
   const [editing, setEditing] = useState(null)
+  const allCategories = useMemo(() => ({ ...CATEGORIES, ...customCategories }), [customCategories])
 
   // Available months sorted ascending
   const availableMonths = useMemo(() => {
@@ -105,7 +106,7 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
           { label: 'Gastado este mes', value: fmt(totalSpend), sub: currentMonth ? format(parseISO(currentMonth + '-01'), 'MMMM yyyy', { locale: es }) : '—', color: 'indigo' },
           { label: 'Presupuesto total', value: totalBudget ? fmt(totalBudget) : 'Sin definir', sub: `${budgetedCategories.length} categ. configuradas`, color: 'violet' },
           { label: 'Disponible', value: totalBudget ? fmt(Math.max(0, totalBudget - totalSpend)) : '—', sub: totalBudget ? `${((totalSpend / totalBudget) * 100).toFixed(0)}% usado` : 'Configurá tu presupuesto', color: totalBudget && totalSpend > totalBudget ? 'red' : 'emerald' },
-          { label: 'Categorías sobre límite', value: overBudget.length, sub: overBudget.length ? overBudget.map(c => CATEGORIES[c]?.label).join(', ') : 'Todo dentro del límite', color: overBudget.length ? 'red' : 'emerald' },
+          { label: 'Categorías sobre límite', value: overBudget.length, sub: overBudget.length ? overBudget.map(c => allCategories[c]?.label).join(', ') : 'Todo dentro del límite', color: overBudget.length ? 'red' : 'emerald' },
         ].map((c, i) => (
           <div key={i} className={`rounded-2xl border p-4 ${
             c.color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-100 dark:border-indigo-900' :
@@ -158,7 +159,7 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
             const over    = budget > 0 && spend > budget
             const near    = budget > 0 && pct >= 80 && !over
             const barColor = over ? 'bg-red-500' : near ? 'bg-amber-400' : 'bg-indigo-500'
-            const catDef  = CATEGORIES[cat]
+            const catDef  = allCategories[cat]
 
             return (
               <div key={cat} className="px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
