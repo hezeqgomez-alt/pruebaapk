@@ -6,7 +6,8 @@ const MP_PLAN_ID   = '65b536a45d974b038219887643100785'
 const IS_WEB       = !window.electronAPI
 
 function getMpCheckoutUrl(userId) {
-  const base = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}`
+  const backUrl = encodeURIComponent(`${window.location.origin}/?mp_success=1`)
+  const base = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}&back_url=${backUrl}`
   return userId ? `${base}&external_reference=${userId}` : base
 }
 

@@ -95,6 +95,41 @@ export default function App() {
     window.electronAPI.getLicenseStatus().then(setElectronLicense)
   }, [])
 
+  // Detect MP redirect-back: store flag in sessionStorage, clean URL
+  useEffect(() => {
+    if (window.electronAPI) return
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has('mp_success')) return
+    window.history.replaceState({}, '', window.location.pathname)
+    sessionStorage.setItem('mp_pending_verify', '1')
+  }, [])
+
+  // When user is loaded and pending verify flag exists, auto-verify subscription
+  useEffect(() => {
+    if (window.electronAPI || !user || user === undefined) return
+    if (!sessionStorage.getItem('mp_pending_verify')) return
+    sessionStorage.removeItem('mp_pending_verify')
+
+    const run = async () => {
+      setToast('ℹ️ Verificando tu suscripción...')
+      try {
+        const res = await fetch('/api/verify-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, email: user.email }),
+        })
+        const data = await res.json()
+        if (data.found) {
+          setToast('✅ ¡Suscripción activada! Bienvenido a EasyResumen Pro.')
+        } else {
+          setToast('⚠️ Pago recibido — la activación puede demorar unos minutos. Usá el botón "Ya me suscribí".')
+        }
+      } catch { setToast('⚠️ No pudimos verificar la suscripción. Usá el botón "Ya me suscribí".') }
+      await refreshTrial()
+    }
+    run()
+  }, [user, refreshTrial])
+
   // Apply / remove dark class on <html>
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)

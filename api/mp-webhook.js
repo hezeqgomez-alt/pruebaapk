@@ -4,22 +4,52 @@
  * Cuando un pago es aprobado, activa el plan "paid" del usuario en Supabase.
  *
  * Env vars requeridas:
- *   MP_ACCESS_TOKEN    — token de acceso producción de MercadoPago
- *   SUPABASE_URL       — URL del proyecto Supabase
- *   SUPABASE_SERVICE_KEY — service_role key de Supabase (solo server-side)
+ *   MP_ACCESS_TOKEN       — token de acceso producción de MercadoPago
+ *   MP_WEBHOOK_SECRET     — secret configurado en el panel de webhooks MP (opcional pero recomendado)
+ *   SUPABASE_URL          — URL del proyecto Supabase
+ *   SUPABASE_SERVICE_KEY  — service_role key de Supabase (solo server-side)
  */
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
+
+function verifyMpSignature(req) {
+  const secret = process.env.MP_WEBHOOK_SECRET
+  if (!secret) return true // skip if not configured
+
+  const xSignature = req.headers['x-signature']
+  const xRequestId = req.headers['x-request-id']
+  const dataId     = req.query?.['data.id'] || req.body?.data?.id
+
+  if (!xSignature) return false
+
+  // Parse ts and v1 from x-signature header
+  const parts = {}
+  for (const part of xSignature.split(',')) {
+    const [k, v] = part.trim().split('=')
+    if (k && v) parts[k] = v
+  }
+
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${parts.ts};`
+  const expected = crypto.createHmac('sha256', secret).update(manifest).digest('hex')
+  return parts.v1 === expected
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-signature, x-request-id')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   // MercadoPago sends GET pings — respond 200 to avoid retries
   if (req.method === 'GET') return res.status(200).json({ ok: true })
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // Verify MP signature when secret is configured
+  if (!verifyMpSignature(req)) {
+    console.warn('[mp-webhook] invalid signature')
+    return res.status(401).json({ error: 'Invalid signature' })
+  }
 
   const { type, data } = req.body || {}
 

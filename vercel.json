@@ -10,9 +10,22 @@
     {
       "source": "/",
       "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, x-signature, x-request-id" }
+      ]
     }
   ],
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/mp-webhook.js": { "maxDuration": 15 },
+    "api/verify-subscription.js": { "maxDuration": 15 },
+    "api/webhook-debug.js": { "maxDuration": 10 }
+  }
 }
