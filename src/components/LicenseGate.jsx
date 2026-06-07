@@ -121,6 +121,9 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
           <strong>{daysLeft} {daysLeft === 1 ? 'día restante' : 'días restantes'}</strong>
           {pdfCount > 0 && <span className="opacity-75"> · {pdfCount} resúmenes procesados</span>}
         </span>
+        {IS_WEB && (
+          <span className="opacity-75 hidden sm:inline">· $4.999/mes</span>
+        )}
         <button
           onClick={ctaAction}
           className={`ml-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
@@ -181,10 +184,16 @@ export function ExpiredGate({ onActivated }) {
             <KeyRound size={28} className="text-white" />
           </div>
           <h1 className="text-xl font-extrabold text-white mb-2">Período de prueba finalizado</h1>
-          <p className="text-sm text-slate-400 mb-7 leading-relaxed">
-            Gracias por probar EasyResumen.<br />
-            Suscribite para seguir analizando tus resúmenes sin límites.
+          <p className="text-sm text-slate-400 mb-2 leading-relaxed">
+            Seguí analizando tus resúmenes sin límites.
           </p>
+          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 mb-6">
+            <span className="text-2xl font-extrabold text-white">$4.999</span>
+            <div className="text-left">
+              <div className="text-xs text-indigo-300 font-semibold">por mes</div>
+              <div className="text-[10px] text-slate-500">30 días gratis · Cancelá cuando quieras</div>
+            </div>
+          </div>
 
           <div className="space-y-3">
             <a
@@ -193,7 +202,7 @@ export function ExpiredGate({ onActivated }) {
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
             >
-              Suscribirme <ExternalLink size={14} />
+              Suscribirme con MercadoPago <ExternalLink size={14} />
             </a>
 
             <button
@@ -202,17 +211,17 @@ export function ExpiredGate({ onActivated }) {
               className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20 text-sm transition-all disabled:opacity-50"
             >
               {checking ? (
-                <><RefreshCw size={14} className="animate-spin" /> Verificando...</>
+                <><RefreshCw size={14} className="animate-spin" /> Verificando tu suscripción...</>
               ) : checked ? (
-                <><CheckCircle2 size={14} className="text-emerald-400" /> Verificado</>
+                <><CheckCircle2 size={14} className="text-emerald-400" /> ¡Suscripción verificada!</>
               ) : (
                 <><RefreshCw size={14} /> Ya me suscribí</>
               )}
             </button>
           </div>
 
-          <p className="mt-5 text-xs text-slate-600">
-            Después de suscribirte, hacé clic en "Ya me suscribí" para activar tu cuenta.
+          <p className="mt-4 text-xs text-slate-600 leading-relaxed">
+            Después de suscribirte en MercadoPago, volvé acá y hacé clic en <strong className="text-slate-500">"Ya me suscribí"</strong>.
           </p>
         </div>
       </div>
