@@ -113,16 +113,13 @@ export default function App() {
   // Save to localStorage always; sync to cloud (debounced 2s) when logged in
   useEffect(() => {
     saveData({ transactions })
-    if (window.electronAPI || !user?.id) return
-    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets }), 2000)
-    return () => clearTimeout(t)
   }, [transactions])
 
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
     const t = setTimeout(() => cloudSave(user.id, { transactions, budgets }), 2000)
     return () => clearTimeout(t)
-  }, [budgets])
+  }, [transactions, budgets, user?.id])
 
   const handleBudgetsChange = useCallback((b) => {
     setBudgets(b)
