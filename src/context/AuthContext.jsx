@@ -9,7 +9,7 @@ function computeTrialStatus(user) {
 
   if (meta.plan === 'paid') return { status: 'active' }
 
-  const startedAt = meta.trial_started_at ? new Date(meta.trial_started_at) : new Date()
+  const startedAt = new Date(meta.trial_started_at || user.created_at)
   const daysElapsed = Math.floor((Date.now() - startedAt) / 86_400_000)
   const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
   const pdfCount = meta.pdf_count || 0
