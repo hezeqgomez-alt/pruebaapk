@@ -1,184 +1,194 @@
-# EasyResumen — Documento de Traspaso de Sesión
+# EasyResumen — Handoff de Sesión
 
-> Generado automáticamente para continuar el desarrollo en una nueva sesión.
-> Fecha: Junio 2025 · Branch: `claude/charming-rubin-d3P33` · Repo: `hezeqgomez-alt/pruebaapk`
-
----
-
-## 1. Qué es el proyecto
-
-**EasyResumen** es una app de escritorio (Electron 42 + React 19 + Vite + Tailwind 3.4) para usuarios argentinos que analiza resúmenes de tarjeta de crédito y extractos bancarios en PDF. Detecta banco, marca de tarjeta, cuotas, categorías automáticas, proyección de gastos futuros y balance mensual. 100% offline.
-
-- **Stack**: React 19 + Vite, Tailwind, pdfjs-dist 5.x, Electron 42
-- **Parser PDF**: `src/utils/pdfParser.js`
-- **15+ bancos**: Credicoop, Galicia, BBVA, Santander, Macro, Ciudad, Nación, HSBC, Supervielle, Patagonia, ICBC, Brubank, Ualá, Naranja X, Mercado Pago
-- **Marcas**: Visa, Mastercard, Cabal, AMEX, Maestro
+> Última actualización: Junio 2026 · Branch activo: `claude/dreamy-dijkstra-iIlSf` · Repo: `hezeqgomez-alt/pruebaapk`
 
 ---
 
-## 2. Estado actual del modelo de negocio
+## 1. Descripción del proyecto
 
-- **Precio**: $4.999 ARS/mes (suscripción mensual)
-- **Trial**: 30 días gratis + máx. 3 PDFs, sin tarjeta de crédito
-- **Pago**: Gumroad (suscripción mensual)
-- **Entrega**: automática vía webhook → Supabase + Resend
+**EasyResumen** — App web (+ Electron desktop) para analizar resúmenes de tarjetas de crédito argentinas en PDF.
+
+- **Dominio**: [www.easyresumen.com.ar](https://www.easyresumen.com.ar)
+- **Deploy**: Vercel (web) · Auto-update electron-updater (desktop)
+- **Stack**: React 19 + Vite + Tailwind CSS (dark mode, fondo `#0f0f1a`) + Supabase Auth + Vercel serverless
 
 ---
 
-## 3. Implementaciones completadas en esta sesión
+## 2. Stack técnico
 
-### Parser PDF
-| Implementación | Archivo | Estado |
-|---|---|---|
-| `detectCardBrand()` — detecta Visa/MC/Cabal/AMEX/Maestro separado del banco | `src/utils/pdfParser.js` | ✅ |
-| Fix CABAL detectado como Mastercard (reorden prioridades + límite 2000 chars) | `src/utils/pdfParser.js` | ✅ |
-| Detección banco por contenido PDF (fallback cuando filename no alcanza) | `src/utils/pdfParser.js` | ✅ |
-| Sufijos ordinales legibles: `*A1` → `Adicional 1` | `src/utils/pdfParser.js` | ✅ |
-| Dedup cross-período: clave incluye `t.source` | `src/App.jsx` | ✅ |
+| Capa | Tecnología |
+|---|---|
+| Frontend | React 19 + Vite + Tailwind CSS |
+| Auth | Supabase Auth (email/password) |
+| Backend | Vercel serverless (`/api/*.js`, ES modules) |
+| Pagos | MercadoPago suscripciones |
+| PDF | pdfjs-dist + Tesseract OCR (fallback) |
+| Persistencia | localStorage + Supabase tabla `user_data` |
+| Export | jsPDF, xlsx |
+| Desktop | Electron (build separado) |
 
-### Sistema de licencias
-| Implementación | Archivo | Estado |
-|---|---|---|
-| HMAC-SHA256 offline (formato `EASY-XXXXX-XXXXX-XXXXX-XXXXX`) | `electron/license.cjs` | ✅ |
-| Validación online Supabase + grace period 72h offline | `electron/license.cjs` | ✅ |
-| Trial 30 días + límite 3 PDFs (storage en disco, no localStorage) | `electron/license.cjs` | ✅ |
-| CLI keygen: `node tools/keygen.cjs 1 100` | `tools/keygen.cjs` | ✅ |
-| IPC handlers: `license:status`, `license:activate`, `license:trackpdf` | `electron/main.cjs` | ✅ |
-| contextBridge preload | `electron/preload.cjs` | ✅ |
+---
 
-### Servidor (Vercel serverless)
-| Implementación | Archivo | Estado |
-|---|---|---|
-| Webhook Gumroad → genera clave → Supabase → email Resend | `server/api/webhook/gumroad.js` | ✅ |
-| Activación/verificación de licencia online | `server/api/license/activate.js` | ✅ |
-| Recuperación de clave por email | `server/api/license/recover.js` | ✅ |
-| Schema Supabase (tabla `licenses`, RLS, indexes) | `server/supabase-schema.sql` | ✅ |
-| Módulo ES de keygen para Vercel | `server/lib/keygen.js` | ✅ |
+## 3. Estado actual del MVP
 
-### UI / UX
-| Implementación | Archivo | Estado |
-|---|---|---|
-| `<TrialBanner>` — franja días restantes + PDFs usados | `src/components/LicenseGate.jsx` | ✅ |
-| `<ExpiredGate>` — pantalla bloqueante al vencer trial | `src/components/LicenseGate.jsx` | ✅ |
-| `<UpdateToast>` — notificación de nueva versión disponible | `src/components/LicenseGate.jsx` | ✅ |
-| Auto-update electron-updater (verifica 10s post-inicio) | `electron/main.cjs` | ✅ |
-| Panel filtros mobile-friendly (`flex-col sm:flex-row`) | `src/components/TransactionList.jsx` | ✅ |
-| Export PDF respeta filtros activos | `src/components/ExportButtons.jsx` | ✅ |
-| Badge Alertas con conteo real (≥80% del límite) | `src/components/BudgetPanel.jsx` | ✅ |
+### ✅ Implementado y funcionando
 
-### Web y documentación
+| Feature | Detalle |
+|---|---|
+| Parsing PDF | 15+ bancos argentinos, OCR fallback |
+| 23 categorías automáticas | Incluye Intereses Financieros (primera prioridad) |
+| Categorías personalizadas | Modal crear/editar/borrar, sincroniza a nube |
+| UI glassmorphism dark | Header, tabs, fondo animado con orbs |
+| Auth web | Login / registro / recovery — Supabase |
+| Trial 30 días + 3 PDFs | Basado en `created_at`, sin tarjeta |
+| Badge PRO | Aparece en header (junto al logo) cuando `plan: paid` — ícono ⚡ dorado |
+| Persistencia Supabase | Tabla `user_data` (transactions, budgets, custom_categories) |
+| MercadoPago checkout | URL dinámica con `external_reference={user.id}` |
+| Webhook MP | `api/mp-webhook.js` — activa `plan: paid` en Supabase |
+| Verificación activa | `api/verify-subscription.js` — búsqueda en MP por userId/email |
+| Botón "Ya me suscribí" | Aparece tras abrir checkout en `TrialBanner` y `ExpiredGate` |
+| Precio visible | $2.999/mes en banner y pantalla de expiración |
+| Export PDF/Excel/CSV | Respeta filtros activos |
+| Import Excel/CSV | Dedup automático |
+| Guía por banco | Modal con instrucciones paso a paso |
+| Compartir resumen | Web Share API o clipboard |
+| Mobile responsive | Cards en transacciones, drawer lateral |
+| Presupuesto por categoría | Alertas 80%, selector de mes |
+| Cuotas + préstamos + balance | Paneles completos |
+| Insights automáticos | Suscripciones, impulsos, concentración |
+| Admin manual | `api/admin/promote.js` — activa plan por email + ADMIN_SECRET |
+
+---
+
+## 4. Flujo de suscripción (completo y funcional)
+
+```
+Usuario hace click "Suscribirse — $2.999/mes"
+  → abre: mercadopago.com.ar/subscriptions/checkout
+          ?preapproval_plan_id=65b536a45d974b038219887643100785
+          &external_reference={user.id}   ← clave para webhook
+  → usuario paga en MP
+  → MP hace POST a /api/mp-webhook con el evento
+  → webhook busca la suscripción en MP API
+  → extrae external_reference = user.id
+  → llama supabase.auth.admin.updateUserById → plan: paid
+  → badge PRO aparece en header
+
+Si el webhook falla:
+  → usuario presiona "Ya me suscribí"
+  → llama /api/verify-subscription con {userId, email}
+  → busca suscripción en MP por external_reference, luego por email
+  → si encuentra authorized → activa plan: paid
+  → refreshTrial() actualiza la sesión sin recargar
+```
+
+**Plan ID de producción MP**: `65b536a45d974b038219887643100785`
+
+---
+
+## 5. Archivos clave
+
+### Componentes
 | Archivo | Descripción |
 |---|---|
-| `landing/index.html` | Landing page completa con pricing $4.999/mes |
-| `landing/informe-lanzamiento.html` | Proyección de ingresos 3 años (imprimible como PDF) |
-| `landing/informe-implementaciones.html` | Este resumen en formato visual (imprimible como PDF) |
+| `src/components/LicenseGate.jsx` | `TrialBanner`, `ExpiredGate`, `ProBadge`, `UpdateToast`, `VerifyButton` |
+| `src/components/AuthGate.jsx` | Login / registro / recovery |
+| `src/components/BudgetPanel.jsx` | Presupuestos con alertas |
+| `src/components/TransactionList.jsx` | Lista movimientos + categoría editable |
+| `src/components/MobileDrawer.jsx` | Menú lateral mobile |
+
+### API (Vercel serverless)
+| Archivo | Descripción |
+|---|---|
+| `api/mp-webhook.js` | Recibe eventos MP (`subscription_preapproval`, `payment`), activa `plan: paid` |
+| `api/verify-subscription.js` | Búsqueda activa en MP; llamado por "Ya me suscribí" |
+| `api/admin/promote.js` | Activación manual por email + `ADMIN_SECRET` |
+
+### Utils y contexto
+| Archivo | Descripción |
+|---|---|
+| `src/context/AuthContext.jsx` | `user`, `trialStatus`, `trackPDF`, `refreshTrial` |
+| `src/utils/cloudStorage.js` | `cloudLoad` / `cloudSave` a Supabase |
+| `src/utils/storage.js` | localStorage + `loadCustomCategories` / `saveCustomCategories` |
+| `src/utils/categorizer.js` | `CATEGORIES` (23) + `RULES` |
+| `src/utils/pdfParser.js` | Parser multi-banco + OCR fallback |
+
+### Config
+| Archivo | Descripción |
+|---|---|
+| `vercel.json` | `buildCommand: npm run build:web`, `outputDir: dist`, rewrite SPA (excluye `/api/`) |
 
 ---
 
-## 4. Archivos clave del proyecto
+## 6. Variables de entorno (Vercel)
 
-```
-pruebaapk/
-├── src/
-│   ├── App.jsx                    # Estado global, carga PDFs, licencia
-│   ├── utils/
-│   │   ├── pdfParser.js           # ★ Parser principal multi-banco
-│   │   ├── categorizer.js         # Categorías automáticas
-│   │   ├── reportGenerator.js     # Generación PDF informe
-│   │   ├── exportXLSX.js
-│   │   ├── importFile.js
-│   │   └── storage.js
-│   └── components/
-│       ├── LicenseGate.jsx        # ★ Trial/Expired/UpdateToast
-│       ├── TransactionList.jsx    # Lista de movimientos + filtros
-│       ├── BudgetPanel.jsx        # Presupuestos y alertas
-│       ├── InstallmentsPanel.jsx  # Cuotas y proyección
-│       ├── BalancePanel.jsx       # Balance mensual
-│       ├── LoansPanel.jsx         # Préstamos
-│       ├── CategoryChart.jsx
-│       ├── StatsCards.jsx
-│       └── ExportButtons.jsx
-├── electron/
-│   ├── main.cjs                   # ★ Electron main + IPC + updater
-│   ├── preload.cjs                # ★ contextBridge API
-│   └── license.cjs                # ★ Lógica de licencias
-├── server/
-│   ├── api/
-│   │   ├── webhook/gumroad.js     # ★ Webhook Gumroad
-│   │   └── license/
-│   │       ├── activate.js        # ★ Verificación online
-│   │       └── recover.js         # Recuperación por email
-│   ├── lib/keygen.js              # Generador claves (ES module)
-│   ├── supabase-schema.sql        # Schema DB
-│   └── vercel.json
-├── tools/
-│   └── keygen.cjs                 # CLI: node tools/keygen.cjs 1 100
-├── landing/
-│   ├── index.html                 # Landing page
-│   ├── informe-lanzamiento.html   # Proyección ingresos 3 años
-│   └── informe-implementaciones.html
-└── package.json
-```
+| Variable | Uso |
+|---|---|
+| `VITE_SUPABASE_URL` | Cliente frontend |
+| `VITE_SUPABASE_ANON_KEY` | Cliente frontend |
+| `SUPABASE_URL` | API serverless |
+| `SUPABASE_SERVICE_KEY` | API serverless (admin) |
+| `MP_ACCESS_TOKEN` | `APP_USR-6269736721458782-...` producción MP |
+| `ADMIN_SECRET` | Endpoint manual promote |
 
 ---
 
-## 5. Constantes críticas (NO COMPARTIR)
+## 7. Supabase
 
+### Tabla `user_data`
+```sql
+create table user_data (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  transactions jsonb default '[]',
+  budgets jsonb default '{}',
+  custom_categories jsonb default '{}',
+  updated_at timestamptz default now()
+);
+-- RLS activado: users can manage their own data
+-- columna custom_categories agregada con:
+-- alter table user_data add column if not exists custom_categories jsonb default '{}'::jsonb;
+```
+
+### Plan activado en `user_metadata`
 ```js
-// electron/license.cjs y tools/keygen.cjs
-const SECRET = 'ER2025-easyresumen-7f3a8e2bc4d14f6a9e5c2b8d-private'
-```
+// Plan trial (default al registrarse)
+{ plan: 'trial', trial_started_at: '...', pdf_count: 0 }
 
-Variables de entorno necesarias en Vercel:
-```
-SUPABASE_URL=
-SUPABASE_SERVICE_KEY=
-RESEND_API_KEY=
-GUMROAD_SELLER_ID=
-LICENSE_API_URL=https://easyresumen.vercel.app
+// Plan pagado (activado por webhook o verify-subscription)
+{ plan: 'paid', mp_subscription_id: '...', activated_at: '...' }
 ```
 
 ---
 
-## 6. Lo que falta para lanzar (pendiente del usuario)
+## 8. Usuarios activos
 
-### BLOQUEANTE — servicios externos a configurar:
-1. **Supabase**: crear proyecto → ejecutar `server/supabase-schema.sql`
-2. **Resend**: crear cuenta → verificar dominio `easyresumen.com` (o usar gmail transitoriamente)
-3. **Vercel**: deploy de la carpeta `server/` con las env vars del punto 5
-4. **Gumroad**: crear producto suscripción $4.999 ARS → configurar webhook a `https://tu-vercel.app/api/webhook/gumroad`
-5. **GitHub Release**: subir el `.exe` instalador para que auto-update funcione
-6. **Landing page**: subir `landing/index.html` al repo `hezeqgomez-alt/Web` (GitHub Pages)
-
-### OPCIONAL recomendado:
-- Code signing Windows: Azure Code Signing ~$10/mes (sin esto, Windows muestra advertencia SmartScreen)
-- Dominio propio: `easyresumen.com`
-- Video tutorial para redes sociales
+| Email | Estado | Nota |
+|---|---|---|
+| mcandelaguido@gmail.com | `plan: paid` | Activado manualmente via SQL (primera usuaria) |
 
 ---
 
-## 7. Próxima tarea pendiente (última conversación)
+## 9. Pendientes / Próximos pasos
 
-El usuario preguntó sobre hacer una **versión web** de la herramienta. Se empezó a analizar y se interrumpió.
-
-**Contexto del análisis:**
-- El 80% del código ya es compatible con web (React + Vite, pdfjs-dist funciona en browser)
-- Lo que hay que cambiar:
-  1. Reemplazar `window.electronAPI.*` por llamadas directas a Supabase Auth
-  2. Login email/password en vez de licencia por archivo
-  3. Almacenamiento en localStorage/IndexedDB o Supabase
-  4. Deploy a Vercel (ya está preparado)
-- La ventaja: no instalar nada, funciona en mobile, alcance mucho mayor
-- El riesgo: pierde el argumento "100% offline" (aunque el parsing sigue siendo client-side)
+| Prioridad | Tarea |
+|---|---|
+| 🔴 Alta | Probar flujo completo de suscripción con cuenta de prueba MP para validar webhook end-to-end |
+| 🔴 Alta | Confirmar que columna `custom_categories` en Supabase ya existe (ALTER TABLE) |
+| 🟡 Media | Completar guía de descarga para bancos: Itaú, ICBC, Patagonia, Credicoop |
+| 🟡 Media | Persistencia Electron — datos del desktop sin sync a nube todavía |
+| 🟢 Baja | Video tutorial para redes sociales |
+| 🟢 Baja | Code signing Windows (sin esto, SmartScreen muestra advertencia) |
 
 ---
 
-## 8. Cómo continuar en una nueva sesión
+## 10. Cómo continuar en una nueva sesión
 
-Decirle a Claude en la nueva sesión:
-
-> "Continuamos el desarrollo de EasyResumen. Lee el archivo HANDOFF.md en la raíz del repo para entender el contexto completo. El branch de trabajo es `claude/charming-rubin-d3P33` en `hezeqgomez-alt/pruebaapk`."
+```
+Continuamos el desarrollo de EasyResumen. Lee el archivo HANDOFF.md
+en la raíz del repo para entender el contexto completo.
+El branch de trabajo es claude/dreamy-dijkstra-iIlSf en hezeqgomez-alt/pruebaapk.
+```
 
 ---
 
-*Branch: `claude/charming-rubin-d3P33` · Repo: `hezeqgomez-alt/pruebaapk` · Junio 2025*
+*Branch: `claude/dreamy-dijkstra-iIlSf` · Repo: `hezeqgomez-alt/pruebaapk` · Junio 2026*
