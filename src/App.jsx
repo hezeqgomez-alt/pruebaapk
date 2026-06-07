@@ -23,6 +23,7 @@ import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
 import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
+import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
 import { importFromXLSX, importFromCSV } from './utils/importFile'
@@ -79,9 +80,12 @@ export default function App() {
   const [electronLicense, setElectronLicense] = useState(null)
   const licenseStatus = window.electronAPI ? electronLicense : trialStatus
 
-  const chartDonutRef = useRef(null)
-  const chartBarRef   = useRef(null)
-  const addBtnRef     = useRef(null)
+  const chartDonutRef  = useRef(null)
+  const chartBarRef    = useRef(null)
+  const addBtnRef      = useRef(null)
+  const cloudSaveTimer = useRef(null)
+  const cloudLoaded    = useRef(false) // evita doble load
+  const cloudReady     = useRef(false) // load completado — habilita saves
 
   // Electron-only license check on mount
   useEffect(() => {
@@ -95,13 +99,37 @@ export default function App() {
     saveDarkMode(darkMode)
   }, [darkMode])
 
+  // Cloud load: cuando el usuario se autentica, traer datos desde Supabase
   useEffect(() => {
+    if (!user || window.electronAPI || cloudLoaded.current) return
+    cloudLoaded.current = true
+    cloudLoad(user.id).then(remote => {
+      if (remote?.transactions?.length > 0) {
+        setTransactions(remote.transactions)
+        saveData({ transactions: remote.transactions })
+      }
+      if (remote?.budgets && Object.keys(remote.budgets).length > 0) {
+        setBudgets(remote.budgets)
+        saveBudgets(remote.budgets)
+      }
+      cloudReady.current = true // habilitar saves recién después de cargar
+    })
+  }, [user])
+
+  // Cloud save: debounced 1.5s — solo después de que cloudLoad terminó
+  useEffect(() => {
+    if (!user || window.electronAPI || !cloudReady.current) return
     saveData({ transactions })
-  }, [transactions])
+    clearTimeout(cloudSaveTimer.current)
+    cloudSaveTimer.current = setTimeout(() => {
+      cloudSave(user.id, { transactions, budgets })
+    }, 1500)
+    return () => clearTimeout(cloudSaveTimer.current)
+  }, [transactions, budgets, user])
 
   const handleBudgetsChange = useCallback((b) => {
     setBudgets(b)
-    saveBudgets(b)
+    saveBudgets(b) // localStorage inmediato; cloud sync lo toma por el efecto
   }, [])
 
   const handleFiles = useCallback(async (files) => {
@@ -187,6 +215,9 @@ export default function App() {
     if (confirm('¿Borrar todos los movimientos cargados?')) {
       setTransactions([])
       clearData()
+      if (user && !window.electronAPI) {
+        cloudSave(user.id, { transactions: [], budgets })
+      }
       setToast('🗑️ Datos eliminados')
     }
   }
