@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react'
+import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const FEATURES = [
@@ -10,7 +10,7 @@ const FEATURES = [
 ]
 
 export default function AuthGate() {
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, resetPassword } = useAuth()
   const [mode,     setMode]     = useState('login')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -18,6 +18,7 @@ export default function AuthGate() {
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
   const [confirm,  setConfirm]  = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -26,9 +27,12 @@ export default function AuthGate() {
     try {
       if (mode === 'login') {
         await signIn(email, password)
-      } else {
+      } else if (mode === 'register') {
         const data = await signUp(email, password)
         if (!data.session) setConfirm(true)
+      } else if (mode === 'forgot') {
+        await resetPassword(email)
+        setResetSent(true)
       }
     } catch (err) {
       setError(translateError(err.message))
@@ -38,8 +42,17 @@ export default function AuthGate() {
   }
 
   const toggle = () => { setMode(m => m === 'login' ? 'register' : 'login'); setError(''); setConfirm(false) }
+  const goForgot = () => { setMode('forgot'); setError(''); setResetSent(false) }
+  const goLogin  = () => { setMode('login');  setError(''); setResetSent(false) }
 
   if (confirm) return <ConfirmScreen email={email} onBack={() => { setConfirm(false); setMode('login') }} />
+  if (mode === 'forgot') return (
+    <ForgotScreen
+      email={email} setEmail={setEmail}
+      loading={loading} error={error} sent={resetSent}
+      onSubmit={handleSubmit} onBack={goLogin}
+    />
+  )
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0f0f1a]">
@@ -143,6 +156,14 @@ export default function AuthGate() {
                 minLength={6}
               />
 
+              {mode === 'login' && (
+                <div className="text-right -mt-1">
+                  <button type="button" onClick={goForgot} className="text-xs text-slate-500 hover:text-indigo-400 transition-colors">
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+              )}
+
               {error && (
                 <div className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -199,6 +220,66 @@ function Field({ label, type, value, onChange, placeholder, icon, suffix, autoCo
         />
         {suffix && (
           <span className="absolute right-3.5 top-1/2 -translate-y-1/2">{suffix}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ForgotScreen({ email, setEmail, loading, error, sent, onSubmit, onBack }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f1a] p-4">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-[120px]" />
+      </div>
+      <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-10 w-full max-w-sm text-center shadow-2xl shadow-black/40">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-5">
+          <KeyRound size={26} className="text-indigo-400" />
+        </div>
+        <h2 className="text-xl font-extrabold text-white mb-1">Recuperar contraseña</h2>
+        <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+          Ingresá tu email y te enviamos un link para restablecer tu contraseña.
+        </p>
+
+        {sent ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-sm text-emerald-400">
+              <CheckCircle2 size={16} className="shrink-0" />
+              Revisá tu correo — te enviamos el link de recuperación.
+            </div>
+            <button onClick={onBack} className="text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+              ← Volver al inicio de sesión
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4 text-left">
+            <Field
+              label="Correo electrónico"
+              type="email"
+              value={email}
+              onChange={v => setEmail(v)}
+              placeholder="vos@ejemplo.com"
+              icon={<Mail size={15} />}
+              autoComplete="email"
+            />
+            {error && (
+              <div className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
+            >
+              {loading ? 'Enviando...' : 'Enviar link de recuperación'}
+            </button>
+            <button type="button" onClick={onBack} className="w-full text-sm text-slate-500 hover:text-slate-300 transition-colors pt-1">
+              ← Volver al inicio de sesión
+            </button>
+          </form>
         )}
       </div>
     </div>

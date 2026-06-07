@@ -18,24 +18,28 @@ function SortIcon({ field, sortBy, sortDir }) {
   return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />
 }
 
-function EditableCategory({ value, onChange }) {
+function EditableCategory({ value, onChange, allCategories }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value)
+  const cat = allCategories[value]
 
   if (!editing) {
     return (
       <button
         onClick={() => setEditing(true)}
         className="group flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg hover:ring-1 hover:ring-indigo-200 dark:hover:ring-indigo-700 transition-all"
-        style={{ background: (CATEGORIES[value]?.color || '#94a3b8') + '18' }}
+        style={{ background: (cat?.color || '#94a3b8') + '18' }}
       >
-        <span style={{ color: CATEGORIES[value]?.color || '#64748b' }} className="font-medium">
-          {CATEGORIES[value]?.icon} {CATEGORIES[value]?.label || value}
+        <span style={{ color: cat?.color || '#64748b' }} className="font-medium">
+          {cat?.icon} {cat?.label || value}
         </span>
-        <Edit3 size={9} className="opacity-20 group-hover:opacity-60 transition-opacity" style={{ color: CATEGORIES[value]?.color || '#64748b' }} />
+        <Edit3 size={9} className="opacity-20 group-hover:opacity-60 transition-opacity" style={{ color: cat?.color || '#64748b' }} />
       </button>
     )
   }
+
+  const systemEntries = Object.entries(CATEGORIES)
+  const customEntries = Object.entries(allCategories).filter(([k]) => !CATEGORIES[k])
 
   return (
     <div className="flex items-center gap-1">
@@ -45,9 +49,18 @@ function EditableCategory({ value, onChange }) {
         className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-1.5 py-1 bg-white dark:bg-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
         autoFocus
       >
-        {Object.entries(CATEGORIES).map(([k, c]) => (
-          <option key={k} value={k}>{c.icon} {c.label}</option>
-        ))}
+        <optgroup label="Sistema">
+          {systemEntries.map(([k, c]) => (
+            <option key={k} value={k}>{c.icon} {c.label}</option>
+          ))}
+        </optgroup>
+        {customEntries.length > 0 && (
+          <optgroup label="Mis categorías">
+            {customEntries.map(([k, c]) => (
+              <option key={k} value={k}>{c.icon} {c.label}</option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <button onClick={() => { onChange(val); setEditing(false) }} className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600">
         <Check size={12} />
@@ -206,7 +219,8 @@ function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
   )
 }
 
-export default function TransactionList({ transactions, onUpdate, onFilteredChange }) {
+export default function TransactionList({ transactions, onUpdate, onFilteredChange, customCategories = {} }) {
+  const allCategories = useMemo(() => ({ ...CATEGORIES, ...customCategories }), [customCategories])
   const [_p] = useState(loadFilterPrefs)
   const [searchInput, setSearchInput] = useState(_p.search || '')
   const [search, setSearch]           = useState(_p.search || '')
@@ -412,7 +426,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
           <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setPage(1) }}
             className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
             <option value="">Todas las categorías</option>
-            {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
+            {Object.entries(allCategories).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
           </select>
           {sources.length > 1 && (
             <SourceFilter
@@ -450,7 +464,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
             <select value={bulkCat} onChange={e => setBulkCat(e.target.value)}
               className="text-sm border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="">— Categoría —</option>
-              {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
+              {Object.entries(allCategories).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
             </select>
             <button onClick={applyBulkCategory} disabled={!bulkCat}
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-40 transition-colors">
@@ -477,8 +491,51 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
         </div>
       )}
 
-      {/* Table */}
-      <div className="relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
+      {/* Mobile cards — visible only on small screens */}
+      <div className="block sm:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500">
+            <Search size={24} className="opacity-30" />
+            <p className="text-sm font-medium">Sin resultados</p>
+            <button onClick={clearFilters} className="text-xs text-indigo-500 underline underline-offset-2">Limpiar filtros</button>
+          </div>
+        ) : paged.map(t => {
+          const isCredit = t.type === 'credit'
+          return (
+            <div key={t.id} className="px-4 py-3 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{t.description}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono">
+                  {safeFormat(t.date, 'dd MMM yy', { locale: es })}
+                  {t.source && <span className="ml-1.5 not-italic font-sans">· {t.source}</span>}
+                </p>
+                <div className="mt-1.5">
+                  <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} allCategories={allCategories} />
+                </div>
+                {t.installment && (
+                  <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold mt-0.5 block">
+                    Cuota {t.installment.current}/{t.installment.total}
+                  </span>
+                )}
+              </div>
+              <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
+                <span className={`text-sm font-bold ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                  {isCredit ? '+' : ''}{fmt(t.amount)}
+                </span>
+                <button
+                  onClick={() => deleteOne(t.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden sm:block relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-700 text-left">
@@ -547,7 +604,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                       </div>
                     </td>
                     <td className="py-2.5 pr-4">
-                      <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
+                      <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} allCategories={allCategories} />
                     </td>
                     <td className="py-2.5 pr-4">
                       <div className="flex flex-col gap-0.5">
@@ -577,7 +634,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
             )}
           </tbody>
         </table>
-      </div>
+      </div>{/* end desktop table */}
 
       {filtered.length > paged.length && (
         <div className="p-4 pt-3">

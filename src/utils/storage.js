@@ -2,6 +2,7 @@ const KEY       = 'gasto_tracker_data'
 const KEY_BUD   = 'easyresumen_budgets'
 const KEY_FILT  = 'easyresumen_filters'
 const KEY_DARK  = 'easyresumen_dark'
+const KEY_CATS  = 'easyresumen_custom_categories'
 
 function isValidDate(d) {
   if (!d || typeof d !== 'string') return false
@@ -68,10 +69,24 @@ export function saveFilterPrefs(prefs) {
   try { localStorage.setItem(KEY_FILT, JSON.stringify(prefs)) } catch { /* quota/private-mode */ }
 }
 
+// ── Custom categories ─────────────────────────────────────────────────────────
+
+export function loadCustomCategories() {
+  try {
+    const raw = localStorage.getItem(KEY_CATS)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+export function saveCustomCategories(cats) {
+  try { localStorage.setItem(KEY_CATS, JSON.stringify(cats)) } catch { /* quota/private-mode */ }
+}
+
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 
 export function loadDarkMode() {
-  return localStorage.getItem(KEY_DARK) === 'true'
+  const val = localStorage.getItem(KEY_DARK)
+  return val === null ? true : val === 'true'
 }
 
 export function saveDarkMode(val) {

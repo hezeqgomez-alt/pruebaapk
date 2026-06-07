@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, Loader2, Zap } from 'lucide-react'
+import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw, Zap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // ─── PRO badge ────────────────────────────────────────────────────────────────
@@ -15,19 +15,19 @@ export function ProBadge() {
   )
 }
 
-const MP_PLAN_ID = '65b536a45d974b038219887643100785'
-const IS_WEB     = !window.electronAPI
+const MP_PLAN_ID   = '65b536a45d974b038219887643100785'
+const IS_WEB       = !window.electronAPI
 
 function getMpCheckoutUrl(userId) {
-  return `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}&external_reference=${userId}`
+  const base = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}`
+  return userId ? `${base}&external_reference=${userId}` : base
 }
-
-// ─── Activation form (Electron only) ─────────────────────────────────────────
 
 function formatKey(raw) {
   const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 24)
   const groups = []
   for (let i = 0; i < clean.length; i += 5) groups.push(clean.slice(i, i + 5))
+  // Always prefix EASY if user didn't type it
   if (groups.length && groups[0] !== 'EASY') groups.unshift('EASY')
   return groups.slice(0, 5).join('-')
 }
@@ -99,7 +99,7 @@ function ActivationForm({ onActivated }) {
         ¿No tenés una clave?{' '}
         <button
           type="button"
-          onClick={() => window.electronAPI?.openExternal('https://www.easyresumen.com.ar/#pricing')}
+          onClick={() => window.electronAPI?.openExternal('https://www.easyresumen.com.ar')}
           className="text-indigo-600 hover:underline font-medium inline-flex items-center gap-0.5"
         >
           Comprá EasyResumen <ExternalLink size={10} />
@@ -109,97 +109,76 @@ function ActivationForm({ onActivated }) {
   )
 }
 
-// ─── "Ya me suscribí" button (web only) ──────────────────────────────────────
+// ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
-function VerifyButton({ onActivated }) {
+export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
+  const [showModal,   setShowModal]   = useState(false)
+  const [showVerify,  setShowVerify]  = useState(false)
+  const [checking,    setChecking]    = useState(false)
+  const [verifyMsg,   setVerifyMsg]   = useState('')
   const { user, refreshTrial } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [msg,     setMsg]     = useState('')
-  const [ok,      setOk]      = useState(false)
+  const urgent = daysLeft <= 5
 
-  const handleVerify = async () => {
-    if (!user) return
-    setLoading(true)
-    setMsg('')
+  const ctaLabel  = IS_WEB ? 'Suscribirme' : 'Activar licencia'
+  const ctaAction = IS_WEB
+    ? () => { window.open(getMpCheckoutUrl(user?.id), '_blank'); setShowVerify(true) }
+    : () => setShowModal(true)
+
+  async function handleVerify() {
+    setChecking(true)
+    setVerifyMsg('')
     try {
       const res = await fetch('/api/verify-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, email: user.email }),
+        body: JSON.stringify({ userId: user?.id, email: user?.email }),
       })
       const data = await res.json()
-      if (data.ok && data.activated) {
-        setOk(true)
-        await refreshTrial()
-        setTimeout(() => onActivated?.(), 1500)
-      } else {
-        setMsg('No encontramos una suscripción activa todavía. Si acabás de pagar, esperá unos minutos e intentá de nuevo.')
-      }
-    } catch {
-      setMsg('Error de conexión. Intentá de nuevo.')
-    } finally {
-      setLoading(false)
-    }
+      if (!data.found) setVerifyMsg('No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.')
+    } catch { /* fall through */ }
+    await refreshTrial()
+    setChecking(false)
   }
-
-  if (ok) {
-    return (
-      <p className="text-center text-sm text-green-600 font-semibold flex items-center justify-center gap-1.5">
-        <CheckCircle2 size={16} /> ¡Plan PRO activado!
-      </p>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      <button
-        onClick={handleVerify}
-        disabled={loading}
-        className="w-full py-2 rounded-xl border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-      >
-        {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-        Ya me suscribí
-      </button>
-      {msg && <p className="text-xs text-slate-500 text-center leading-snug">{msg}</p>}
-    </div>
-  )
-}
-
-// ─── Trial banner (non-blocking) ─────────────────────────────────────────────
-
-export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated }) {
-  const { user } = useAuth()
-  const [checkoutOpened, setCheckoutOpened] = useState(false)
-  const [showModal,      setShowModal]      = useState(false)
-  const urgent = daysLeft <= 5 || pdfCount >= pdfLimit
-
-  const handleWebCTA = () => {
-    if (!user) return
-    const url = getMpCheckoutUrl(user.id)
-    window.open(url, '_blank')
-    setCheckoutOpened(true)
-  }
-
-  const ctaLabel  = IS_WEB ? 'Suscribirse — $2.999/mes' : 'Activar licencia'
-  const ctaAction = IS_WEB ? handleWebCTA : () => setShowModal(true)
 
   return (
     <>
-      <div className={`flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-medium ${urgent ? 'bg-red-500' : 'bg-amber-500'} text-white`}>
-        <Clock size={12} />
-        <span>
-          Prueba gratis:{' '}
-          <strong>{daysLeft} {daysLeft === 1 ? 'día' : 'días'}</strong>
-          {' · '}
-          <strong>{pdfCount}/{pdfLimit} resúmenes</strong> usados
+      <div className={`relative flex items-center justify-center gap-2.5 px-4 py-2 text-xs font-medium ${
+        urgent
+          ? 'bg-gradient-to-r from-red-600 to-rose-500'
+          : 'bg-gradient-to-r from-amber-500 to-orange-400'
+      } text-white shadow-sm`}>
+        <Clock size={11} className="shrink-0 opacity-90" />
+        <span className="tracking-wide">
+          {urgent ? '⚠️ ' : ''}Período de prueba:{' '}
+          <strong>{daysLeft} {daysLeft === 1 ? 'día restante' : 'días restantes'}</strong>
+          {pdfCount > 0 && <span className="opacity-75"> · {pdfCount} resúmenes procesados</span>}
         </span>
-        <button onClick={ctaAction} className="underline font-semibold hover:no-underline whitespace-nowrap">
-          {ctaLabel}
+        {IS_WEB && (
+          <span className="opacity-75 hidden sm:inline">· $2.999/mes</span>
+        )}
+        <button
+          onClick={ctaAction}
+          className={`ml-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+            urgent
+              ? 'bg-white text-red-600 hover:bg-red-50'
+              : 'bg-white text-amber-600 hover:bg-amber-50'
+          } shadow-sm`}
+        >
+          {ctaLabel} →
         </button>
-        {IS_WEB && checkoutOpened && (
-          <VerifyInlineBanner onActivated={onActivated} />
+        {IS_WEB && showVerify && (
+          <button
+            onClick={handleVerify}
+            disabled={checking}
+            className="ml-1 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 transition-all disabled:opacity-50"
+          >
+            {checking ? <RefreshCw size={11} className="inline animate-spin" /> : '✓ Ya me suscribí'}
+          </button>
         )}
       </div>
+      {verifyMsg && (
+        <div className="text-center text-xs py-1 bg-amber-600 text-white px-4">{verifyMsg}</div>
+      )}
 
       {showModal && !IS_WEB && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -222,89 +201,91 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
   )
 }
 
-// Inline "Ya me suscribí" dentro del banner (pequeño)
-function VerifyInlineBanner({ onActivated }) {
-  const { user, refreshTrial } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [ok,      setOk]      = useState(false)
-
-  const handleVerify = async () => {
-    if (!user) return
-    setLoading(true)
-    try {
-      const res = await fetch('/api/verify-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, email: user.email }),
-      })
-      const data = await res.json()
-      if (data.ok && data.activated) {
-        setOk(true)
-        await refreshTrial()
-        setTimeout(() => onActivated?.(), 1500)
-      }
-    } catch { /* silent */ } finally {
-      setLoading(false)
-    }
-  }
-
-  if (ok) return <span className="font-semibold">¡PRO activado!</span>
-
-  return (
-    <button
-      onClick={handleVerify}
-      disabled={loading}
-      className="underline font-semibold hover:no-underline opacity-90 disabled:opacity-50 flex items-center gap-1"
-    >
-      {loading ? <Loader2 size={10} className="animate-spin" /> : null}
-      Ya me suscribí
-    </button>
-  )
-}
-
 // ─── Expired gate (blocking) ──────────────────────────────────────────────────
 
 export function ExpiredGate({ onActivated }) {
-  const { user } = useAuth()
-  const [checkoutOpened, setCheckoutOpened] = useState(false)
+  const { user, refreshTrial } = useAuth()
+  const [checking, setChecking] = useState(false)
+  const [checked,  setChecked]  = useState(false)
+  const [errMsg,   setErrMsg]   = useState('')
+
+  async function handleAlreadySubscribed() {
+    setChecking(true)
+    setErrMsg('')
+    try {
+      // First try to verify + activate via MP API
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, email: user?.email }),
+      })
+      const data = await res.json()
+      if (!data.found) {
+        setErrMsg('No encontramos una suscripción activa. Si acabás de pagar, esperá unos minutos e intentá de nuevo.')
+      }
+    } catch { /* network error — fall through to refreshTrial */ }
+    // Always refresh from Supabase after attempt
+    await refreshTrial()
+    setChecking(false)
+    setChecked(true)
+    setTimeout(() => setChecked(false), 4000)
+  }
 
   if (IS_WEB) {
-    const handleCheckout = () => {
-      if (!user) return
-      const url = getMpCheckoutUrl(user.id)
-      window.open(url, '_blank')
-      setCheckoutOpened(true)
-    }
-
     return (
-      <div className="fixed inset-0 bg-slate-900/95 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-          <img
-            src="/icon.png"
-            alt="EasyResumen"
-            className="w-16 h-16 mx-auto mb-4 rounded-2xl"
-            onError={e => { e.target.style.display = 'none' }}
-          />
-          <h1 className="text-xl font-extrabold text-slate-800 mb-1">Período de prueba finalizado</h1>
-          <p className="text-sm text-slate-500 mb-2">
-            Gracias por probar EasyResumen. Suscribite para seguir accediendo.
+      <div className="fixed inset-0 bg-[#0f0f1a]/98 flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[120px]" />
+        </div>
+        <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-md text-center shadow-2xl shadow-black/40">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-indigo-500/30">
+            <KeyRound size={28} className="text-white" />
+          </div>
+          <h1 className="text-xl font-extrabold text-white mb-2">Período de prueba finalizado</h1>
+          <p className="text-sm text-slate-400 mb-2 leading-relaxed">
+            Seguí analizando tus resúmenes sin límites.
           </p>
-          <p className="text-2xl font-extrabold text-indigo-600 mb-6">$2.999<span className="text-base font-normal text-slate-400">/mes</span></p>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleCheckout}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-            >
-              Suscribirme con MercadoPago <ExternalLink size={14} />
-            </button>
-
-            {checkoutOpened && <VerifyButton onActivated={onActivated} />}
+          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 mb-6">
+            <span className="text-2xl font-extrabold text-white">$2.999</span>
+            <div className="text-left">
+              <div className="text-xs text-indigo-300 font-semibold">por mes</div>
+              <div className="text-[10px] text-slate-500">30 días gratis · Cancelá cuando quieras</div>
+            </div>
           </div>
 
-          <p className="mt-4 text-xs text-slate-400">
-            ¿Tenés problemas? Escribinos a{' '}
-            <a href="mailto:soporte@easyresumen.com.ar" className="underline">soporte@easyresumen.com.ar</a>
+          <div className="space-y-3">
+            <a
+              href={getMpCheckoutUrl(user?.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
+            >
+              Suscribirme con MercadoPago <ExternalLink size={14} />
+            </a>
+
+            <button
+              onClick={handleAlreadySubscribed}
+              disabled={checking}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20 text-sm transition-all disabled:opacity-50"
+            >
+              {checking ? (
+                <><RefreshCw size={14} className="animate-spin" /> Verificando tu suscripción...</>
+              ) : checked ? (
+                <><CheckCircle2 size={14} className="text-emerald-400" /> ¡Suscripción verificada!</>
+              ) : (
+                <><RefreshCw size={14} /> Ya me suscribí</>
+              )}
+            </button>
+          </div>
+
+          {errMsg && (
+            <p className="mt-3 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-left">
+              ⚠️ {errMsg}
+            </p>
+          )}
+          <p className="mt-4 text-xs text-slate-600 leading-relaxed">
+            Después de suscribirte en MercadoPago, volvé acá y hacé clic en <strong className="text-slate-500">"Ya me suscribí"</strong>.
           </p>
         </div>
       </div>
@@ -328,7 +309,7 @@ export function ExpiredGate({ onActivated }) {
 // ─── Update notification (toast) ─────────────────────────────────────────────
 
 export function UpdateToast() {
-  const [state, setState] = useState(null)
+  const [state, setState] = useState(null) // null | 'available' | 'downloading' | 'ready'
   const [pct,   setPct]   = useState(0)
 
   useEffect(() => {

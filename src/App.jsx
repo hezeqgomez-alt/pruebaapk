@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag,
 } from 'lucide-react'
 import MobileDrawer from './components/MobileDrawer'
 import UploadZone from './components/UploadZone'
@@ -16,13 +16,15 @@ import InstallmentsPanel from './components/InstallmentsPanel'
 import BalancePanel from './components/BalancePanel'
 import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
-import { TrialBanner, ExpiredGate, UpdateToast, ProBadge } from './components/LicenseGate'
+import BankGuideModal from './components/BankGuideModal'
+import CategoryManagerModal from './components/CategoryManagerModal'
+import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
 import AuthGate from './components/AuthGate'
 import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
-import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
+import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories } from './utils/storage'
 import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
@@ -70,7 +72,10 @@ export default function App() {
   const [generating, setGenerating]               = useState(false)
   const [budgets, setBudgets]                     = useState(() => loadBudgets())
   const [darkMode, setDarkMode]                   = useState(() => loadDarkMode())
+  const [customCategories, setCustomCategories]   = useState(() => loadCustomCategories())
   const [showAddModal, setShowAddModal]           = useState(false)
+  const [showBankGuide, setShowBankGuide]         = useState(false)
+  const [showCatManager, setShowCatManager]       = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
@@ -80,12 +85,9 @@ export default function App() {
   const [electronLicense, setElectronLicense] = useState(null)
   const licenseStatus = window.electronAPI ? electronLicense : trialStatus
 
-  const chartDonutRef  = useRef(null)
-  const chartBarRef    = useRef(null)
-  const addBtnRef      = useRef(null)
-  const cloudSaveTimer = useRef(null)
-  const cloudLoaded    = useRef(false) // evita doble load
-  const cloudReady     = useRef(false) // load completado — habilita saves
+  const chartDonutRef = useRef(null)
+  const chartBarRef   = useRef(null)
+  const addBtnRef     = useRef(null)
 
   // Electron-only license check on mount
   useEffect(() => {
@@ -99,37 +101,42 @@ export default function App() {
     saveDarkMode(darkMode)
   }, [darkMode])
 
-  // Cloud load: cuando el usuario se autentica, traer datos desde Supabase
+  // Load from cloud when user logs in (web only)
   useEffect(() => {
-    if (!user || window.electronAPI || cloudLoaded.current) return
-    cloudLoaded.current = true
-    cloudLoad(user.id).then(remote => {
-      if (remote?.transactions?.length > 0) {
-        setTransactions(remote.transactions)
-        saveData({ transactions: remote.transactions })
+    if (window.electronAPI || !user?.id) return
+    cloudLoad(user.id).then(cloud => {
+      if (!cloud) return
+      if (cloud.transactions?.length > 0) {
+        const valid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
+        setTransactions(valid)
+        setToast(`📥 ${valid.length} movimientos cargados desde la nube`)
       }
-      if (remote?.budgets && Object.keys(remote.budgets).length > 0) {
-        setBudgets(remote.budgets)
-        saveBudgets(remote.budgets)
+      if (cloud.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
+      if (cloud.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
+        setCustomCategories(cloud.custom_categories)
       }
-      cloudReady.current = true // habilitar saves recién después de cargar
     })
-  }, [user])
+  }, [user?.id])
 
-  // Cloud save: debounced 1.5s — solo después de que cloudLoad terminó
+  // Save to localStorage always; sync to cloud (debounced 2s) when logged in
   useEffect(() => {
-    if (!user || window.electronAPI || !cloudReady.current) return
     saveData({ transactions })
-    clearTimeout(cloudSaveTimer.current)
-    cloudSaveTimer.current = setTimeout(() => {
-      cloudSave(user.id, { transactions, budgets })
-    }, 1500)
-    return () => clearTimeout(cloudSaveTimer.current)
-  }, [transactions, budgets, user])
+  }, [transactions])
+
+  useEffect(() => {
+    if (window.electronAPI || !user?.id) return
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }), 2000)
+    return () => clearTimeout(t)
+  }, [transactions, budgets, user?.id])
 
   const handleBudgetsChange = useCallback((b) => {
     setBudgets(b)
-    saveBudgets(b) // localStorage inmediato; cloud sync lo toma por el efecto
+    saveBudgets(b)
+  }, [])
+
+  const handleCustomCategoriesChange = useCallback((cats) => {
+    setCustomCategories(cats)
+    saveCustomCategories(cats)
   }, [])
 
   const handleFiles = useCallback(async (files) => {
@@ -215,9 +222,6 @@ export default function App() {
     if (confirm('¿Borrar todos los movimientos cargados?')) {
       setTransactions([])
       clearData()
-      if (user && !window.electronAPI) {
-        cloudSave(user.id, { transactions: [], budgets })
-      }
       setToast('🗑️ Datos eliminados')
     }
   }
@@ -244,6 +248,21 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
     setToast('📥 CSV exportado')
   }
+
+  const handleShare = useCallback(() => {
+    const txs = filteredForReport ?? transactions
+    const total = txs.filter(t => t.type !== 'credit').reduce((s, t) => s + t.amount, 0)
+    const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+    const months = [...new Set(txs.map(t => t.date.slice(0, 7)))].sort()
+    const period = months.length === 1 ? months[0] : `${months[0]} al ${months[months.length - 1]}`
+    const text = `📊 *Resumen EasyResumen* — ${period}\n💳 Total gastos: ${fmt(total)}\n📦 ${txs.length} movimientos\n\nGenerado en www.easyresumen.com.ar`
+    if (navigator.share) {
+      navigator.share({ title: 'Mi resumen — EasyResumen', text })
+    } else {
+      navigator.clipboard.writeText(text)
+      setToast('✅ Resumen copiado al portapapeles')
+    }
+  }, [transactions, filteredForReport])
 
   const handleExportXLSX = () => {
     try {
@@ -348,7 +367,17 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/40">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:bg-[#0f0f1a] dark:bg-none relative overflow-x-hidden">
+
+      {/* ── Dark mode animated background ── */}
+      <div className="hidden dark:block fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-15%] left-[-8%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[130px]" />
+        <div className="absolute bottom-[-15%] right-[-8%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[130px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-indigo-900/5 rounded-full blur-[80px]" />
+        <div className="absolute inset-0 opacity-[0.02]"
+          style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '48px 48px' }}
+        />
+      </div>
 
       {/* ── License gates ── */}
       {licenseStatus?.status === 'expired' && <ExpiredGate onActivated={refreshLicense} />}
@@ -380,22 +409,27 @@ export default function App() {
       />
 
       {/* ── Header ── */}
-      <header className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 sticky top-0 z-40 shadow-sm">
+      <header className="bg-white/90 dark:bg-white/5 backdrop-blur-md dark:backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10 sticky top-0 z-40 shadow-sm dark:shadow-black/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
 
           {/* Brand */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-indigo-900">
-              <ReceiptText size={18} className="text-white" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 dark:shadow-indigo-500/20 shrink-0">
+              <ReceiptText size={20} className="text-white" />
             </div>
-            <div className="leading-none">
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                  EasyResumen
-                </h1>
-                <ProBadge />
-              </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">100% local · sin IA</p>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
+                EasyResumen
+              </h1>
+              {licenseStatus?.status === 'active' ? (
+                <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white tracking-wide shadow-sm shadow-indigo-500/30">
+                  PRO
+                </span>
+              ) : (
+                <span className="hidden sm:inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-400/20 tracking-wide">
+                  100% local
+                </span>
+              )}
             </div>
           </div>
 
@@ -430,6 +464,22 @@ export default function App() {
                   {filteredForReport && filteredForReport.length < transactions.length && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
                   )}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
+                  title="Compartir resumen"
+                >
+                  <Share2 size={14} />
+                  <span className="hidden sm:inline">Compartir</span>
+                </button>
+                <button
+                  onClick={() => setShowCatManager(true)}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
+                  title="Gestionar categorías"
+                >
+                  <Tag size={14} />
+                  <span className="hidden sm:inline">Categorías</span>
                 </button>
                 <button
                   onClick={handleClearAll}
@@ -492,11 +542,23 @@ export default function App() {
       {/* ── Main ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 overflow-x-hidden">
 
-        <UploadZone
-          onFiles={handleFiles}
-          compact={hasData}
-          onRejected={(names) => setToast(`⚠️ Solo se aceptan PDF. Ignorados: ${names.join(', ')}`)}
-        />
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <UploadZone
+              onFiles={handleFiles}
+              compact={hasData}
+              onRejected={(names) => setToast(`⚠️ Solo se aceptan PDF. Ignorados: ${names.join(', ')}`)}
+            />
+          </div>
+          <button
+            onClick={() => setShowBankGuide(true)}
+            title="¿Cómo bajo el PDF de mi banco?"
+            className={`shrink-0 flex items-center gap-2 px-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all text-xs font-medium ${hasData ? 'h-[52px]' : 'h-[52px] self-center'}`}
+          >
+            <HelpCircle size={15} />
+            <span className="hidden sm:inline">¿Cómo bajo el PDF?</span>
+          </button>
+        </div>
         <OnboardingTooltip hasData={hasData} />
 
         {/* Processing indicator */}
@@ -520,15 +582,15 @@ export default function App() {
             <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} />
 
             {/* Tabs — solo desktop */}
-            <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-slate-800 rounded-2xl p-1 w-fit overflow-x-auto">
+            <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-white/5 dark:border dark:border-white/10 rounded-2xl p-1 w-fit overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-700/60'
+                      ? 'bg-white dark:bg-white/10 text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-white/5'
                   }`}
                 >
                   {tab.label}
@@ -559,7 +621,7 @@ export default function App() {
 
             {/* Always mounted to preserve page/sort state when switching tabs */}
             <div className={activeTab !== 'movimientos' ? 'hidden' : ''}>
-              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={setFilteredForReport} />
+              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={setFilteredForReport} customCategories={customCategories} />
             </div>
 
             {activeTab === 'presupuesto' && (
@@ -567,6 +629,7 @@ export default function App() {
                 transactions={transactions}
                 budgets={budgets}
                 onBudgetsChange={handleBudgetsChange}
+                customCategories={customCategories}
               />
             )}
 
@@ -595,7 +658,7 @@ export default function App() {
 
         {!hasData && !loading.length && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900 dark:to-violet-900 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:bg-white/5 dark:border dark:border-white/10 dark:bg-none flex items-center justify-center mx-auto mb-4">
               <ReceiptText size={28} className="text-indigo-400" />
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium">Cargá un PDF de resumen para comenzar</p>
@@ -616,6 +679,16 @@ export default function App() {
           onAdd={handleAddTransaction}
           onClose={() => setShowAddModal(false)}
           triggerRef={addBtnRef}
+        />
+      )}
+
+      {showBankGuide && <BankGuideModal onClose={() => setShowBankGuide(false)} />}
+
+      {showCatManager && (
+        <CategoryManagerModal
+          customCategories={customCategories}
+          onChange={handleCustomCategoriesChange}
+          onClose={() => setShowCatManager(false)}
         />
       )}
 
