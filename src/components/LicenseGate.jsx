@@ -122,7 +122,7 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
           {pdfCount > 0 && <span className="opacity-75"> · {pdfCount} resúmenes procesados</span>}
         </span>
         {IS_WEB && (
-          <span className="opacity-75 hidden sm:inline">· $4.999/mes</span>
+          <span className="opacity-75 hidden sm:inline">· $2.999/mes</span>
         )}
         <button
           onClick={ctaAction}
@@ -188,7 +188,7 @@ export function ExpiredGate({ onActivated }) {
             Seguí analizando tus resúmenes sin límites.
           </p>
           <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 mb-6">
-            <span className="text-2xl font-extrabold text-white">$4.999</span>
+            <span className="text-2xl font-extrabold text-white">$2.999</span>
             <div className="text-left">
               <div className="text-xs text-indigo-300 font-semibold">por mes</div>
               <div className="text-[10px] text-slate-500">30 días gratis · Cancelá cuando quieras</div>

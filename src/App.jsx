@@ -102,7 +102,9 @@ export default function App() {
     cloudLoad(user.id).then(cloud => {
       if (!cloud) return
       if (cloud.transactions?.length > 0) {
-        setTransactions(cloud.transactions.filter(t => t && t.date && t.amount > 0))
+        const valid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
+        setTransactions(valid)
+        setToast(`📥 ${valid.length} movimientos cargados desde la nube`)
       }
       if (cloud.budgets && Object.keys(cloud.budgets).length > 0) {
         setBudgets(cloud.budgets)
