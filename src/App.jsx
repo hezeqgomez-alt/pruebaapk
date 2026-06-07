@@ -23,6 +23,7 @@ import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary } from './utils/categorizer'
 import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode } from './utils/storage'
+import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
 import { importFromXLSX, importFromCSV } from './utils/importFile'
@@ -95,9 +96,33 @@ export default function App() {
     saveDarkMode(darkMode)
   }, [darkMode])
 
+  // Load from cloud when user logs in (web only)
+  useEffect(() => {
+    if (window.electronAPI || !user?.id) return
+    cloudLoad(user.id).then(cloud => {
+      if (!cloud) return
+      if (cloud.transactions?.length > 0) {
+        setTransactions(cloud.transactions.filter(t => t && t.date && t.amount > 0))
+      }
+      if (cloud.budgets && Object.keys(cloud.budgets).length > 0) {
+        setBudgets(cloud.budgets)
+      }
+    })
+  }, [user?.id])
+
+  // Save to localStorage always; sync to cloud (debounced 2s) when logged in
   useEffect(() => {
     saveData({ transactions })
+    if (window.electronAPI || !user?.id) return
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets }), 2000)
+    return () => clearTimeout(t)
   }, [transactions])
+
+  useEffect(() => {
+    if (window.electronAPI || !user?.id) return
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets }), 2000)
+    return () => clearTimeout(t)
+  }, [budgets])
 
   const handleBudgetsChange = useCallback((b) => {
     setBudgets(b)
