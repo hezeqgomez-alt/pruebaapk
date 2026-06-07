@@ -110,15 +110,26 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
 
   return (
     <>
-      <div className={`flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-medium ${urgent ? 'bg-red-500' : 'bg-amber-500'} text-white`}>
-        <Clock size={12} />
-        <span>
-          Prueba gratis:{' '}
+      <div className={`relative flex items-center justify-center gap-2.5 px-4 py-2 text-xs font-medium ${
+        urgent
+          ? 'bg-gradient-to-r from-red-600 to-rose-500'
+          : 'bg-gradient-to-r from-amber-500 to-orange-400'
+      } text-white shadow-sm`}>
+        <Clock size={11} className="shrink-0 opacity-90" />
+        <span className="tracking-wide">
+          {urgent ? '⚠️ ' : ''}Período de prueba:{' '}
           <strong>{daysLeft} {daysLeft === 1 ? 'día restante' : 'días restantes'}</strong>
-          {pdfCount > 0 && <> · <strong>{pdfCount} resúmenes</strong> procesados</>}
+          {pdfCount > 0 && <span className="opacity-75"> · {pdfCount} resúmenes procesados</span>}
         </span>
-        <button onClick={ctaAction} className="underline font-semibold hover:no-underline">
-          {ctaLabel}
+        <button
+          onClick={ctaAction}
+          className={`ml-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+            urgent
+              ? 'bg-white text-red-600 hover:bg-red-50'
+              : 'bg-white text-amber-600 hover:bg-amber-50'
+          } shadow-sm`}
+        >
+          {ctaLabel} →
         </button>
       </div>
 
