@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
-const TRIAL_DAYS  = 30
-const PDF_LIMIT   = 3
+const TRIAL_DAYS = 30
 
 function computeTrialStatus(user) {
   if (!user) return null
@@ -15,11 +14,11 @@ function computeTrialStatus(user) {
   const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
   const pdfCount = meta.pdf_count || 0
 
-  if (daysLeft === 0 || pdfCount >= PDF_LIMIT) {
-    return { status: 'expired', daysLeft, pdfCount, pdfLimit: PDF_LIMIT }
+  if (daysLeft === 0) {
+    return { status: 'expired', daysLeft, pdfCount }
   }
 
-  return { status: 'trial', daysLeft, pdfCount, pdfLimit: PDF_LIMIT }
+  return { status: 'trial', daysLeft, pdfCount }
 }
 
 const AuthContext = createContext(null)
@@ -86,7 +85,6 @@ export function AuthProvider({ children }) {
   const trackPDF = useCallback(async () => {
     if (!isSupabaseConfigured) return { allowed: true }
 
-    // Always fetch fresh data — avoids stale closure when multiple PDFs are uploaded in sequence
     const { data: fresh } = await supabase.auth.getUser()
     const freshUser = fresh?.user
     if (!freshUser) return { allowed: true }
@@ -95,14 +93,8 @@ export function AuthProvider({ children }) {
     if (meta.plan === 'paid') return { allowed: true }
 
     const currentCount = meta.pdf_count || 0
-
-    // Sync state with fresh data in case it diverged
     setUser(freshUser)
     setTrialStatus(computeTrialStatus(freshUser))
-
-    if (currentCount >= PDF_LIMIT) {
-      return { allowed: false, pdfCount: currentCount, pdfLimit: PDF_LIMIT }
-    }
 
     const newCount = currentCount + 1
     const { data, error } = await supabase.auth.updateUser({
@@ -114,11 +106,18 @@ export function AuthProvider({ children }) {
       setTrialStatus(computeTrialStatus(data.user))
     }
 
-    return { allowed: true, pdfCount: newCount, pdfLimit: PDF_LIMIT }
+    return { allowed: true, pdfCount: newCount }
+  }, [])
+
+  const resetPassword = useCallback(async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
+    if (error) throw error
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, trialStatus, signIn, signUp, signOut, trackPDF, refreshTrial }}>
+    <AuthContext.Provider value={{ user, trialStatus, signIn, signUp, signOut, trackPDF, refreshTrial, resetPassword }}>
       {children}
     </AuthContext.Provider>
   )

@@ -92,9 +92,9 @@ function ActivationForm({ onActivated }) {
 
 // ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
-export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated }) {
+export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
   const [showModal, setShowModal] = useState(false)
-  const urgent = daysLeft <= 5 || pdfCount >= pdfLimit
+  const urgent = daysLeft <= 5
 
   const ctaLabel  = IS_WEB ? 'Ver planes' : 'Activar licencia'
   const ctaAction = IS_WEB
@@ -107,9 +107,8 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
         <Clock size={12} />
         <span>
           Prueba gratis:{' '}
-          <strong>{daysLeft} {daysLeft === 1 ? 'día' : 'días'}</strong>
-          {' · '}
-          <strong>{pdfCount}/{pdfLimit} resúmenes</strong> usados
+          <strong>{daysLeft} {daysLeft === 1 ? 'día restante' : 'días restantes'}</strong>
+          {pdfCount > 0 && <> · <strong>{pdfCount} resúmenes</strong> procesados</>}
         </span>
         <button onClick={ctaAction} className="underline font-semibold hover:no-underline">
           {ctaLabel}

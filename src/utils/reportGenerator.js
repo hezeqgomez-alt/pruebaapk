@@ -130,12 +130,12 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   const topMerchants = Object.entries(byMerchant).sort(([, a], [, b]) => b - a).slice(0, 10)
 
   const sources = [...new Set(transactions.map(t => t.source))]
-  const TOTAL_PAGES = 3
 
   // ──────────────────────────────────────────────────────────────
   // PAGE 1 — Cover + executive summary
   // ──────────────────────────────────────────────────────────────
-  addPageChrome(doc, 1, TOTAL_PAGES)
+  // Page numbers are added retroactively after all content is rendered
+  addPageChrome(doc, 1, '…')
 
   // Hero band
   doc.setFillColor(...INDIGO)
@@ -231,7 +231,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   // PAGE 2 — Charts
   // ──────────────────────────────────────────────────────────────
   doc.addPage()
-  addPageChrome(doc, 2, TOTAL_PAGES)
+  addPageChrome(doc, 2, '…')
 
   y = 18
   y = sectionTitle(doc, 'Distribución por categoría', y)
@@ -310,7 +310,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   // PAGE 3 — Top merchants + transaction list
   // ──────────────────────────────────────────────────────────────
   doc.addPage()
-  addPageChrome(doc, 3, TOTAL_PAGES)
+  addPageChrome(doc, 3, '…')
 
   y = 18
   y = sectionTitle(doc, 'Top 10 comercios', y)
@@ -366,6 +366,25 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
       }
     },
   })
+
+  // Retroactively update page numbers now that we know the real total
+  const totalPages = doc.internal.pages.length - 1
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    addPageChrome(doc, p, totalPages)
+  }
+
+  // Fix footer URL while we're at it
+  const ph = doc.internal.pageSize.getHeight()
+  const pw2 = doc.internal.pageSize.getWidth()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFillColor(...LIGHT)
+    doc.rect(0, ph - 10, pw2, 10, 'F')
+    doc.setFontSize(6)
+    doc.setTextColor(...GRAY)
+    doc.text('EasyResumen · procesamiento 100% local · www.easyresumen.com.ar', pw2 / 2, ph - 5, { align: 'center' })
+  }
 
   const fileName = `easyresumen_informe_${format(new Date(), 'yyyy-MM-dd')}.pdf`
   doc.save(fileName)

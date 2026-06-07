@@ -477,8 +477,51 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
         </div>
       )}
 
-      {/* Table */}
-      <div className="relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
+      {/* Mobile cards — visible only on small screens */}
+      <div className="block sm:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500">
+            <Search size={24} className="opacity-30" />
+            <p className="text-sm font-medium">Sin resultados</p>
+            <button onClick={clearFilters} className="text-xs text-indigo-500 underline underline-offset-2">Limpiar filtros</button>
+          </div>
+        ) : paged.map(t => {
+          const isCredit = t.type === 'credit'
+          return (
+            <div key={t.id} className="px-4 py-3 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{t.description}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono">
+                  {safeFormat(t.date, 'dd MMM yy', { locale: es })}
+                  {t.source && <span className="ml-1.5 not-italic font-sans">· {t.source}</span>}
+                </p>
+                <div className="mt-1.5">
+                  <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
+                </div>
+                {t.installment && (
+                  <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold mt-0.5 block">
+                    Cuota {t.installment.current}/{t.installment.total}
+                  </span>
+                )}
+              </div>
+              <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
+                <span className={`text-sm font-bold ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                  {isCredit ? '+' : ''}{fmt(t.amount)}
+                </span>
+                <button
+                  onClick={() => deleteOne(t.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden sm:block relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-700 text-left">
@@ -577,7 +620,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
             )}
           </tbody>
         </table>
-      </div>
+      </div>{/* end desktop table */}
 
       {filtered.length > paged.length && (
         <div className="p-4 pt-3">
