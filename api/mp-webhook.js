@@ -1,11 +1,11 @@
 /**
  * POST /api/mp-webhook
  * Recibe notificaciones de MercadoPago para suscripciones.
- * Cuando un pago es aprobado, activa el plan "paid" del usuario en Supabase.
+ * Activa o desactiva el plan del usuario en Supabase según el estado.
  *
  * Env vars requeridas:
- *   MP_ACCESS_TOKEN    — token de acceso producción de MercadoPago
- *   SUPABASE_URL       — URL del proyecto Supabase
+ *   MP_ACCESS_TOKEN      — token de acceso producción de MercadoPago
+ *   SUPABASE_URL         — URL del proyecto Supabase
  *   SUPABASE_SERVICE_KEY — service_role key de Supabase (solo server-side)
  */
 import { createClient } from '@supabase/supabase-js'
@@ -45,13 +45,9 @@ export default async function handler(req, res) {
 
   const preapproval = await mpRes.json()
 
-  // Only activate on authorized (active) subscriptions
-  if (preapproval.status !== 'authorized') {
-    return res.status(200).json({ ok: true, status: preapproval.status, skipped: true })
-  }
-
-  const userId    = preapproval.external_reference   // set when building checkout URL
+  const userId     = preapproval.external_reference
   const payerEmail = preapproval.payer_email
+  const status     = preapproval.status
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -59,15 +55,40 @@ export default async function handler(req, res) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Activate by user ID (preferred) or fallback to email lookup
-  if (userId) {
-    const { error } = await supabase.auth.admin.updateUserById(userId, {
-      user_metadata: { plan: 'paid', mp_preapproval_id: preapprovalId },
+  // Helper: update user preserving existing metadata
+  async function activateUser(id, newMeta) {
+    const { data: { user }, error: getErr } = await supabase.auth.admin.getUserById(id)
+    if (getErr) return getErr
+    const { error } = await supabase.auth.admin.updateUserById(id, {
+      user_metadata: { ...(user?.user_metadata || {}), ...newMeta },
     })
-    if (error) return res.status(500).json({ error: error.message })
+    return error
+  }
+
+  // Handle cancellations and pauses — downgrade plan
+  if (['cancelled', 'paused'].includes(status)) {
+    if (userId) {
+      const err = await activateUser(userId, { plan: 'expired', mp_preapproval_id: preapprovalId })
+      if (err) return res.status(500).json({ error: err.message })
+      return res.status(200).json({ ok: true, downgraded_by: 'user_id', userId, status })
+    }
+    // No userId — no action, let subscription expire naturally
+    return res.status(200).json({ ok: true, skipped: 'no userId for downgrade', status })
+  }
+
+  // Only activate on authorized subscriptions
+  if (status !== 'authorized') {
+    return res.status(200).json({ ok: true, status, skipped: true })
+  }
+
+  // Activate by user ID (preferred)
+  if (userId) {
+    const err = await activateUser(userId, { plan: 'paid', mp_preapproval_id: preapprovalId })
+    if (err) return res.status(500).json({ error: err.message })
     return res.status(200).json({ ok: true, activated_by: 'user_id', userId })
   }
 
+  // Fallback: activate by payer email
   if (payerEmail) {
     const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 })
     if (listErr) return res.status(500).json({ error: listErr.message })
@@ -75,10 +96,8 @@ export default async function handler(req, res) {
     const user = users.find(u => u.email?.toLowerCase() === payerEmail.toLowerCase())
     if (!user) return res.status(404).json({ error: `User not found for email ${payerEmail}` })
 
-    const { error } = await supabase.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...user.user_metadata, plan: 'paid', mp_preapproval_id: preapprovalId },
-    })
-    if (error) return res.status(500).json({ error: error.message })
+    const err = await activateUser(user.id, { plan: 'paid', mp_preapproval_id: preapprovalId })
+    if (err) return res.status(500).json({ error: err.message })
     return res.status(200).json({ ok: true, activated_by: 'email', email: payerEmail })
   }
 

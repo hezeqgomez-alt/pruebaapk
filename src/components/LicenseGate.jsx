@@ -116,6 +116,7 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
   const [showVerify,  setShowVerify]  = useState(false)
   const [checking,    setChecking]    = useState(false)
   const [verifyMsg,   setVerifyMsg]   = useState('')
+  const [activated,   setActivated]   = useState(false)
   const { user, refreshTrial } = useAuth()
   const urgent = daysLeft <= 5
 
@@ -134,10 +135,21 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
         body: JSON.stringify({ userId: user?.id, email: user?.email }),
       })
       const data = await res.json()
-      if (!data.found) setVerifyMsg('No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.')
-    } catch { /* fall through */ }
+      if (data.activated) {
+        setActivated(true)
+        await refreshTrial()
+        setTimeout(() => onActivated?.(), 1500)
+        return
+      }
+      setVerifyMsg(data.found === false
+        ? 'No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.'
+        : 'Ocurrió un error al verificar. Intentá de nuevo.')
+    } catch {
+      setVerifyMsg('Error de conexión. Revisá tu internet e intentá de nuevo.')
+    } finally {
+      setChecking(false)
+    }
     await refreshTrial()
-    setChecking(false)
   }
 
   return (
@@ -166,7 +178,7 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
         >
           {ctaLabel} →
         </button>
-        {IS_WEB && showVerify && (
+        {IS_WEB && showVerify && !activated && (
           <button
             onClick={handleVerify}
             disabled={checking}
@@ -174,6 +186,11 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
           >
             {checking ? <RefreshCw size={11} className="inline animate-spin" /> : '✓ Ya me suscribí'}
           </button>
+        )}
+        {IS_WEB && activated && (
+          <span className="ml-1 px-3 py-1 rounded-full text-xs font-bold bg-white/30">
+            ¡PRO activado! 🎉
+          </span>
         )}
       </div>
       {verifyMsg && (
@@ -213,18 +230,23 @@ export function ExpiredGate({ onActivated }) {
     setChecking(true)
     setErrMsg('')
     try {
-      // First try to verify + activate via MP API
       const res = await fetch('/api/verify-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, email: user?.email }),
       })
       const data = await res.json()
-      if (!data.found) {
-        setErrMsg('No encontramos una suscripción activa. Si acabás de pagar, esperá unos minutos e intentá de nuevo.')
+      if (data.activated) {
+        await refreshTrial()
+        // refreshTrial will update trialStatus → 'active' → gate unmounts automatically
+        return
       }
-    } catch { /* network error — fall through to refreshTrial */ }
-    // Always refresh from Supabase after attempt
+      setErrMsg(data.found === false
+        ? 'No encontramos una suscripción activa. Si acabás de pagar, esperá unos minutos e intentá de nuevo.'
+        : 'Ocurrió un error al verificar. Intentá de nuevo.')
+    } catch {
+      setErrMsg('Error de conexión. Revisá tu internet e intentá de nuevo.')
+    }
     await refreshTrial()
     setChecking(false)
     setChecked(true)

@@ -2,6 +2,89 @@ import { useState } from 'react'
 import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
+// ─── Password recovery screen (shown after clicking email link) ───────────────
+
+function PasswordRecoveryScreen() {
+  const { updatePassword } = useAuth()
+  const [password, setPassword] = useState('')
+  const [showPwd,  setShowPwd]  = useState(false)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
+  const [done,     setDone]     = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
+    setLoading(true)
+    setError('')
+    try {
+      await updatePassword(password)
+      setDone(true)
+    } catch (err) {
+      setError(err.message || 'Error al actualizar la contraseña.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f1a] p-4">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-[120px]" />
+      </div>
+      <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-10 w-full max-w-sm text-center shadow-2xl shadow-black/40">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-5">
+          <KeyRound size={26} className="text-indigo-400" />
+        </div>
+        <h2 className="text-xl font-extrabold text-white mb-1">Nueva contraseña</h2>
+        <p className="text-sm text-slate-400 mb-6">Elegí una contraseña nueva para tu cuenta.</p>
+
+        {done ? (
+          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-sm text-emerald-400">
+            <CheckCircle2 size={16} className="shrink-0" />
+            ¡Contraseña actualizada! Ya podés usar la app.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 text-left">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Nueva contraseña</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"><Lock size={15} /></span>
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError('') }}
+                  placeholder="Mínimo 6 caracteres"
+                  minLength={6}
+                  required
+                  className="w-full pl-9 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition"
+                />
+                <button type="button" onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                  {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+            {error && (
+              <div className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" />{error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
+            >
+              {loading ? 'Guardando...' : 'Guardar contraseña'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const FEATURES = [
   { icon: '🏦', text: '15+ bancos argentinos soportados' },
   { icon: '📊', text: 'Cuotas, categorías y proyecciones automáticas' },
@@ -10,7 +93,9 @@ const FEATURES = [
 ]
 
 export default function AuthGate() {
-  const { signIn, signUp, resetPassword } = useAuth()
+  const { signIn, signUp, resetPassword, passwordRecovery } = useAuth()
+
+  if (passwordRecovery) return <PasswordRecoveryScreen />
   const [mode,     setMode]     = useState('login')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')

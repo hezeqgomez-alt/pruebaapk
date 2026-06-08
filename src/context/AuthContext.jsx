@@ -24,8 +24,9 @@ function computeTrialStatus(user) {
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user,         setUser]         = useState(undefined) // undefined = loading
-  const [trialStatus,  setTrialStatus]  = useState(null)
+  const [user,             setUser]             = useState(undefined) // undefined = loading
+  const [trialStatus,      setTrialStatus]      = useState(null)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   const refresh = useCallback((session) => {
     const u = session?.user ?? null
@@ -41,7 +42,11 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(({ data }) => refresh(data.session))
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+        return
+      }
       refresh(session)
     })
 
@@ -71,6 +76,12 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
+  }, [])
+
+  const updatePassword = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+    setPasswordRecovery(false)
   }, [])
 
   const refreshTrial = useCallback(async () => {
@@ -117,7 +128,11 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, trialStatus, signIn, signUp, signOut, trackPDF, refreshTrial, resetPassword }}>
+    <AuthContext.Provider value={{
+      user, trialStatus, passwordRecovery,
+      signIn, signUp, signOut, trackPDF,
+      refreshTrial, resetPassword, updatePassword,
+    }}>
       {children}
     </AuthContext.Provider>
   )

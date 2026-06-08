@@ -105,14 +105,22 @@ export default function App() {
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
     cloudLoad(user.id).then(cloud => {
-      if (!cloud) return
-      if (cloud.transactions?.length > 0) {
+      const localTxs   = loadData().transactions ?? []
+      const localBudg  = loadBudgets()
+      const localCats  = loadCustomCategories()
+
+      if (cloud?.transactions?.length > 0) {
+        // Cloud has data — use it as source of truth
         const valid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
         setTransactions(valid)
         setToast(`📥 ${valid.length} movimientos cargados desde la nube`)
+      } else if (localTxs.length > 0) {
+        // First login with local data — push to cloud so it's not lost
+        cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats })
       }
-      if (cloud.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
-      if (cloud.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
+
+      if (cloud?.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
+      if (cloud?.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
         setCustomCategories(cloud.custom_categories)
       }
     })
@@ -151,11 +159,7 @@ export default function App() {
         }
         setElectronLicense(s => s?.status === 'trial' ? { ...s, pdfCount: check.pdfCount } : s)
       } else if (isSupabaseConfigured && user) {
-        const check = await webTrackPDF()
-        if (!check.allowed) {
-          setToast(`❌ Límite de prueba: ya analizaste ${check.pdfLimit} resúmenes. Suscribite para continuar.`)
-          continue
-        }
+        await webTrackPDF()
       }
 
       setLoading(l => [...l, file.name])

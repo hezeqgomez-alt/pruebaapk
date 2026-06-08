@@ -3,7 +3,6 @@
  * Verifica si el usuario tiene una suscripción activa en MercadoPago
  * y activa su plan en Supabase si corresponde.
  * Body: { userId: string, email: string }
- * Requiere header Authorization: Bearer <supabase_jwt>
  */
 import { createClient } from '@supabase/supabase-js'
 
@@ -22,7 +21,7 @@ export default async function handler(req, res) {
   const MP_TOKEN = process.env.MP_ACCESS_TOKEN
   if (!MP_TOKEN) return res.status(500).json({ error: 'MP_ACCESS_TOKEN not configured' })
 
-  // Search subscriptions by external_reference (userId) or by payer email
+  // Search by external_reference (userId) first, then by payer email as fallback
   let preapproval = null
 
   if (userId) {
@@ -36,7 +35,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Fallback: search by payer email
   if (!preapproval && email) {
     const r = await fetch(
       `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&preapproval_plan_id=${MP_PLAN_ID}&status=authorized`,
@@ -52,7 +50,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ found: false, message: 'No se encontró suscripción activa en MercadoPago' })
   }
 
-  // Activate in Supabase
   const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_KEY,
@@ -62,8 +59,17 @@ export default async function handler(req, res) {
   const targetId = preapproval.external_reference || userId
   if (!targetId) return res.status(400).json({ error: 'No user ID available' })
 
+  // Fetch existing metadata to preserve fields like trial_started_at, pdf_count
+  const { data: { user }, error: getErr } = await supabase.auth.admin.getUserById(targetId)
+  if (getErr) return res.status(500).json({ error: getErr.message })
+
   const { error } = await supabase.auth.admin.updateUserById(targetId, {
-    user_metadata: { plan: 'paid', mp_preapproval_id: preapproval.id },
+    user_metadata: {
+      ...(user?.user_metadata || {}),
+      plan: 'paid',
+      mp_preapproval_id: preapproval.id,
+      activated_at: new Date().toISOString(),
+    },
   })
 
   if (error) return res.status(500).json({ error: error.message })
