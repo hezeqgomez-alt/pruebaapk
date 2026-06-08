@@ -101,7 +101,7 @@ function kpiCard(doc, x, y, w, h, label, value, sub, accentRgb) {
   doc.setTextColor(...DARK)
 }
 
-export async function generateReport({ transactions, chartDonutRef, chartBarRef }) {
+export async function generateReport({ transactions, chartDonutRef, chartBarRef, asBlob = false }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pw = doc.internal.pageSize.getWidth()
 
@@ -387,6 +387,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   }
 
   const fileName = `easyresumen_informe_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+  if (asBlob) return { blob: doc.output('blob'), fileName }
   doc.save(fileName)
   return fileName
 }

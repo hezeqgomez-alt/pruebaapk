@@ -256,20 +256,51 @@ export default function App() {
     setToast('📥 CSV exportado')
   }
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     const txs = filteredForReport ?? transactions
     const total = txs.filter(t => t.type !== 'credit').reduce((s, t) => s + t.amount, 0)
     const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
     const months = [...new Set(txs.map(t => t.date.slice(0, 7)))].sort()
     const period = months.length === 1 ? months[0] : `${months[0]} al ${months[months.length - 1]}`
     const text = `📊 *Resumen EasyResumen* — ${period}\n💳 Total gastos: ${fmt(total)}\n📦 ${txs.length} movimientos\n\nGenerado en www.easyresumen.com.ar`
+
     if (navigator.share) {
-      navigator.share({ title: 'Mi resumen — EasyResumen', text })
+      // Try Web Share API level 2 — share PDF + Excel files
+      try {
+        setToast('⏳ Generando archivos...')
+        setActiveTab('dashboard')
+        await new Promise(r => setTimeout(r, 300))
+        const [pdfResult, xlsxResult] = await Promise.all([
+          generateReport({ transactions: txs, chartDonutRef, chartBarRef, asBlob: true }),
+          Promise.resolve(exportXLSX(txs, { asBlob: true })),
+        ])
+        const files = [
+          new File([pdfResult.blob], pdfResult.fileName, { type: 'application/pdf' }),
+          new File([xlsxResult.blob], xlsxResult.fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        ]
+        if (navigator.canShare?.({ files })) {
+          await navigator.share({ title: 'Mi resumen — EasyResumen', text, files })
+          setToast('✅ Archivos compartidos')
+          return
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return
+        // File share not supported — fall through to text-only
+      }
+      // Fallback: share text only (desktop browsers / no file support)
+      try {
+        await navigator.share({ title: 'Mi resumen — EasyResumen', text })
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          navigator.clipboard?.writeText(text)
+          setToast('✅ Resumen copiado al portapapeles')
+        }
+      }
     } else {
       navigator.clipboard.writeText(text)
       setToast('✅ Resumen copiado al portapapeles')
     }
-  }, [transactions, filteredForReport])
+  }, [transactions, filteredForReport, chartDonutRef, chartBarRef])
 
   const handleExportXLSX = () => {
     try {

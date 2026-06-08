@@ -9,7 +9,7 @@ function safeDate(d) {
 
 function fmtNum(n) { return Math.round(n * 100) / 100 }
 
-export function exportXLSX(transactions) {
+export function exportXLSX(transactions, { asBlob = false } = {}) {
   const wb = XLSX.utils.book_new()
 
   const debits  = transactions.filter(t => t.type !== 'credit')
@@ -124,6 +124,13 @@ export function exportXLSX(transactions) {
   }
 
   const fileName = `easyresumen_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+  if (asBlob) {
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    return {
+      blob: new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      fileName,
+    }
+  }
   XLSX.writeFile(wb, fileName)
   return fileName
 }
