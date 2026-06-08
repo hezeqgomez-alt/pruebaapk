@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, KeyRound, Instagram } from 'lucide-react'
+import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, KeyRound } from 'lucide-react'
+
+function InstagramIcon({ size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <circle cx="12" cy="12" r="4"/>
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
 import { useAuth } from '../context/AuthContext'
 
 // ─── Password recovery screen (shown after clicking email link) ───────────────
@@ -200,7 +210,7 @@ export default function AuthGate() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-pink-400 transition-colors w-fit"
             >
-              <Instagram size={15} />
+              <InstagramIcon size={15} />
               @easyresumen.app
             </a>
             <div className="flex items-center gap-3 text-xs text-slate-600">
