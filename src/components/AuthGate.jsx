@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, KeyRound } from 'lucide-react'
+import { ReceiptText, Mail, Lock, Eye, EyeOff, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, KeyRound, Instagram } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 // ─── Password recovery screen (shown after clicking email link) ───────────────
@@ -156,10 +156,10 @@ export default function AuthGate() {
       <div className="relative z-10 w-full max-w-5xl mx-auto px-4 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 py-12">
 
         {/* ── Left: branding ── */}
-        <div className="flex-1 text-white text-center lg:text-left">
+        <div className="flex-1 text-white text-left">
 
           {/* Logo */}
-          <div className="flex items-center justify-center lg:justify-start gap-3 mb-8">
+          <div className="flex items-center justify-start gap-3 mb-8">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
               <ReceiptText size={22} className="text-white" />
             </div>
@@ -172,25 +172,43 @@ export default function AuthGate() {
               finanzas
             </span>{' '}al instante
           </h1>
-          <p className="text-slate-400 text-lg mb-10 max-w-sm mx-auto lg:mx-0">
+          <p className="text-slate-400 text-lg mb-10 max-w-sm">
             Analizá resúmenes de tarjeta sin subir datos a ningún servidor.
           </p>
 
-          <ul className="space-y-3 max-w-xs mx-auto lg:mx-0">
+          <ul className="space-y-3 max-w-xs mb-10">
             {FEATURES.map(f => (
               <li key={f.text} className="flex items-center gap-3 text-sm text-slate-300">
-                <span className="text-base shrink-0">{f.icon}</span>
+                <span className="text-base w-5 text-center shrink-0">{f.icon}</span>
                 {f.text}
               </li>
             ))}
           </ul>
 
           {mode === 'register' && (
-            <div className="mt-8 inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-indigo-300">
+            <div className="mb-8 inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-indigo-300">
               <Sparkles size={14} />
               30 días de prueba gratis · Sin tarjeta de crédito
             </div>
           )}
+
+          {/* Instagram + legal links */}
+          <div className="flex flex-col gap-3">
+            <a
+              href="https://www.instagram.com/easyresumen.ar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-pink-400 transition-colors w-fit"
+            >
+              <Instagram size={15} />
+              @easyresumen.ar
+            </a>
+            <div className="flex items-center gap-3 text-xs text-slate-600">
+              <a href="/terminos.html" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Términos y condiciones</a>
+              <span>·</span>
+              <a href="/privacidad.html" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Privacidad</a>
+            </div>
+          </div>
         </div>
 
         {/* ── Right: form card ── */}
@@ -278,6 +296,19 @@ export default function AuthGate() {
                 {mode === 'login' ? 'Registrate gratis' : 'Iniciá sesión'}
               </button>
             </p>
+
+            {mode === 'register' && (
+              <p className="mt-4 text-center text-[11px] text-slate-600 leading-relaxed">
+                Al registrarte aceptás nuestros{' '}
+                <a href="/terminos.html" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 underline underline-offset-2 transition-colors">
+                  Términos y condiciones
+                </a>{' '}
+                y la{' '}
+                <a href="/privacidad.html" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 underline underline-offset-2 transition-colors">
+                  Política de privacidad
+                </a>.
+              </p>
+            )}
           </div>
         </div>
       </div>
