@@ -67,7 +67,12 @@ export default function App() {
     return saved.transactions?.length > 0 ? saved.transactions : []
   })
   const [loading, setLoading]                     = useState([])
-  const [toast, setToast]                         = useState(null)
+  const [toastState, setToastState]               = useState(null) // { id, msg }
+  const toastIdRef                                = useRef(0)
+  const setToast = useCallback((msg) => msg
+    ? setToastState({ id: ++toastIdRef.current, msg })
+    : setToastState(null)
+  , [])
   const [activeTab, setActiveTab]                 = useState('dashboard')
   const [generating, setGenerating]               = useState(false)
   const [budgets, setBudgets]                     = useState(() => loadBudgets())
@@ -104,16 +109,21 @@ export default function App() {
   // Load from cloud when user logs in (web only)
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
+    const txKey = t => `${t.date}|${t.amount}|${t.description}|${t.source}`
     cloudLoad(user.id).then(cloud => {
-      const localTxs   = loadData().transactions ?? []
-      const localBudg  = loadBudgets()
-      const localCats  = loadCustomCategories()
+      const localTxs  = loadData().transactions ?? []
+      const localBudg = loadBudgets()
+      const localCats = loadCustomCategories()
 
       if (cloud?.transactions?.length > 0) {
-        // Cloud has data — use it as source of truth
-        const valid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
-        setTransactions(valid)
-        setToast(`📥 ${valid.length} movimientos cargados desde la nube`)
+        // Merge: cloud base + any local txs not yet in cloud
+        const cloudValid  = cloud.transactions.filter(t => t && t.date && t.amount > 0)
+        const cloudKeys   = new Set(cloudValid.map(txKey))
+        const localOnly   = localTxs.filter(t => !cloudKeys.has(txKey(t)))
+        const merged      = [...cloudValid, ...localOnly]
+        setTransactions(merged)
+        if (localOnly.length > 0) cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats })
+        setToast(`📥 ${merged.length} movimientos cargados desde la nube`)
       } else if (localTxs.length > 0) {
         // First login with local data — push to cloud so it's not lost
         cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats })
@@ -234,16 +244,22 @@ export default function App() {
   }
 
   const exportCSV = () => {
+    const sanitizeCell = v => {
+      const s = String(v ?? '')
+      // Prefix formula-starting chars to prevent CSV injection in Excel/Sheets
+      return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+    }
+    const csvCell = v => `"${sanitizeCell(v).replace(/"/g, "'")}"`
     const data = filteredForReport ?? transactions
     const rows = [
       ['Fecha', 'Descripcion', 'Categoria', 'Tipo', 'Importe', 'Origen'],
       ...data.map(t => [
         t.date,
-        `"${t.description.replace(/"/g, "'")}"`,
-        t.category,
+        csvCell(t.description),
+        sanitizeCell(t.category),
         t.type || 'debit',
         t.type === 'credit' ? t.amount : -t.amount,
-        `"${t.source}"`,
+        csvCell(t.source),
       ]),
     ]
     const csv = rows.map(r => r.join(',')).join('\n')
@@ -269,7 +285,8 @@ export default function App() {
       try {
         setToast('⏳ Generando archivos...')
         setActiveTab('dashboard')
-        await new Promise(r => setTimeout(r, 300))
+        // Wait two animation frames so charts have time to mount and paint
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
         const [pdfResult, xlsxResult] = await Promise.all([
           generateReport({ transactions: txs, chartDonutRef, chartBarRef, asBlob: true }),
           Promise.resolve(exportXLSX(txs, { asBlob: true })),
@@ -372,23 +389,25 @@ export default function App() {
     setToast('✅ Movimiento agregado')
   }
 
-  const [findingsKey, setFindingsKey] = useState(0)
   const findings = useMemo(() => detectUnnecessary(transactions), [transactions])
   const hasData  = transactions.length > 0
 
-  const hasInstallments = transactions.some(t => t.installment)
-
-  const tabs = [
-    { id: 'dashboard',    label: 'Resumen' },
-    { id: 'movimientos',  label: 'Movimientos', count: (filteredForReport && filteredForReport.length < transactions.length) ? filteredForReport.length : transactions.length },
-    { id: 'presupuesto',  label: 'Presupuesto' },
-    ...(hasInstallments ? [{ id: 'cuotas', label: 'Cuotas' }] : []),
-    { id: 'prestamos',    label: 'Préstamos' },
-    { id: 'balance',      label: 'Balance' },
-    { id: 'insights',     label: 'Alertas',
-      count: findings.filter(f => f.type !== 'lastInstallment').length,
-      countGreen: findings.filter(f => f.type === 'lastInstallment').length },
-  ]
+  const tabs = useMemo(() => {
+    const hasInstallments = transactions.some(t => t.installment)
+    const txCount = (filteredForReport && filteredForReport.length < transactions.length)
+      ? filteredForReport.length : transactions.length
+    return [
+      { id: 'dashboard',   label: 'Resumen' },
+      { id: 'movimientos', label: 'Movimientos', count: txCount },
+      { id: 'presupuesto', label: 'Presupuesto' },
+      ...(hasInstallments ? [{ id: 'cuotas', label: 'Cuotas' }] : []),
+      { id: 'prestamos',   label: 'Préstamos' },
+      { id: 'balance',     label: 'Balance' },
+      { id: 'insights',    label: 'Alertas',
+        count: findings.filter(f => f.type !== 'lastInstallment').length,
+        countGreen: findings.filter(f => f.type === 'lastInstallment').length },
+    ]
+  }, [transactions, filteredForReport, findings])
 
   const refreshLicense = () => {
     if (window.electronAPI) {
@@ -685,10 +704,8 @@ export default function App() {
 
             {activeTab === 'insights' && (
               <InsightsPanel
-                key={findingsKey}
                 findings={findings}
                 transactions={transactions}
-                onRefresh={() => setFindingsKey(k => k + 1)}
               />
             )}
           </>
@@ -730,7 +747,7 @@ export default function App() {
         />
       )}
 
-      {toast && <Toast key={toast} msg={toast} onDone={() => setToast(null)} />}
+      {toastState && <Toast key={toastState.id} msg={toastState.msg} onDone={() => setToast(null)} />}
     </div>
   )
 }

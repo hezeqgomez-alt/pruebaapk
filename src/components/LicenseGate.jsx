@@ -346,9 +346,12 @@ export function UpdateToast() {
 
   useEffect(() => {
     if (!window.electronAPI) return
-    window.electronAPI.onUpdateAvailable(() => setState('available'))
-    window.electronAPI.onUpdateProgress(({ percent }) => { setState('downloading'); setPct(Math.round(percent)) })
-    window.electronAPI.onUpdateReady(() => setState('ready'))
+    const unsub = [
+      window.electronAPI.onUpdateAvailable?.(() => setState('available')),
+      window.electronAPI.onUpdateProgress?.(({ percent }) => { setState('downloading'); setPct(Math.round(percent)) }),
+      window.electronAPI.onUpdateReady?.(() => setState('ready')),
+    ]
+    return () => unsub.forEach(fn => typeof fn === 'function' && fn())
   }, [])
 
   if (!state) return null
