@@ -672,6 +672,7 @@ async function renderPageToCanvas(pdfPage, scale = 2.0) {
 // Worker singleton: se inicializa una vez y se reutiliza entre PDFs
 let _ocrWorker = null
 let _ocrWorkerReady = false
+let _ocrWorkerIdleTimer = null
 
 async function getOcrWorker(base, onProgress, numPages) {
   const { createWorker } = await import('tesseract.js')
@@ -705,11 +706,26 @@ async function ocrPages(arrayBuffer, numPages, onProgress) {
       const canvas = await renderPageToCanvas(page)
       const { data: { text } } = await worker.recognize(canvas)
       fullText += text + '\n'
+      // Release canvas memory immediately after OCR
+      canvas.width = 0
+      canvas.height = 0
       onProgress?.({ stage: 'ocr', page: i, total: numPages, pct: (i / numPages) * 100 })
     } catch { /* skip unrenderable page */ }
   }
 
-  // No terminamos el worker — lo reutilizamos la próxima vez
+  await pdf.destroy()
+
+  // Schedule worker termination after 5 minutes of inactivity
+  if (_ocrWorkerIdleTimer) clearTimeout(_ocrWorkerIdleTimer)
+  _ocrWorkerIdleTimer = setTimeout(async () => {
+    if (_ocrWorker) {
+      await _ocrWorker.terminate().catch(() => {})
+      _ocrWorker = null
+      _ocrWorkerReady = false
+      _ocrWorkerIdleTimer = null
+    }
+  }, 5 * 60 * 1000)
+
   return fullText
 }
 

@@ -204,7 +204,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef,
     body: catSorted.map(([cat, amt]) => [
       catLabel(cat),
       fmt(amt),
-      `${((amt / totalDebits) * 100).toFixed(1)}%`,
+      totalDebits > 0 ? `${((amt / totalDebits) * 100).toFixed(1)}%` : '—',
       debits.filter(t => t.category === cat).length,
     ]),
     foot: [['Total gastos', fmt(totalDebits), '100%', debits.length]],
@@ -260,7 +260,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef,
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...DARK)
     doc.text(
-      `${catLabel(cat)}: ${fmt(amt)} (${((amt / totalDebits) * 100).toFixed(1)}%)`,
+      `${catLabel(cat)}: ${fmt(amt)} (${totalDebits > 0 ? ((amt / totalDebits) * 100).toFixed(1) : '0'}%)`,
       lx + 5, ly
     )
   })

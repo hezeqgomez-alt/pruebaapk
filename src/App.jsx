@@ -122,18 +122,18 @@ export default function App() {
         const localOnly   = localTxs.filter(t => !cloudKeys.has(txKey(t)))
         const merged      = [...cloudValid, ...localOnly]
         setTransactions(merged)
-        if (localOnly.length > 0) cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats })
+        if (localOnly.length > 0) cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats }).catch(console.warn)
         setToast(`📥 ${merged.length} movimientos cargados desde la nube`)
       } else if (localTxs.length > 0) {
         // First login with local data — push to cloud so it's not lost
-        cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats })
+        cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats }).catch(console.warn)
       }
 
       if (cloud?.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
       if (cloud?.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
         setCustomCategories(cloud.custom_categories)
       }
-    })
+    }).catch(console.warn)
   }, [user?.id])
 
   // Save to localStorage always; sync to cloud (debounced 2s) when logged in
@@ -143,7 +143,7 @@ export default function App() {
 
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
-    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }), 2000)
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }).catch(console.warn), 2000)
     return () => clearTimeout(t)
   }, [transactions, budgets, customCategories, user?.id])
 
@@ -237,7 +237,7 @@ export default function App() {
       setTransactions([])
       clearData()
       if (user?.id && !window.electronAPI) {
-        cloudSave(user.id, { transactions: [], budgets, customCategories })
+        cloudSave(user.id, { transactions: [], budgets, customCategories }).catch(console.warn)
       }
       setToast('🗑️ Datos eliminados')
     }

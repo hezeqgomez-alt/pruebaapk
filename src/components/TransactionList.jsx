@@ -122,8 +122,13 @@ function SourceFilter({ sources, selected, onChange }) {
   useEffect(() => {
     if (!open) return
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    function handleKeyDown(e) { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [open])
 
   const allSelected = selected.length === 0
@@ -143,6 +148,9 @@ function SourceFilter({ sources, selected, onChange }) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Filtrar por tarjeta: ${label}`}
         className={`flex items-center justify-between gap-2 text-sm border rounded-xl px-3 py-1.5 w-full sm:w-52 text-left transition-colors
           ${selected.length > 0
             ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'
@@ -209,10 +217,15 @@ function SourceFilter({ sources, selected, onChange }) {
 }
 
 function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
+  const isActive = sortBy === field
   return (
     <th
       className={`pb-3 pr-4 text-slate-400 dark:text-slate-500 font-medium cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 whitespace-nowrap text-xs uppercase tracking-wide ${className}`}
       onClick={() => onSort(field)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort(field) } }}
+      tabIndex={0}
+      role="columnheader"
+      aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <span className="flex items-center gap-1">{children}<SortIcon field={field} sortBy={sortBy} sortDir={sortDir} /></span>
     </th>
