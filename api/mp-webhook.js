@@ -9,18 +9,40 @@
  *   SUPABASE_SERVICE_KEY — service_role key de Supabase (solo server-side)
  */
 import { createClient } from '@supabase/supabase-js'
+import { createHmac }   from 'crypto'
 import { sendEmail, proActivationEmail } from './_lib/email.js'
 
+function verifyMPSignature(req) {
+  const secret = process.env.MP_WEBHOOK_SECRET
+  if (!secret) return true // skip if not configured (dev/test)
+
+  const xSignature  = req.headers['x-signature']  || ''
+  const xRequestId  = req.headers['x-request-id'] || ''
+  const dataId      = req.query?.['data.id']       || req.body?.data?.id || ''
+
+  // MP signature format: ts=<timestamp>,v1=<hmac>
+  const parts = Object.fromEntries(xSignature.split(',').map(p => p.split('=')))
+  const ts    = parts['ts'] || ''
+  const v1    = parts['v1'] || ''
+  if (!ts || !v1) return false
+
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+  const expected = createHmac('sha256', secret).update(manifest).digest('hex')
+  return expected === v1
+}
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  // Webhook is called server-to-server — no CORS headers needed
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   // MercadoPago sends GET pings — respond 200 to avoid retries
   if (req.method === 'GET') return res.status(200).json({ ok: true })
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  if (!verifyMPSignature(req)) {
+    return res.status(401).json({ error: 'Invalid signature' })
+  }
 
   const { type, data } = req.body || {}
 

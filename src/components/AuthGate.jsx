@@ -105,7 +105,7 @@ const FEATURES = [
 export default function AuthGate() {
   const { signIn, signUp, resetPassword, passwordRecovery } = useAuth()
 
-  if (passwordRecovery) return <PasswordRecoveryScreen />
+  // All hooks must run unconditionally before any early return (Rules of Hooks)
   const [mode,     setMode]     = useState('login')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -114,6 +114,8 @@ export default function AuthGate() {
   const [error,    setError]    = useState('')
   const [confirm,  setConfirm]  = useState(false)
   const [resetSent, setResetSent] = useState(false)
+
+  if (passwordRecovery) return <PasswordRecoveryScreen />
 
   const handleSubmit = async (e) => {
     e.preventDefault()

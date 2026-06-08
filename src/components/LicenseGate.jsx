@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw, Zap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
+
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token || null
+}
 
 // ─── PRO badge ────────────────────────────────────────────────────────────────
 
@@ -129,10 +135,11 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
     setChecking(true)
     setVerifyMsg('')
     try {
+      const token = await getAccessToken()
       const res = await fetch('/api/verify-subscription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, email: user?.email }),
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (data.activated) {
@@ -141,9 +148,11 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
         setTimeout(() => onActivated?.(), 1500)
         return
       }
-      setVerifyMsg(data.found === false
-        ? 'No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.'
-        : 'Ocurrió un error al verificar. Intentá de nuevo.')
+      setVerifyMsg(!res.ok
+        ? 'Error al contactar MercadoPago. Intentá de nuevo en unos minutos.'
+        : data.found === false
+          ? 'No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.'
+          : 'Ocurrió un error al verificar. Intentá de nuevo.')
     } catch {
       setVerifyMsg('Error de conexión. Revisá tu internet e intentá de nuevo.')
     } finally {
@@ -230,10 +239,11 @@ export function ExpiredGate({ onActivated }) {
     setChecking(true)
     setErrMsg('')
     try {
+      const token = await getAccessToken()
       const res = await fetch('/api/verify-subscription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, email: user?.email }),
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (data.activated) {

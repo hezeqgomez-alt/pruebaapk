@@ -40,7 +40,9 @@ export function AuthProvider({ children }) {
       return
     }
 
-    supabase.auth.getSession().then(({ data }) => refresh(data.session))
+    supabase.auth.getSession()
+      .then(({ data }) => refresh(data.session))
+      .catch(() => setUser(null))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {

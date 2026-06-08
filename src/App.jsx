@@ -147,7 +147,7 @@ export default function App() {
     saveCustomCategories(cats)
   }, [])
 
-  const handleFiles = useCallback(async (files) => {
+  const handleFiles = useCallback(async (files) => { // eslint-disable-line react-hooks/exhaustive-deps
     for (const file of files) {
       // Check PDF limit for trial users before parsing
       if (window.electronAPI) {
@@ -220,7 +220,7 @@ export default function App() {
       }
       setLoading(l => l.filter(n => n !== file.name))
     }
-  }, [])
+  }, [user, webTrackPDF])
 
   const handleClearAll = () => {
     if (confirm('¿Borrar todos los movimientos cargados?')) {
