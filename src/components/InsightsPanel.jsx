@@ -67,7 +67,7 @@ function formatCompletedDate(dateStr) {
 function FreedCapitalSummary({ findings }) {
   const [dismissed, setDismissed] = useState(new Set())
   const completed = findings
-    .filter(f => f.type === 'lastInstallment' && !dismissed.has(f.transactions[0].description))
+    .filter(f => f.type === 'lastInstallment' && f.transactions?.[0] && !dismissed.has(f.transactions[0].description))
   if (completed.length === 0) return null
   const totalFreed = completed.reduce((s, f) => s + f.total, 0)
   return (
@@ -92,17 +92,17 @@ function FreedCapitalSummary({ findings }) {
           <div key={i} className="flex items-center gap-3 bg-white/70 dark:bg-white/10 rounded-xl px-3 py-2">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                {f.transactions[0].description}
+                {f.transactions[0]?.description}
               </div>
               <div className="text-xs text-slate-400 dark:text-slate-500">
-                {f.transactions[0].installment.total} cuotas · completado {formatCompletedDate(f.completedDate)}
+                {f.transactions[0]?.installment?.total} cuotas · completado {formatCompletedDate(f.completedDate)}
               </div>
             </div>
             <div className="text-sm font-bold text-teal-700 dark:text-teal-300 shrink-0">
               {fmt(f.total)}/mes
             </div>
             <button
-              onClick={() => setDismissed(d => new Set([...d, f.transactions[0].description]))}
+              onClick={() => setDismissed(d => new Set([...d, f.transactions[0]?.description]))}
               title="Descartar"
               className="w-5 h-5 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
             >
@@ -191,6 +191,7 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
 
   const byCategory = {}
   for (const t of transactions) {
+    if (t.type === 'credit') continue
     byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
   }
   const topCat = Object.entries(byCategory).sort(([, a], [, b]) => b - a)[0]
@@ -202,7 +203,7 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
       title: f.label,
       body: f.type === 'subscription'
         ? `"${f.description.slice(0, 30)}" se repite ${f.count} veces — ${fmt(f.total)} en total`
-        : f.type === 'lastInstallment'
+        : f.type === 'lastInstallment' && f.transactions?.[0]
         ? `Cuota ${f.transactions[0].installment.total}/${f.transactions[0].installment.total} · completado ${formatCompletedDate(f.completedDate)} · libera ${fmt(f.total)}/mes`
         : f.description,
       amount: f.total ? fmt(f.total) : null,

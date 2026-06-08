@@ -85,9 +85,9 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange, cu
   }
 
   const totalSpend = Object.values(spendByCategory).reduce((s, v) => s + v, 0)
-  const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0)
-  const budgetedCategories = categories.filter(c => budgets[c])
-  const overBudget = budgetedCategories.filter(c => (spendByCategory[c] || 0) > budgets[c])
+  const totalBudget = Object.values(budgets).reduce((s, v) => s + (Number(v) || 0), 0)
+  const budgetedCategories = categories.filter(c => Number(budgets[c]) > 0)
+  const overBudget = budgetedCategories.filter(c => (spendByCategory[c] || 0) > Number(budgets[c]))
 
   if (transactions.length === 0) {
     return (
@@ -154,7 +154,7 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange, cu
         <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
           {categories.map(cat => {
             const spend   = spendByCategory[cat] || 0
-            const budget  = budgets[cat] || 0
+            const budget  = Number(budgets[cat]) || 0
             const pct     = budget > 0 ? Math.min((spend / budget) * 100, 100) : 0
             const over    = budget > 0 && spend > budget
             const near    = budget > 0 && pct >= 80 && !over

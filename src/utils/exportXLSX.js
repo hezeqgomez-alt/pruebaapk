@@ -9,6 +9,12 @@ function safeDate(d) {
 
 function fmtNum(n) { return Math.round(n * 100) / 100 }
 
+// Prevent formula injection in spreadsheet cells
+function sanitizeCell(v) {
+  if (typeof v !== 'string') return v
+  return /^[=+\-@\t\r]/.test(v) ? "'" + v : v
+}
+
 export function exportXLSX(transactions, { asBlob = false } = {}) {
   const wb = XLSX.utils.book_new()
 
@@ -41,9 +47,9 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
     .sort(([, a], [, b]) => b - a)
     .forEach(([cat, amt]) => {
       catRows.push([
-        CATEGORIES[cat]?.label || cat,
+        sanitizeCell(CATEGORIES[cat]?.label || cat),
         fmtNum(amt),
-        fmtNum((amt / totalD) * 100),
+        totalD > 0 ? fmtNum((amt / totalD) * 100) : 0,
         debits.filter(t => t.category === cat).length,
       ])
     })
@@ -80,15 +86,15 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
     .sort((a, b) => b.date.localeCompare(a.date))
     .map(t => [
       safeDate(t.date),
-      t.description,
-      CATEGORIES[t.category]?.label || t.category,
+      sanitizeCell(t.description),
+      sanitizeCell(CATEGORIES[t.category]?.label || t.category),
       t.type === 'credit' ? 'Crédito' : 'Débito',
       t.type === 'credit' ? fmtNum(t.amount) : fmtNum(-t.amount),
       t.originalCurrency || '',
       t.originalAmount ? fmtNum(t.originalAmount) : '',
       t.installment ? `${t.installment.current}/${t.installment.total}` : '',
-      t.note || '',
-      t.source,
+      sanitizeCell(t.note || ''),
+      sanitizeCell(t.source),
     ])]
   const wsTx = XLSX.utils.aoa_to_sheet(txRows)
   wsTx['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 30 }, { wch: 30 }]

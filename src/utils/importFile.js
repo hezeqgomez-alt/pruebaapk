@@ -19,11 +19,15 @@ function parseDate(raw) {
   if (m1) return `${m1[3]}-${m1[2].padStart(2, '0')}-${m1[1].padStart(2, '0')}`
   // YYYY-MM-DD (from CSV export)
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-  // Excel serial date number
+  // Excel serial date number (must be in a valid modern range: 1900–2100)
   if (/^\d+(\.\d+)?$/.test(s)) {
     try {
-      const d = XLSX.SSF.parse_date_code(parseFloat(s))
-      if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`
+      const serial = parseFloat(s)
+      if (serial >= 1 && serial <= 73050) { // 73050 ≈ year 2099
+        const d = XLSX.SSF.parse_date_code(serial)
+        if (d && d.y >= 2000 && d.y <= 2099)
+          return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`
+      }
     } catch { /* ignore */ }
   }
   return null
@@ -115,7 +119,11 @@ function rowsToTransactions(headers, rows) {
   return txs
 }
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10 MB
+const MAX_ROWS = 50_000
+
 export async function importFromXLSX(file) {
+  if (file.size > MAX_FILE_BYTES) throw new Error('El archivo es demasiado grande (máx. 10 MB)')
   const buffer = await file.arrayBuffer()
   const wb = XLSX.read(buffer, { type: 'array' })
 
@@ -128,11 +136,12 @@ export async function importFromXLSX(file) {
 
   if (data.length < 2) return []
   const headers = data[0]
-  const rows = data.slice(1).filter(r => r.some(c => c !== ''))
+  const rows = data.slice(1, MAX_ROWS + 1).filter(r => r.some(c => c !== ''))
   return rowsToTransactions(headers, rows)
 }
 
 export function importFromCSV(text) {
+  if (text.length > MAX_FILE_BYTES) throw new Error('El archivo es demasiado grande (m\u00E1x. 10 MB)')
   // Strip UTF-8 BOM if present
   const clean = text.replace(/^\uFEFF/, '')
   const lines = clean.split(/\r?\n/).filter(l => l.trim())
@@ -152,6 +161,6 @@ export function importFromCSV(text) {
   }
 
   const headers = parseLine(lines[0])
-  const rows = lines.slice(1).map(parseLine)
+  const rows = lines.slice(1, MAX_ROWS + 1).map(parseLine)
   return rowsToTransactions(headers, rows)
 }

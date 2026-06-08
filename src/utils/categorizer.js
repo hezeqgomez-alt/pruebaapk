@@ -394,16 +394,25 @@ export function detectUnnecessary(transactions) {
   }
 
   // Merchant concentration: one merchant > 50% of its category total
-  const catTotals = {}
-  const merchantTotals = {}
-  for (const t of transactions.filter(t => t.type !== 'credit')) {
-    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount
-    const mk = `${t.category}|${normalize(t.description).slice(0, 20)}`
-    merchantTotals[mk] = (merchantTotals[mk] || 0) + t.amount
+  // Precompute normalized descriptions once to avoid O(n²) repeated normalize() calls
+  const normDescCache = new Map()
+  const getNorm = t => {
+    if (!normDescCache.has(t.id)) normDescCache.set(t.id, normalize(t.description).slice(0, 20))
+    return normDescCache.get(t.id)
   }
+
+  const catTotals = {}
   const catCounts = {}
-  for (const t of transactions.filter(t => t.type !== 'credit')) {
+  const merchantTotals = {}
+  const merchantTxs = {} // mk → array of transactions
+  for (const t of transactions) {
+    if (t.type === 'credit') continue
+    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount
     catCounts[t.category] = (catCounts[t.category] || 0) + 1
+    const mk = `${t.category}|${getNorm(t)}`
+    merchantTotals[mk] = (merchantTotals[mk] || 0) + t.amount
+    if (!merchantTxs[mk]) merchantTxs[mk] = []
+    merchantTxs[mk].push(t)
   }
   for (const [mk, amt] of Object.entries(merchantTotals)) {
     const [cat, desc] = mk.split('|')
@@ -415,9 +424,9 @@ export function detectUnnecessary(transactions) {
           type: 'concentration',
           label: 'Gasto concentrado en un comercio',
           description: `"${desc}" representa el ${Math.round((amt / catTotal) * 100)}% de ${CATEGORIES[cat]?.label || cat}`,
-          count: transactions.filter(t => normalize(t.description).startsWith(desc)).length,
+          count: merchantTxs[mk].length,
           total: amt,
-          transactions: transactions.filter(t => normalize(t.description).slice(0, 20).startsWith(desc)),
+          transactions: merchantTxs[mk],
         })
       }
     }

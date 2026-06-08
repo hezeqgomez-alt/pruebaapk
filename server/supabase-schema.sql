@@ -23,3 +23,31 @@ create index if not exists licenses_email_idx on licenses (email);
 alter table licenses enable row level security;
 
 -- No public policies — all access goes through our API with service_role key
+
+-- ─── user_data: cloud sync table ──────────────────────────────────────────────
+create table if not exists user_data (
+  id                uuid        default gen_random_uuid() primary key,
+  user_id           uuid        not null unique references auth.users(id) on delete cascade,
+  transactions      jsonb       default '[]',
+  budgets           jsonb       default '{}',
+  custom_categories jsonb       default '{}',
+  updated_at        timestamptz default now(),
+  created_at        timestamptz default now()
+);
+
+create index if not exists user_data_user_id_idx on user_data (user_id);
+
+alter table user_data enable row level security;
+
+-- Each user can only read and write their own row
+create policy "users_select_own" on user_data
+  for select using (auth.uid() = user_id);
+
+create policy "users_insert_own" on user_data
+  for insert with check (auth.uid() = user_id);
+
+create policy "users_update_own" on user_data
+  for update using (auth.uid() = user_id);
+
+create policy "users_delete_own" on user_data
+  for delete using (auth.uid() = user_id);

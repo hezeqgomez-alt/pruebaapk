@@ -104,26 +104,31 @@ export default function App() {
   // Load from cloud when user logs in (web only)
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
+    const txKey = t => `${t.date}|${t.amount}|${t.description}|${t.source}`
     cloudLoad(user.id).then(cloud => {
       const localTxs   = loadData().transactions ?? []
       const localBudg  = loadBudgets()
       const localCats  = loadCustomCategories()
 
       if (cloud?.transactions?.length > 0) {
-        // Cloud has data — use it as source of truth
-        const valid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
-        setTransactions(valid)
-        setToast(`📥 ${valid.length} movimientos cargados desde la nube`)
+        // Merge: cloud base + any local txs not yet in cloud
+        const cloudValid  = cloud.transactions.filter(t => t && t.date && t.amount > 0)
+        const cloudKeys   = new Set(cloudValid.map(txKey))
+        const localOnly   = localTxs.filter(t => !cloudKeys.has(txKey(t)))
+        const merged      = [...cloudValid, ...localOnly]
+        setTransactions(merged)
+        if (localOnly.length > 0) cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats }).catch(console.warn)
+        setToast(`📥 ${merged.length} movimientos cargados desde la nube`)
       } else if (localTxs.length > 0) {
         // First login with local data — push to cloud so it's not lost
-        cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats })
+        cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats }).catch(console.warn)
       }
 
       if (cloud?.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
       if (cloud?.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
         setCustomCategories(cloud.custom_categories)
       }
-    })
+    }).catch(console.warn)
   }, [user?.id])
 
   // Save to localStorage always; sync to cloud (debounced 2s) when logged in
@@ -133,7 +138,7 @@ export default function App() {
 
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
-    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }), 2000)
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }).catch(console.warn), 2000)
     return () => clearTimeout(t)
   }, [transactions, budgets, customCategories, user?.id])
 
@@ -227,7 +232,7 @@ export default function App() {
       setTransactions([])
       clearData()
       if (user?.id && !window.electronAPI) {
-        cloudSave(user.id, { transactions: [], budgets, customCategories })
+        cloudSave(user.id, { transactions: [], budgets, customCategories }).catch(console.warn)
       }
       setToast('🗑️ Datos eliminados')
     }
