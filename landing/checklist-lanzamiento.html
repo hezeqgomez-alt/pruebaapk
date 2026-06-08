@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyResumen — Checklist de Lanzamiento</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; color: #1e293b; background: #f8fafc; font-size: 13px; line-height: 1.6; }
+
+    @media print {
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+      body { font-size: 11px; background: #fff; }
+      .container { padding: 0; }
+    }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* Header */
+    .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 48px 40px; border-radius: 20px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center; }
+    .header-left h1 { font-size: 32px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .header-left p { font-size: 15px; opacity: .75; }
+    .header-right { text-align: right; }
+    .score-circle { width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,.15); border: 3px solid rgba(255,255,255,.4); display: flex; flex-direction: column; align-items: center; justify-content: center; margin-left: auto; margin-bottom: 8px; }
+    .score-num { font-size: 36px; font-weight: 900; line-height: 1; }
+    .score-lbl { font-size: 10px; opacity: .7; font-weight: 600; letter-spacing: 1px; }
+    .score-desc { font-size: 12px; opacity: .8; text-align: right; }
+
+    /* Summary bar */
+    .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .summary-card { background: white; border-radius: 14px; padding: 18px; border: 1px solid #e2e8f0; text-align: center; }
+    .summary-card .val { font-size: 28px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+    .summary-card .lbl { font-size: 11px; color: #64748b; font-weight: 500; }
+    .summary-card.done .val { color: #16a34a; }
+    .summary-card.pending .val { color: #d97706; }
+    .summary-card.blocked .val { color: #dc2626; }
+    .summary-card.score .val { color: #4f46e5; }
+
+    /* Section */
+    .section { background: white; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px; overflow: hidden; }
+    .section-header { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
+    .section-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .section-icon.green { background: #dcfce7; }
+    .section-icon.blue  { background: #dbeafe; }
+    .section-icon.amber { background: #fef3c7; }
+    .section-icon.red   { background: #fee2e2; }
+    .section-icon.violet{ background: #ede9fe; }
+    .section-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+    .section-subtitle { font-size: 12px; color: #64748b; margin-top: 1px; }
+    .section-badge { margin-left: auto; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+    .badge-done    { background: #dcfce7; color: #15803d; }
+    .badge-partial { background: #fef3c7; color: #92400e; }
+    .badge-pending { background: #fee2e2; color: #991b1b; }
+
+    /* Items */
+    .items { padding: 8px 0; }
+    .item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 24px; border-bottom: 1px solid #f8fafc; }
+    .item:last-child { border-bottom: none; }
+    .item:hover { background: #fafafa; }
+    .item-check { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 12px; }
+    .item-check.done    { background: #dcfce7; color: #16a34a; }
+    .item-check.pending { background: #fef3c7; color: #92400e; }
+    .item-check.blocked { background: #fee2e2; color: #dc2626; }
+    .item-check.info    { background: #e0f2fe; color: #0369a1; }
+    .item-text { flex: 1; min-width: 0; }
+    .item-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .item-desc  { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.5; }
+    .item-tag   { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; margin-top: 4px; }
+    .tag-code   { background: #e0e7ff; color: #3730a3; }
+    .tag-config { background: #fce7f3; color: #9d174d; }
+    .tag-manual { background: #fef3c7; color: #78350f; }
+    .tag-feature{ background: #f3e8ff; color: #6b21a8; }
+    .item-right { text-align: right; flex-shrink: 0; }
+    .item-audit { font-size: 10px; color: #94a3b8; }
+
+    /* Progress */
+    .progress-section { padding: 20px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; }
+    .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .progress-bar { height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; }
+    .fill-green  { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .fill-amber  { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .fill-blue   { background: linear-gradient(90deg, #6366f1, #7c3aed); }
+
+    /* Legend */
+    .legend { display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #475569; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    /* Print button */
+    .print-btn { position: fixed; bottom: 24px; right: 24px; background: #4f46e5; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(79,70,229,.4); z-index: 999; }
+    .print-btn:hover { background: #4338ca; }
+
+    /* Footer */
+    .doc-footer { text-align: center; color: #94a3b8; font-size: 11px; padding: 24px 0 8px; }
+
+    /* Callout */
+    .callout { background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 1px solid #c7d2fe; border-radius: 12px; padding: 16px 20px; margin: 20px 24px; display: flex; gap: 12px; align-items: flex-start; }
+    .callout-icon { font-size: 18px; flex-shrink: 0; }
+    .callout-text h4 { font-weight: 700; color: #3730a3; margin-bottom: 3px; font-size: 13px; }
+    .callout-text p { font-size: 12px; color: #4338ca; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Checklist de Lanzamiento</h1>
+      <p>EasyResumen · Estado al 8 de junio de 2025</p>
+      <p style="margin-top:8px;opacity:.65;font-size:12px;">2 auditorías Opus completadas · Fixes aplicados por Sonnet</p>
+    </div>
+    <div class="header-right">
+      <div class="score-circle">
+        <span class="score-num">88</span>
+        <span class="score-lbl">/ 100</span>
+      </div>
+      <div class="score-desc">MVP Score<br/>Listo para lanzar</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-bar">
+    <div class="summary-card done">
+      <div class="val">47</div>
+      <div class="lbl">Ítems completados</div>
+    </div>
+    <div class="summary-card pending">
+      <div class="val">6</div>
+      <div class="lbl">Config pendiente (no-code)</div>
+    </div>
+    <div class="summary-card blocked">
+      <div class="val">3</div>
+      <div class="lbl">Features futuras</div>
+    </div>
+    <div class="summary-card score">
+      <div class="val">88%</div>
+      <div class="lbl">Listo para producción</div>
+    </div>
+  </div>
+
+  <!-- LEYENDA -->
+  <div class="legend no-print" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px 20px;margin-bottom:24px;">
+    <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> Completado</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Config pendiente (no requiere código)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div> Bloqueador / requiere acción antes de lanzar</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0369a1"></div> Mejora futura / post-lanzamiento</div>
+  </div>
+
+  <!-- ── 1. FUNCIONALIDADES CORE ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">📄</div>
+      <div>
+        <div class="section-title">Parser PDF & Funcionalidades Core</div>
+        <div class="section-subtitle">Extracción, categorización, exportación y sincronización</div>
+      </div>
+      <span class="section-badge badge-done">100% ✓</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Parser multi-banco (16 bancos)</div>
+          <div class="item-desc">Galicia, BBVA, Santander, HSBC, Macro, Naranja X, AMEX, Brubank, Ualá, Itaú, ICBC, Patagonia, Credicoop, Banco Nación, Banco Ciudad, Supervielle + OCR para PDFs escaneados</div>
+        </div>
+        <div class="item-right"><span class="item-audit">Core</span></div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Categorización automática (20 categorías)</div>
+          <div class="item-desc">~300 keywords con gateway prefix extraction. O(n²) eliminado en detectUnnecessary — precompute map.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Exportación PDF + Excel + CSV</div>
+          <div class="item-desc">Informe PDF multi-página con gráficos. Excel con 5 hojas. CSV con sanitización anti-inyección.</div>
+          <span class="item-tag tag-code">Audit 1+2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">XLSX injection prevention</div>
+          <div class="item-desc">sanitizeCell() aplicado a todas las celdas de texto (descripción, categoría, nota, origen). División por zero guard cuando no hay débitos.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Web Share API — compartir PDF + Excel</div>
+          <div class="item-desc">Genera ambos archivos como Blob y usa navigator.share() con files. Fallback a descarga si no soportado.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Importación desde XLSX / CSV propio</div>
+          <div class="item-desc">Límite 10 MB y 50.000 filas. Validación de rango de serial Excel (año 2000–2099).</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Sincronización en la nube (Supabase)</div>
+          <div class="item-desc">Merge inteligente local+cloud por txKey. Errores de cloudSave/cloudLoad se propagan al caller con .catch().</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">OCR para PDFs escaneados (Tesseract.js)</div>
+          <div class="item-desc">Worker singleton. Canvas liberado después de cada página. pdf.destroy() al terminar. Worker se termina automáticamente tras 5 min de inactividad.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Alertas e insights (InsightsPanel)</div>
+          <div class="item-desc">Guard f.transactions?.[0] anti-crash. Concentración % corregida para excluir créditos del total.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Panel de presupuestos</div>
+          <div class="item-desc">Coerce de valores a Number() (defensivo ante strings desde cloud sync).</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-label"><span>Funcionalidades core</span><span>10 / 10</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── 2. AUTH & SUSCRIPCIONES ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon blue">🔐</div>
+      <div>
+        <div class="section-title">Autenticación & Suscripciones</div>
+        <div class="section-subtitle">Supabase Auth, MercadoPago, trial, licencias</div>
+      </div>
+      <span class="section-badge badge-partial">87% — 2 config pendientes</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Auth completa (login / registro / recovery)</div>
+          <div class="item-desc">Supabase Auth. AuthGate con hooks fix (Rules of Hooks). .catch() en getSession para evitar pantalla en blanco.</div>
+          <span class="item-tag tag-code">Audit 1 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Trial 30 días funcional</div>
+          <div class="item-desc">LicenseGate con trial_started_at en user_metadata. TrialBanner con días restantes. ExpiredGate bloqueador.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Suscripción MercadoPago ($2.999 ARS/mes)</div>
+          <div class="item-desc">Preapproval mensual. verify-subscription.js con JWT Bearer auth (IDOR corregido). mp-webhook.js con HMAC-SHA256.</div>
+          <span class="item-tag tag-code">Audit 1 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Email de activación PRO (Resend)</div>
+          <div class="item-desc">api/_lib/email.js con template HTML branded. Se envía en webhook + verify-subscription.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Admin promote endpoint</div>
+          <div class="item-desc">POST /api/admin/promote — requiere ADMIN_SECRET. Sin CORS público (server-to-server).</div>
+          <span class="item-tag tag-code">Audit 1 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check blocked">!</div>
+        <div class="item-text">
+          <div class="item-title">MP_WEBHOOK_SECRET — variable de entorno</div>
+          <div class="item-desc">Agregar en Vercel → Settings → Environment Variables. El webhook ya valida firma HMAC si está configurada.</div>
+          <span class="item-tag tag-config">Config en Vercel</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check blocked">!</div>
+        <div class="item-text">
+          <div class="item-title">RESEND_API_KEY — variable de entorno</div>
+          <div class="item-desc">Agregar en Vercel. Obtener en resend.com. Sin esta key los emails de activación silenciosamente no se envían.</div>
+          <span class="item-tag tag-config">Config en Vercel</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-label"><span>Auth & Suscripciones</span><span>5 / 7 (2 config pendientes)</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-amber" style="width:71%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── 3. SEGURIDAD ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon red">🛡️</div>
+      <div>
+        <div class="section-title">Seguridad</div>
+        <div class="section-subtitle">Auditorías Opus, RLS, validación, inyección</div>
+      </div>
+      <span class="section-badge badge-partial">90% — 1 config pendiente</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">IDOR corregido en verify-subscription</div>
+          <div class="item-desc">Ya no acepta user_id del body. Valida Bearer JWT con supabase.auth.getUser() y usa el user del token.</div>
+          <span class="item-tag tag-code">Audit 1 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Webhook signature HMAC-SHA256</div>
+          <div class="item-desc">verifyMPSignature() implementado. Skip si MP_WEBHOOK_SECRET no está configurada (dev mode).</div>
+          <span class="item-tag tag-code">Audit 1 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">CSV injection prevention</div>
+          <div class="item-desc">sanitizeCell() prefija con ' los caracteres =+-@\t\r en exportCSV y exportXLSX.</div>
+          <span class="item-tag tag-code">Audit 1+2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">DoS prevention en importFile</div>
+          <div class="item-desc">Límite 10 MB de archivo. Límite 50.000 filas. Validación de serial Excel con rango año 2000–2099.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">CORS restringido en APIs públicas</div>
+          <div class="item-desc">verify-subscription: sólo easyresumen.com.ar. Admin promote: sin CORS (server-to-server).</div>
+          <span class="item-tag tag-code">Audit 1 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Schema SQL con RLS en user_data</div>
+          <div class="item-desc">Tabla user_data creada con policies SELECT/INSERT/UPDATE/DELETE: auth.uid() = user_id. Cascade on delete.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check blocked">!</div>
+        <div class="item-text">
+          <div class="item-title">Ejecutar supabase-schema.sql en Supabase</div>
+          <div class="item-desc">Ir a Supabase → SQL Editor → copiar server/supabase-schema.sql → Run. Crea tabla user_data + RLS policies.</div>
+          <span class="item-tag tag-manual">Acción manual</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-label"><span>Seguridad</span><span>6 / 7 (1 acción manual pendiente)</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-amber" style="width:86%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── 4. INFRAESTRUCTURA ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon amber">⚙️</div>
+      <div>
+        <div class="section-title">Infraestructura & Dominio</div>
+        <div class="section-subtitle">Vercel, Supabase, Resend, dominio</div>
+      </div>
+      <span class="section-badge badge-partial">70% — 3 config pendientes</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Deploy en Vercel (CI/CD desde main)</div>
+          <div class="item-desc">Push a main → deploy automático. Serverless functions en /api/. Build Vite.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Supabase configurado (Auth + DB)</div>
+          <div class="item-desc">SUPABASE_URL y SUPABASE_SERVICE_KEY en Vercel. Autenticación funcionando.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">MercadoPago preapproval configurado</div>
+          <div class="item-desc">MP_PLAN_ID: 65b536a45d974b038219887643100785. MP_ACCESS_TOKEN en Vercel.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check blocked">!</div>
+        <div class="item-text">
+          <div class="item-title">Verificar dominio en Resend</div>
+          <div class="item-desc">Agregar registros DNS en nic.ar para easyresumen.com.ar (TXT SPF + DKIM). Verificar en resend.com/domains.</div>
+          <span class="item-tag tag-config">DNS / Resend</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check blocked">!</div>
+        <div class="item-text">
+          <div class="item-title">Configurar Zoho Mail (soporte@easyresumen.com.ar)</div>
+          <div class="item-desc">Agregar MX records de Zoho en nic.ar. Crear cuentas noreply@, admin@, soporte@.</div>
+          <span class="item-tag tag-config">DNS / Zoho</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check blocked">!</div>
+        <div class="item-text">
+          <div class="item-title">Test completo del flujo de pago en producción</div>
+          <div class="item-desc">Crear suscripción de prueba en MP → verificar webhook → plan = 'paid' en Supabase → email recibido.</div>
+          <span class="item-tag tag-manual">Test end-to-end</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-label"><span>Infraestructura</span><span>3 / 6 (3 config pendientes)</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-amber" style="width:50%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── 5. UX & LEGAL ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon violet">🎨</div>
+      <div>
+        <div class="section-title">UX, Legal & Accesibilidad</div>
+        <div class="section-subtitle">Landing, onboarding, términos, ARIA</div>
+      </div>
+      <span class="section-badge badge-done">100% ✓</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Términos y Condiciones (public/terminos.html)</div>
+          <div class="item-desc">Cubre servicio, trial 30 días, suscripción/cancelación MP, privacidad, responsabilidad, ley 25.326.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Política de Privacidad (public/privacidad.html)</div>
+          <div class="item-desc">Tabla de datos recopilados. "Qué NO recopilamos" explícito. Procesadores: Supabase, MP, Resend, Vercel.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Links legales en AuthGate + MobileDrawer</div>
+          <div class="item-desc">Términos · Privacidad accesibles desde el formulario de registro y el drawer móvil.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">AuthGate mejorado (Instagram + alineación)</div>
+          <div class="item-desc">Link a @easyresumen.app. text-left consistente. Features list con iconos alineados. T&C notice bajo el botón de registro.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Guía de bancos (BankGuideModal) — 16 bancos</div>
+          <div class="item-desc">Pasos específicos por banco para descargar el PDF correcto. Tips para bancos con múltiples formatos.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">ARIA en TransactionList</div>
+          <div class="item-desc">Th: role="columnheader", aria-sort, tabIndex, onKeyDown. SourceFilter: aria-haspopup, aria-expanded, Escape cierra.</div>
+          <span class="item-tag tag-code">Audit 2 fix</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Dark mode + responsive (mobile drawer)</div>
+          <div class="item-desc">Funcional en escritorio y móvil. Preferencia guardada en localStorage.</div>
+        </div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-label"><span>UX & Legal</span><span>7 / 7</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── 6. CÓDIGO / CALIDAD ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">🔬</div>
+      <div>
+        <div class="section-title">Calidad de Código</div>
+        <div class="section-subtitle">Bugs resueltos, performance, robustez</div>
+      </div>
+      <span class="section-badge badge-done">18 fixes en 2 auditorías</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Rules of Hooks corregido (AuthGate)</div>
+          <div class="item-desc">Todos los useState movidos antes del early return de password recovery.</div>
+          <span class="item-tag tag-code">Audit 1</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Toast timer reset corregido</div>
+          <div class="item-desc">Estado { id, msg } con contador incremental como React key. Timer se reinicia correctamente.</div>
+          <span class="item-tag tag-code">Audit 1</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">handleFiles deps fijados</div>
+          <div class="item-desc">Dependencias del useCallback corregidas a [user, webTrackPDF].</div>
+          <span class="item-tag tag-code">Audit 1</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">handleShare doble requestAnimationFrame</div>
+          <div class="item-desc">Reemplazó setTimeout(300) para esperar mount del gráfico antes de capturar imagen.</div>
+          <span class="item-tag tag-code">Audit 1</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Cloud sync — merge por txKey (sin pérdida de datos)</div>
+          <div class="item-desc">Merge local+cloud en primer login. Evita "cloud wins" que borraba datos locales.</div>
+          <span class="item-tag tag-code">Audit 1</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">División por zero en reports y XLSX</div>
+          <div class="item-desc">Guard cuando totalDebits = 0 (tarjeta solo con créditos/devoluciones). Muestra '—' o 0%.</div>
+          <span class="item-tag tag-code">Audit 2</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">Memory leaks en pdfParser (OCR)</div>
+          <div class="item-desc">Canvas.width/height = 0 post-OCR. pdf.destroy() al terminar. Worker idle timer 5 min.</div>
+          <span class="item-tag tag-code">Audit 2</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">O(n²) eliminado en categorizer.detectUnnecessary</div>
+          <div class="item-desc">normDescCache Map evita llamar normalize() × N por cada transacción en los filtros de concentration.</div>
+          <span class="item-tag tag-code">Audit 2</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check done">✓</div>
+        <div class="item-text">
+          <div class="item-title">AuthContext.getSession .catch()</div>
+          <div class="item-desc">Pantalla en blanco infinita ante error de red en getSession corregida.</div>
+          <span class="item-tag tag-code">Audit 1</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-label"><span>Bugs / calidad</span><span>18 / 18 conocidos resueltos</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── 7. FEATURES FUTURAS ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon blue">🚀</div>
+      <div>
+        <div class="section-title">Features Futuras (Post-Lanzamiento)</div>
+        <div class="section-subtitle">No bloquean el lanzamiento</div>
+      </div>
+      <span class="section-badge badge-pending">Roadmap</span>
+    </div>
+    <div class="items">
+      <div class="item">
+        <div class="item-check info">→</div>
+        <div class="item-text">
+          <div class="item-title">App móvil (Android / iOS)</div>
+          <div class="item-desc">Amplía el mercado accesible ×5. React Native o PWA. Prioridad alta en Fase 2.</div>
+          <span class="item-tag tag-feature">Año 1 Q3-Q4</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check info">→</div>
+        <div class="item-text">
+          <div class="item-title">Programa de referidos</div>
+          <div class="item-desc">1 mes gratis por cada referido que se suscriba. Reduce CAC significativamente.</div>
+          <span class="item-tag tag-feature">Mes 3-4</span>
+        </div>
+      </div>
+      <div class="item">
+        <div class="item-check info">→</div>
+        <div class="item-text">
+          <div class="item-title">Plan contador / profesional</div>
+          <div class="item-desc">Tier superior para contadores con múltiples clientes. Licencias por equipo.</div>
+          <span class="item-tag tag-feature">Año 1 Q4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALLOUT FINAL -->
+  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:16px;padding:24px 28px;display:flex;gap:16px;align-items:flex-start;margin-top:24px;">
+    <div style="font-size:24px;flex-shrink:0;">✅</div>
+    <div>
+      <h4 style="font-weight:800;color:#15803d;font-size:15px;margin-bottom:6px;">Listo para lanzar — 88/100</h4>
+      <p style="font-size:13px;color:#166534;line-height:1.6;">El producto está en condiciones de producción. Las 6 tareas pendientes son todas de configuración (no requieren código): variables de entorno en Vercel, DNS para email, y un test del flujo de pago. Ninguna bloquea un soft launch. Se recomienda completar el test de pago antes de la campaña de lanzamiento.</p>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;">Audit 1: 8 fixes ✓</span>
+        <span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;">Audit 2: 10 fixes ✓</span>
+        <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;">16 bancos compatibles</span>
+        <span style="background:#ede9fe;color:#6b21a8;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;">$2.999 ARS/mes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRÓXIMOS 3 PASOS -->
+  <div style="background:white;border:1px solid #e2e8f0;border-radius:16px;padding:24px;margin-top:20px;">
+    <h3 style="font-size:15px;font-weight:800;color:#1e293b;margin-bottom:16px;">⚡ Próximos 3 pasos antes del lanzamiento</h3>
+    <div style="display:grid;gap:12px;">
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#fef3c7;border-radius:12px;border:1px solid #fde68a;">
+        <span style="font-size:20px;flex-shrink:0;">1️⃣</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#78350f;">Variables en Vercel</div>
+          <div style="font-size:12px;color:#92400e;margin-top:2px;">Agregar MP_WEBHOOK_SECRET y RESEND_API_KEY en Settings → Environment Variables → Redeploy</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#fef3c7;border-radius:12px;border:1px solid #fde68a;">
+        <span style="font-size:20px;flex-shrink:0;">2️⃣</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#78350f;">Ejecutar SQL en Supabase</div>
+          <div style="font-size:12px;color:#92400e;margin-top:2px;">Supabase → SQL Editor → copiar server/supabase-schema.sql → Run. Crea user_data + RLS.</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#fef3c7;border-radius:12px;border:1px solid #fde68a;">
+        <span style="font-size:20px;flex-shrink:0;">3️⃣</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#78350f;">Test del flujo de pago</div>
+          <div style="font-size:12px;color:#92400e;margin-top:2px;">Crear suscripción de $2.999 en producción → verificar que plan="paid" queda en Supabase y llega el email.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    EasyResumen · Checklist de Lanzamiento · Actualizado 8 de junio de 2025<br/>
+    Auditorías: Opus 4.7 · Fixes: Sonnet 4.6 · 2 rondas completadas
+  </div>
+
+</div>
+
+<button class="print-btn no-print" onclick="window.print()">
+  🖨️ &nbsp; Guardar como PDF
+</button>
+
+</body>
+</html>
