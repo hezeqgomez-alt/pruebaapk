@@ -5,6 +5,7 @@
  * Body: { userId: string, email: string }
  */
 import { createClient } from '@supabase/supabase-js'
+import { sendEmail, proActivationEmail } from './_lib/email.js'
 
 const MP_PLAN_ID = '65b536a45d974b038219887643100785'
 
@@ -73,6 +74,9 @@ export default async function handler(req, res) {
   })
 
   if (error) return res.status(500).json({ error: error.message })
+
+  const notifyEmail = email || user?.email
+  if (notifyEmail) await sendEmail(proActivationEmail(notifyEmail))
 
   return res.status(200).json({ found: true, activated: true, preapprovalId: preapproval.id })
 }

@@ -131,6 +131,50 @@ const GUIDES = [
     ],
     tip: 'Ualá solo disponible por app móvil.',
   },
+  {
+    bank: 'Itaú',
+    icon: '🟠',
+    steps: [
+      'Ingresá a homebanking.itau.com.ar',
+      'Ir a Tarjetas → tu tarjeta de crédito',
+      'Seleccioná "Resumen" y elegí el período',
+      'Clic en "Descargar PDF"',
+    ],
+    tip: 'También disponible en la app Itaú Argentina.',
+  },
+  {
+    bank: 'ICBC',
+    icon: '🔴',
+    steps: [
+      'Ingresá a homebanking.icbc.com.ar',
+      'Ir a Tarjetas → Resumen de cuenta',
+      'Elegí la tarjeta y el mes',
+      'Clic en el ícono PDF para descargar',
+    ],
+    tip: 'Si usás la app, encontrás el resumen en Tarjetas → Ver resumen.',
+  },
+  {
+    bank: 'Banco Patagonia',
+    icon: '🟢',
+    steps: [
+      'Ingresá al homebanking de Banco Patagonia',
+      'Ir a Tarjetas → tu tarjeta de crédito',
+      'Seleccioná "Resumen" y el período',
+      'Clic en "Descargar" en formato PDF',
+    ],
+    tip: 'Disponible también desde la app Banco Patagonia.',
+  },
+  {
+    bank: 'Credicoop',
+    icon: '🔵',
+    steps: [
+      'Ingresá a homecoop.com.ar',
+      'Ir a Tarjetas → Resúmenes',
+      'Seleccioná la tarjeta y el período',
+      'Clic en "Descargar PDF"',
+    ],
+    tip: 'Si no encontrás el PDF, contactá a tu sucursal para activar el resumen digital.',
+  },
 ]
 
 export default function BankGuideModal({ onClose }) {

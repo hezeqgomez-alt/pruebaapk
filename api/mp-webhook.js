@@ -9,6 +9,7 @@
  *   SUPABASE_SERVICE_KEY — service_role key de Supabase (solo server-side)
  */
 import { createClient } from '@supabase/supabase-js'
+import { sendEmail, proActivationEmail } from './_lib/email.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -85,6 +86,7 @@ export default async function handler(req, res) {
   if (userId) {
     const err = await activateUser(userId, { plan: 'paid', mp_preapproval_id: preapprovalId })
     if (err) return res.status(500).json({ error: err.message })
+    if (payerEmail) await sendEmail(proActivationEmail(payerEmail))
     return res.status(200).json({ ok: true, activated_by: 'user_id', userId })
   }
 
@@ -98,6 +100,7 @@ export default async function handler(req, res) {
 
     const err = await activateUser(user.id, { plan: 'paid', mp_preapproval_id: preapprovalId })
     if (err) return res.status(500).json({ error: err.message })
+    await sendEmail(proActivationEmail(payerEmail))
     return res.status(200).json({ ok: true, activated_by: 'email', email: payerEmail })
   }
 
