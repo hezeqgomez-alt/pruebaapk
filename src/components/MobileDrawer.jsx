@@ -206,6 +206,11 @@ export default function MobileDrawer({
               {user.email && <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{user.email}</span>}
             </button>
           )}
+          <div className="flex gap-3 px-3 pt-2 pb-1">
+            <a href="/terminos.html" target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-400 dark:text-slate-600 hover:text-indigo-500 transition-colors">Términos</a>
+            <span className="text-[11px] text-slate-300 dark:text-slate-700">·</span>
+            <a href="/privacidad.html" target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-400 dark:text-slate-600 hover:text-indigo-500 transition-colors">Privacidad</a>
+          </div>
         </div>
       </div>
     </>
