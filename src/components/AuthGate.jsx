@@ -195,13 +195,13 @@ export default function AuthGate() {
           {/* Instagram + legal links */}
           <div className="flex flex-col gap-3">
             <a
-              href="https://www.instagram.com/easyresumen.ar"
+              href="https://www.instagram.com/easyresumen.app"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-pink-400 transition-colors w-fit"
             >
               <Instagram size={15} />
-              @easyresumen.ar
+              @easyresumen.app
             </a>
             <div className="flex items-center gap-3 text-xs text-slate-600">
               <a href="/terminos.html" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Términos y condiciones</a>
