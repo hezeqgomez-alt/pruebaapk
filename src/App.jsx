@@ -84,7 +84,7 @@ export default function App() {
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
-  const { user, trialStatus, trackPDF: webTrackPDF, refreshTrial, signOut } = useAuth()
+  const { user, trialStatus, trackPDF: webTrackPDF, refreshTrial, signOut, passwordRecovery } = useAuth()
 
   // In Electron: use electronAPI license. On web: use auth context.
   const [electronLicense, setElectronLicense] = useState(null)
@@ -419,7 +419,7 @@ export default function App() {
 
   // Web auth gate: show login/register when Supabase is configured and user is not logged in
   // user===undefined means still loading; null means no session
-  if (isSupabaseConfigured && !window.electronAPI && user === null) {
+  if (isSupabaseConfigured && !window.electronAPI && (user === null || passwordRecovery)) {
     return <AuthGate />
   }
 
