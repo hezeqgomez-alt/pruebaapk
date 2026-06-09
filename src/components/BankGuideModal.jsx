@@ -69,14 +69,15 @@ const GUIDES = [
     tip: 'También disponible en la app American Express.',
   },
   {
-    bank: 'HSBC',
+    bank: 'Galicia Más (ex HSBC)',
     icon: '🔴',
     steps: [
-      'Ingresá a hsbc.com.ar/homebanking',
+      'Ingresá a homebanking.galiciamas.com.ar',
       'Ir a Tarjetas → Resúmenes',
       'Seleccioná el mes',
       'Botón "Descargar" en formato PDF',
     ],
+    tip: 'HSBC Argentina pasó a llamarse Galicia Más en diciembre 2024. Si tenés resúmenes anteriores a esa fecha, el formato es compatible igual.',
   },
   {
     bank: 'Banco Nación',
@@ -103,7 +104,7 @@ const GUIDES = [
     bank: 'Banco Ciudad',
     icon: '🟡',
     steps: [
-      'Ingresá al Home Banking del Ciudad',
+      'Ingresá a hb.bancociudad.com.ar',
       'Ir a Tarjetas → Resumen de cuenta',
       'Elegí el mes',
       'Descargá en formato PDF',
@@ -132,43 +133,43 @@ const GUIDES = [
     tip: 'Ualá solo disponible por app móvil.',
   },
   {
-    bank: 'Itaú',
+    bank: 'ex Itaú (ahora Macro)',
     icon: '🟠',
     steps: [
-      'Ingresá a homebanking.itau.com.ar',
+      'Ingresá a macro.com.ar y accedé al Home Banking',
       'Ir a Tarjetas → tu tarjeta de crédito',
       'Seleccioná "Resumen" y elegí el período',
       'Clic en "Descargar PDF"',
     ],
-    tip: 'También disponible en la app Itaú Argentina.',
+    tip: 'Banco Itaú Argentina fue absorbido por Banco Macro en noviembre 2023. Los resúmenes anteriores a esa fecha siguen siendo compatibles.',
   },
   {
     bank: 'ICBC',
     icon: '🔴',
     steps: [
-      'Ingresá a homebanking.icbc.com.ar',
+      'Ingresá a accessbanking.com.ar',
       'Ir a Tarjetas → Resumen de cuenta',
       'Elegí la tarjeta y el mes',
       'Clic en el ícono PDF para descargar',
     ],
-    tip: 'Si usás la app, encontrás el resumen en Tarjetas → Ver resumen.',
+    tip: 'El homebanking de ICBC se llama Access Banking. También disponible en la app ICBC Mobile Banking.',
   },
   {
     bank: 'Banco Patagonia',
     icon: '🟢',
     steps: [
-      'Ingresá al homebanking de Banco Patagonia',
+      'Ingresá a ebankpersonas.bancopatagonia.com.ar',
       'Ir a Tarjetas → tu tarjeta de crédito',
       'Seleccioná "Resumen" y el período',
       'Clic en "Descargar" en formato PDF',
     ],
-    tip: 'Disponible también desde la app Banco Patagonia.',
+    tip: 'Disponible también desde la app Patagonia Móvil.',
   },
   {
     bank: 'Credicoop',
     icon: '🔵',
     steps: [
-      'Ingresá a homecoop.com.ar',
+      'Ingresá a bancainternet.bancocredicoop.coop',
       'Ir a Tarjetas → Resúmenes',
       'Seleccioná la tarjeta y el período',
       'Clic en "Descargar PDF"',
