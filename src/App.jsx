@@ -75,6 +75,7 @@ export default function App() {
   , [])
   const [activeTab, setActiveTab]                 = useState('dashboard')
   const [generating, setGenerating]               = useState(false)
+  const [sharing, setSharing]                     = useState(false)
   const [budgets, setBudgets]                     = useState(() => loadBudgets())
   const [darkMode, setDarkMode]                   = useState(() => loadDarkMode())
   const [customCategories, setCustomCategories]   = useState(() => loadCustomCategories())
@@ -109,24 +110,33 @@ export default function App() {
   // Load from cloud when user logs in (web only)
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
+    let cancelled = false
     const txKey = t => `${t.date}|${t.amount}|${t.description}|${t.source}`
     cloudLoad(user.id).then(cloud => {
-      const localTxs  = loadData().transactions ?? []
+      if (cancelled) return
       const localBudg = loadBudgets()
       const localCats = loadCustomCategories()
 
       if (cloud?.transactions?.length > 0) {
-        // Merge: cloud base + any local txs not yet in cloud
-        const cloudValid  = cloud.transactions.filter(t => t && t.date && t.amount > 0)
-        const cloudKeys   = new Set(cloudValid.map(txKey))
-        const localOnly   = localTxs.filter(t => !cloudKeys.has(txKey(t)))
-        const merged      = [...cloudValid, ...localOnly]
-        setTransactions(merged)
-        if (localOnly.length > 0) cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats }).catch(console.warn)
-        setToast(`📥 ${merged.length} movimientos cargados desde la nube`)
-      } else if (localTxs.length > 0) {
+        // Merge against live state (not a stale localStorage snapshot) to avoid losing in-flight edits
+        setTransactions(prev => {
+          const base = prev.length > 0 ? prev : (loadData().transactions ?? [])
+          const cloudValid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
+          const cloudKeys  = new Set(cloudValid.map(txKey))
+          const localOnly  = base.filter(t => !cloudKeys.has(txKey(t)))
+          const merged     = [...cloudValid, ...localOnly]
+          if (localOnly.length > 0) {
+            cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats }).catch(console.warn)
+          }
+          return merged
+        })
+        setToast(`📥 Movimientos cargados desde la nube`)
+      } else {
         // First login with local data — push to cloud so it's not lost
-        cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats }).catch(console.warn)
+        const localTxs = loadData().transactions ?? []
+        if (localTxs.length > 0) {
+          cloudSave(user.id, { transactions: localTxs, budgets: localBudg, customCategories: localCats }).catch(console.warn)
+        }
       }
 
       if (cloud?.budgets && Object.keys(cloud.budgets).length > 0) setBudgets(cloud.budgets)
@@ -134,6 +144,7 @@ export default function App() {
         setCustomCategories(cloud.custom_categories)
       }
     }).catch(console.warn)
+    return () => { cancelled = true }
   }, [user?.id])
 
   // Save to localStorage always; sync to cloud (debounced 2s) when logged in
@@ -273,6 +284,8 @@ export default function App() {
   }
 
   const handleShare = useCallback(async () => {
+    if (sharing) return
+    setSharing(true)
     const txs = filteredForReport ?? transactions
     const total = txs.filter(t => t.type !== 'credit').reduce((s, t) => s + t.amount, 0)
     const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -298,26 +311,27 @@ export default function App() {
         if (navigator.canShare?.({ files })) {
           await navigator.share({ title: 'Mi resumen — EasyResumen', text, files })
           setToast('✅ Archivos compartidos')
+          setSharing(false)
           return
         }
       } catch (err) {
-        if (err.name === 'AbortError') return
+        if (err.name === 'AbortError') { setSharing(false); return }
         // File share not supported — fall through to text-only
       }
       // Fallback: share text only (desktop browsers / no file support)
       try {
         await navigator.share({ title: 'Mi resumen — EasyResumen', text })
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          navigator.clipboard?.writeText(text)
-          setToast('✅ Resumen copiado al portapapeles')
-        }
+        if (err.name === 'AbortError') { setSharing(false); return }
+        navigator.clipboard?.writeText(text)
+        setToast('✅ Resumen copiado al portapapeles')
       }
     } else {
       navigator.clipboard.writeText(text)
       setToast('✅ Resumen copiado al portapapeles')
     }
-  }, [transactions, filteredForReport, chartDonutRef, chartBarRef])
+    setSharing(false)
+  }, [sharing, transactions, filteredForReport, chartDonutRef, chartBarRef])
 
   const handleExportXLSX = () => {
     try {

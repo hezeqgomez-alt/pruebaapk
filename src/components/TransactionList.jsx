@@ -26,7 +26,7 @@ function EditableCategory({ value, onChange, allCategories }) {
   if (!editing) {
     return (
       <button
-        onClick={() => setEditing(true)}
+        onClick={() => { setVal(value); setEditing(true) }}
         className="group flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg hover:ring-1 hover:ring-indigo-200 dark:hover:ring-indigo-700 transition-all"
         style={{ background: (cat?.color || '#94a3b8') + '18' }}
       >
@@ -332,7 +332,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
 
   function applyBulkCategory() {
     if (!bulkCat || selected.size === 0) return
-    onUpdate(transactions.map(t => selected.has(t.id) ? { ...t, category: bulkCat } : t))
+    onUpdate(prev => prev.map(t => selected.has(t.id) ? { ...t, category: bulkCat } : t))
     clearSelection()
   }
 
@@ -340,7 +340,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
     if (!confirmDelete) return setConfirmDelete(true)
     const removed = transactions.filter(t => selected.has(t.id))
     deletedRef.current = removed
-    onUpdate(transactions.filter(t => !selected.has(t.id)))
+    onUpdate(prev => prev.filter(t => !selected.has(t.id)))
     clearSelection()
     clearTimeout(undoTimerRef.current)
     setUndoCount(removed.length)
@@ -361,11 +361,11 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   }
 
   function updateCategory(id, category) {
-    onUpdate(transactions.map(t => t.id === id ? { ...t, category } : t))
+    onUpdate(prev => prev.map(t => t.id === id ? { ...t, category } : t))
   }
 
   function updateNote(id, note) {
-    onUpdate(transactions.map(t => t.id === id ? { ...t, note } : t))
+    onUpdate(prev => prev.map(t => t.id === id ? { ...t, note } : t))
   }
 
   function deleteOne(id) {

@@ -5,6 +5,7 @@
  * Requiere env var ADMIN_SECRET para autenticar la llamada.
  */
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
 
 export default async function handler(req, res) {
   // Admin endpoint — server-to-server only, no CORS needed
@@ -12,11 +13,20 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  const adminSecret = process.env.ADMIN_SECRET
+  if (!adminSecret) return res.status(500).json({ error: 'ADMIN_SECRET not configured' })
+
   const { email, secret, plan = 'paid' } = req.body || {}
 
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
+  if (!secret) return res.status(401).json({ error: 'Unauthorized' })
+  const secretsMatch = (() => {
+    try {
+      const a = Buffer.from(secret)
+      const b = Buffer.from(adminSecret)
+      return a.length === b.length && timingSafeEqual(a, b)
+    } catch { return false }
+  })()
+  if (!secretsMatch) return res.status(401).json({ error: 'Unauthorized' })
 
   if (!email) return res.status(400).json({ error: 'Missing email' })
 

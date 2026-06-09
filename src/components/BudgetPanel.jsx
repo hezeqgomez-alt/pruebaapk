@@ -23,6 +23,7 @@ function EditBudget({ value, onSave, onCancel }) {
     const n = parseArgAmount(val)
     if (!isNaN(n) && n > 0) onSave(n)
     else if (val === '' || val === '0') onSave(0)
+    else onCancel()
   }
   return (
     <div className="flex items-center gap-1">

@@ -397,8 +397,9 @@ export function detectUnnecessary(transactions) {
   // Precompute normalized descriptions once to avoid O(n²) repeated normalize() calls
   const normDescCache = new Map()
   const getNorm = t => {
-    if (!normDescCache.has(t.id)) normDescCache.set(t.id, normalize(t.description).slice(0, 20))
-    return normDescCache.get(t.id)
+    const k = t.id ?? t.description
+    if (!normDescCache.has(k)) normDescCache.set(k, normalize(t.description).slice(0, 20))
+    return normDescCache.get(k)
   }
 
   const catTotals = {}

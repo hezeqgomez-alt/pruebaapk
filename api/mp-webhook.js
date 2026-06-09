@@ -14,7 +14,10 @@ import { sendEmail, proActivationEmail } from './_lib/email.js'
 
 function verifyMPSignature(req) {
   const secret = process.env.MP_WEBHOOK_SECRET
-  if (!secret) return true // skip if not configured (dev/test)
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') return false
+    return true // skip signature check in dev/test only
+  }
 
   const xSignature  = req.headers['x-signature']  || ''
   const xRequestId  = req.headers['x-request-id'] || ''
@@ -58,15 +61,16 @@ export default async function handler(req, res) {
   if (!MP_TOKEN) return res.status(500).json({ error: 'MP_ACCESS_TOKEN not configured' })
 
   // Fetch subscription details from MercadoPago
-  const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
-    headers: { Authorization: `Bearer ${MP_TOKEN}` },
-  })
-
-  if (!mpRes.ok) {
-    return res.status(502).json({ error: `MP API error: ${mpRes.status}` })
+  let preapproval
+  try {
+    const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+      headers: { Authorization: `Bearer ${MP_TOKEN}` },
+    })
+    if (!mpRes.ok) return res.status(502).json({ error: `MP API error: ${mpRes.status}` })
+    preapproval = await mpRes.json()
+  } catch (err) {
+    return res.status(502).json({ error: `MP fetch failed: ${err.message}` })
   }
-
-  const preapproval = await mpRes.json()
 
   const userId     = preapproval.external_reference
   const payerEmail = preapproval.payer_email

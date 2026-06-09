@@ -184,8 +184,7 @@ function SavingsCalculator({ findings, transactions }) {
   )
 }
 
-export default function InsightsPanel({ findings, transactions, onRefresh }) {
-  const [refreshing, setRefreshing] = useState(false) // eslint-disable-line no-unused-vars
+export default function InsightsPanel({ findings, transactions }) {
 
   if (findings.length === 0 && transactions.length === 0) return null
 
@@ -230,10 +229,6 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
 
   const alertCount = insights.filter(i => i.type !== 'ok').length
 
-  function handleRefresh() {
-    onRefresh?.()
-  }
-
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
       <div className="flex items-center gap-2 mb-5">
@@ -248,13 +243,6 @@ export default function InsightsPanel({ findings, transactions, onRefresh }) {
               {alertCount} {alertCount === 1 ? 'alerta' : 'alertas'}
             </span>
           )}
-          <button
-            onClick={handleRefresh}
-            title="Reiniciar alertas descartadas"
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all"
-          >
-            <RefreshCw size={13} />
-          </button>
         </div>
       </div>
 
