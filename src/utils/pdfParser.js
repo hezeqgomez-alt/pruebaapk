@@ -4,6 +4,13 @@ import { categorize } from './categorizer'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
+const randomUUID = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+  ? () => crypto.randomUUID()
+  : () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+    })
+
 
 // Normalize unicode minus signs / dashes to ASCII hyphen
 function norm(str) {
@@ -479,7 +486,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
     const fx = detectForeignCurrency(row.text)
 
     const tx = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       date,
       description: desc,
       amount: Math.abs(amountVal),
@@ -572,7 +579,7 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
     const installment = detectInstallment(text)
     const fx = detectForeignCurrency(text)
     const tx = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       date,
       description: desc,
       amount: Math.abs(amount),

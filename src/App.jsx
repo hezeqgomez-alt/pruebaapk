@@ -51,10 +51,10 @@ function Toast({ msg, onDone }) {
   }, [onDone])
 
   return (
-    <div className={style}>
-      <Icon size={16} className={`${iconColor} shrink-0 mt-0.5`} />
+    <div className={style} role="alert" aria-live="assertive">
+      <Icon size={16} className={`${iconColor} shrink-0 mt-0.5`} aria-hidden="true" />
       <span className="flex-1 leading-snug">{msg.replace(/^(?:✅|❌|⚠️|📄|📥|🗑️|ℹ️)\s*/, '')}</span>
-      <button onClick={onDone} className="opacity-40 hover:opacity-70 transition-opacity ml-1">
+      <button onClick={onDone} className="opacity-40 hover:opacity-70 transition-opacity ml-1" aria-label="Cerrar notificación">
         <X size={14} />
       </button>
     </div>
@@ -157,8 +157,19 @@ export default function App() {
 
   useEffect(() => {
     if (window.electronAPI || !user?.id || !cloudLoadedRef.current) return
-    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories })
-      .catch(() => setToast('⚠️ No se pudo sincronizar con la nube')), 2000)
+    const id = user.id
+    const data = { transactions, budgets, customCategories }
+    const t = setTimeout(async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await cloudSave(id, data)
+          return
+        } catch {
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)))
+        }
+      }
+      setToast('⚠️ No se pudo sincronizar con la nube')
+    }, 2000)
     return () => clearTimeout(t)
   }, [transactions, budgets, customCategories, user?.id])
 
@@ -422,7 +433,18 @@ export default function App() {
       { id: 'prestamos',   label: 'Préstamos' },
       { id: 'balance',     label: 'Balance' },
       { id: 'insights',    label: 'Alertas',
-        count: findings.filter(f => f.type !== 'lastInstallment').length,
+        count: (() => {
+          const base = findings.filter(f => f.type !== 'lastInstallment').length
+          const byCategory = {}
+          for (const t of transactions) {
+            if (t.type === 'credit') continue
+            byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+          }
+          const total = Object.values(byCategory).reduce((s, v) => s + v, 0)
+          const topCat = Object.entries(byCategory).sort(([, a], [, b]) => b - a)[0]
+          const hasConcentration = topCat && total > 0 && topCat[1] / total > 0.35
+          return base + (hasConcentration ? 1 : 0)
+        })(),
         countGreen: findings.filter(f => f.type === 'lastInstallment').length },
     ]
   }, [transactions, filteredForReport, findings])
@@ -559,6 +581,7 @@ export default function App() {
                 <button
                   onClick={handleClearAll}
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-red-200 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 font-medium transition-colors"
+                  aria-label="Borrar todos los movimientos"
                 >
                   <Trash2 size={14} />
                   Borrar
@@ -581,6 +604,7 @@ export default function App() {
             <button
               onClick={() => setDarkMode(d => !d)}
               className="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors"
+              aria-label={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -696,7 +720,7 @@ export default function App() {
 
             {/* Always mounted to preserve page/sort state when switching tabs */}
             <div className={activeTab !== 'movimientos' ? 'hidden' : ''}>
-              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={setFilteredForReport} customCategories={customCategories} />
+              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} />
             </div>
 
             {activeTab === 'presupuesto' && (

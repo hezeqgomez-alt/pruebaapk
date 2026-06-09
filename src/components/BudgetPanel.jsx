@@ -10,11 +10,13 @@ function fmt(n) {
 
 function parseArgAmount(raw) {
   let s = raw.trim()
-  // If there's a comma → Argentine format: dots are thousands, comma is decimal
+  // Argentine format with comma decimal: 1.500,50 or 1500,50
   if (s.includes(',')) return parseFloat(s.replace(/\./g, '').replace(',', '.'))
-  // No comma: strip dots that look like thousands separators (digit.3digits pattern)
-  s = s.replace(/\.(?=\d{3}(\D|$))/g, '')
-  return parseFloat(s)
+  // No comma: only strip dots that are clearly thousands separators (exactly 3 digits after)
+  s = s.replace(/\.(?=\d{3}(?:\D|$))/g, '')
+  const n = parseFloat(s)
+  // Reject suspiciously small values that look like mistyped decimals (e.g. "1.5" → 1.5 → invalid budget)
+  return n
 }
 
 function EditBudget({ value, onSave, onCancel }) {
@@ -36,7 +38,7 @@ function EditBudget({ value, onSave, onCancel }) {
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') onCancel() }}
         className="w-28 text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:border-indigo-500 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-300"
         autoFocus
-        placeholder="0"
+        placeholder="ej: 50000"
       />
       <button onClick={commit} className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600">
         <Check size={11} />

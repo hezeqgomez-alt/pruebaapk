@@ -199,7 +199,7 @@ export default function InsightsPanel({ findings, transactions }) {
       body: f.type === 'subscription'
         ? `"${f.description.slice(0, 30)}" se repite ${f.count} veces — ${fmt(f.total)} en total`
         : f.type === 'lastInstallment' && f.transactions?.[0]
-        ? `Cuota ${f.transactions[0].installment.total}/${f.transactions[0].installment.total} · completado ${formatCompletedDate(f.completedDate)} · libera ${fmt(f.total)}/mes`
+        ? `Cuota ${f.transactions[0].installment?.total}/${f.transactions[0].installment?.total} · completado ${formatCompletedDate(f.completedDate)} · libera ${fmt(f.total)}/mes`
         : f.description,
       amount: f.total ? fmt(f.total) : null,
     })),
@@ -272,7 +272,7 @@ export default function InsightsPanel({ findings, transactions }) {
         })}
       </div>
 
-      <SavingsCalculator findings={findings} transactions={transactions} />
+      <SavingsCalculator findings={findings} />
     </div>
   )
 }

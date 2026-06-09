@@ -176,6 +176,17 @@ const GUIDES = [
     ],
     tip: 'Si no encontrás el PDF, contactá a tu sucursal para activar el resumen digital.',
   },
+  {
+    bank: 'CABAL',
+    icon: '🟢',
+    steps: [
+      'Ingresá a cabal.com.ar y accedé al homebanking',
+      'Ir a Tarjetas → tu tarjeta CABAL',
+      'Seleccioná "Resumen de cuenta" y el período',
+      'Clic en "Descargar PDF"',
+    ],
+    tip: 'Si tu tarjeta CABAL es emitida por un banco (ej. Nación, Credicoop), bajá el resumen desde el homebanking de ese banco.',
+  },
 ]
 
 export default function BankGuideModal({ onClose }) {
@@ -201,7 +212,7 @@ export default function BankGuideModal({ onClose }) {
               {guide ? `Cómo bajar el PDF — ${guide.bank}` : '¿Cómo bajo el PDF de mi banco?'}
             </h2>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+          <button onClick={onClose} aria-label="Cerrar guía" className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
             <X size={16} />
           </button>
         </div>
