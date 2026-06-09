@@ -302,6 +302,10 @@ function shouldSkipDesc(desc) {
   // Description contains only month names/abbreviations + digits/symbols → pure schedule row (e.g. "ENE/25")
   const nonMonth = desc.replace(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?|prox(?:imo)?s?|meses?)\b/gi, '').replace(/[\d\s/,.:|()%$-]+/g, '')
   if (nonMonth.trim().length === 0) return true
+  // CABAL / loyalty: points expiry rows and points summaries — not purchases
+  if (/\bpuntos?\s+a\s+vencer\b|\bpuntos?\s+acumulados?\b|\bpuntos?\s+disponibles?\b|\bpuntos?\s+cabal\b|\bprog(?:rama)?\s+de\s+puntos\b/i.test(desc)) return true
+  if (/^ptos\b/i.test(desc)) return true
+  if (/^total\s+puntos\b/i.test(desc)) return true
   // T&C / legal section headers — backup for when section slicer doesn't cut them
   if (/^(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso)|informaci[oó]n\s+importante|aviso\s+legal|reglamento\s+de\s+(?:uso|la\s+tarjeta))/i.test(desc)) return true
   // Notification letter / legal boilerplate embedded in some PDFs
