@@ -2,6 +2,12 @@
   "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
   "framework": null,
+  "crons": [
+    {
+      "path": "/api/cron/onboarding",
+      "schedule": "0 14 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/index.html",
