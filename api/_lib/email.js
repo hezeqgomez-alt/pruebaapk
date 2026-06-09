@@ -31,72 +31,94 @@ export async function sendEmail({ to, subject, html }) {
 export function proActivationEmail(email) {
   return {
     to: email,
-    subject: '¡Tu plan PRO de EasyResumen está activo! 🎉',
+    subject: 'Estás a un paso de empezar a usar EasyResumen 🚀',
     html: `
 <!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0f0f1a;font-family:'Helvetica Neue',Arial,sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:40px 0">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:48px 16px">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:16px;overflow:hidden;max-width:560px;width:100%">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:20px;overflow:hidden;max-width:560px;width:100%">
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#6366f1,#a855f7);padding:32px 40px;text-align:center">
-            <p style="margin:0 0 8px;font-size:32px">⚡</p>
-            <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700">¡Plan PRO activado!</h1>
-            <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px">EasyResumen</p>
+          <td style="background:linear-gradient(135deg,#6366f1 0%,#a855f7 100%);padding:40px 40px 32px;text-align:center">
+            <img src="https://easyresumen.com.ar/icon.png" width="56" height="56" alt="EasyResumen" style="display:block;margin:0 auto 16px;border-radius:14px">
+            <h1 style="margin:0 0 8px;color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.5px">Estás a un paso de empezar<br>a usar EasyResumen</h1>
+            <p style="margin:0;color:rgba(255,255,255,0.75);font-size:14px">Tu suscripción PRO ya está activa 🎉</p>
           </td>
         </tr>
 
         <!-- Body -->
         <tr>
-          <td style="padding:32px 40px">
-            <p style="margin:0 0 16px;color:#e2e8f0;font-size:16px">
-              Hola 👋
+          <td style="padding:36px 40px 28px">
+            <p style="margin:0 0 12px;color:#e2e8f0;font-size:16px;font-weight:600">¡Bienvenido/a! 👋</p>
+            <p style="margin:0 0 20px;color:#94a3b8;font-size:15px;line-height:1.7">
+              Gracias por suscribirte a EasyResumen. A partir de ahora podés subir tus resúmenes de tarjeta de crédito y en segundos ver exactamente en qué gastás, cuánto debés en cuotas y cómo optimizar tu plata — todo sin que tus datos salgan de tu dispositivo.
             </p>
-            <p style="margin:0 0 24px;color:#94a3b8;font-size:15px;line-height:1.6">
-              Tu suscripción PRO fue activada correctamente. A partir de ahora tenés acceso completo a todas las funciones de EasyResumen sin límites.
+            <p style="margin:0 0 28px;color:#94a3b8;font-size:15px;line-height:1.7">
+              Empezar es muy simple: ingresá a la app, subí el PDF de tu tarjeta y listo. EasyResumen hace el resto.
             </p>
 
             <!-- Features list -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;border-radius:12px;overflow:hidden;margin-bottom:24px">
-              <tr><td style="padding:20px 24px">
-                <p style="margin:0 0 12px;color:#6366f1;font-size:13px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Lo que incluye tu plan PRO</p>
-                <table cellpadding="0" cellspacing="0">
-                  <tr><td style="padding:6px 0;color:#e2e8f0;font-size:14px">✅ &nbsp;Análisis ilimitado de PDFs</td></tr>
-                  <tr><td style="padding:6px 0;color:#e2e8f0;font-size:14px">✅ &nbsp;Sincronización en la nube</td></tr>
-                  <tr><td style="padding:6px 0;color:#e2e8f0;font-size:14px">✅ &nbsp;Presupuestos y categorías personalizadas</td></tr>
-                  <tr><td style="padding:6px 0;color:#e2e8f0;font-size:14px">✅ &nbsp;Exportación a Excel y PDF</td></tr>
-                  <tr><td style="padding:6px 0;color:#e2e8f0;font-size:14px">✅ &nbsp;Soporte prioritario</td></tr>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;border-radius:14px;margin-bottom:28px">
+              <tr><td style="padding:22px 26px">
+                <p style="margin:0 0 14px;color:#818cf8;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase">Tu plan PRO incluye</p>
+                <table cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td style="padding:7px 0;color:#e2e8f0;font-size:14px;line-height:1.4">
+                      ✅ &nbsp;<strong>Análisis ilimitado de PDFs</strong> — cargá todos los resúmenes que quieras
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#e2e8f0;font-size:14px;line-height:1.4">
+                      ✅ &nbsp;<strong>Sincronización en la nube</strong> — accedé desde cualquier dispositivo
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#e2e8f0;font-size:14px;line-height:1.4">
+                      ✅ &nbsp;<strong>Presupuestos y categorías</strong> — personalizá todo a tu medida
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#e2e8f0;font-size:14px;line-height:1.4">
+                      ✅ &nbsp;<strong>Exportación a Excel y PDF</strong> — compartí o archivá tus reportes
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:7px 0;color:#e2e8f0;font-size:14px;line-height:1.4">
+                      ✅ &nbsp;<strong>Soporte prioritario</strong> — respondemos en menos de 24 hs
+                    </td>
+                  </tr>
                 </table>
               </td></tr>
             </table>
 
-            <p style="margin:0 0 8px;color:#94a3b8;font-size:13px">
-              Cuenta activada: <span style="color:#e2e8f0">${email}</span>
-            </p>
-
             <!-- CTA -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px">
+            <table width="100%" cellpadding="0" cellspacing="0">
               <tr><td align="center">
-                <a href="https://easyresumen.com.ar" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 32px;border-radius:10px">
-                  Ir a EasyResumen →
+                <a href="https://easyresumen.com.ar" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 40px;border-radius:12px;letter-spacing:0.2px">
+                  Abrir EasyResumen →
                 </a>
               </td></tr>
             </table>
+
+            <p style="margin:24px 0 0;color:#4a5568;font-size:13px;text-align:center">
+              Tu cuenta: <span style="color:#818cf8">${email}</span>
+            </p>
           </td>
         </tr>
 
         <!-- Footer -->
         <tr>
-          <td style="padding:20px 40px;border-top:1px solid #2d2d4e;text-align:center">
-            <p style="margin:0;color:#4a5568;font-size:12px">
-              Si tenés alguna duda escribinos a
+          <td style="padding:20px 40px 28px;border-top:1px solid #2d2d4e;text-align:center">
+            <p style="margin:0 0 6px;color:#4a5568;font-size:12px;line-height:1.6">
+              ¿Tenés alguna duda? Escribinos a
               <a href="mailto:soporte@easyresumen.com.ar" style="color:#6366f1;text-decoration:none">soporte@easyresumen.com.ar</a>
+              — estamos para ayudarte.
             </p>
-            <p style="margin:8px 0 0;color:#4a5568;font-size:11px">
+            <p style="margin:0;color:#2d2d4e;font-size:11px">
               © ${new Date().getFullYear()} EasyResumen · Argentina
             </p>
           </td>
