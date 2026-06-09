@@ -120,8 +120,14 @@ export default async function handler(req, res) {
 
   // Fallback: activate by payer email
   if (payerEmail) {
-    const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-    if (listErr) return res.status(500).json({ error: listErr.message })
+    let users = [], pg = 1
+    while (true) {
+      const { data, error: listErr } = await supabase.auth.admin.listUsers({ page: pg, perPage: 1000 })
+      if (listErr) return res.status(500).json({ error: listErr.message })
+      users.push(...data.users)
+      if (data.users.length < 1000) break
+      pg++
+    }
 
     const user = users.find(u => u.email?.toLowerCase() === payerEmail.toLowerCase())
     if (!user) return res.status(404).json({ error: `User not found for email ${payerEmail}` })

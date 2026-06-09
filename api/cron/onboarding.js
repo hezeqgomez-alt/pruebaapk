@@ -27,9 +27,15 @@ export default async function handler(req, res) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Fetch all confirmed users (listUsers paginates at 1000)
-  const { data: { users }, error } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-  if (error) return res.status(500).json({ error: error.message })
+  // Fetch all users across all pages
+  let users = [], page = 1
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) return res.status(500).json({ error: error.message })
+    users.push(...data.users)
+    if (data.users.length < 1000) break
+    page++
+  }
 
   const now = Date.now()
   const HOURS_48 = 48 * 60 * 60 * 1000

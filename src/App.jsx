@@ -91,9 +91,10 @@ export default function App() {
   const [electronLicense, setElectronLicense] = useState(null)
   const licenseStatus = window.electronAPI ? electronLicense : trialStatus
 
-  const chartDonutRef = useRef(null)
-  const chartBarRef   = useRef(null)
-  const addBtnRef     = useRef(null)
+  const chartDonutRef   = useRef(null)
+  const chartBarRef     = useRef(null)
+  const addBtnRef       = useRef(null)
+  const cloudLoadedRef  = useRef(false) // gates debounced save until first cloud load completes
 
   // Electron-only license check on mount
   useEffect(() => {
@@ -143,7 +144,9 @@ export default function App() {
       if (cloud?.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
         setCustomCategories(cloud.custom_categories)
       }
-    }).catch(console.warn)
+    }).catch(console.warn).finally(() => {
+      if (!cancelled) cloudLoadedRef.current = true
+    })
     return () => { cancelled = true }
   }, [user?.id])
 
@@ -153,7 +156,7 @@ export default function App() {
   }, [transactions])
 
   useEffect(() => {
-    if (window.electronAPI || !user?.id) return
+    if (window.electronAPI || !user?.id || !cloudLoadedRef.current) return
     const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories })
       .catch(() => setToast('⚠️ No se pudo sincronizar con la nube')), 2000)
     return () => clearTimeout(t)
@@ -261,7 +264,7 @@ export default function App() {
       // Prefix formula-starting chars to prevent CSV injection in Excel/Sheets
       return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
     }
-    const csvCell = v => `"${sanitizeCell(v).replace(/"/g, "'")}"`
+    const csvCell = v => `"${sanitizeCell(v).replace(/"/g, '""')}"`
     const data = filteredForReport ?? transactions
     const rows = [
       ['Fecha', 'Descripcion', 'Categoria', 'Tipo', 'Importe', 'Origen'],

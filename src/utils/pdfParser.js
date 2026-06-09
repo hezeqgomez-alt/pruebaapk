@@ -120,6 +120,7 @@ function detectInstallment(text) {
   // Require explicit keyword prefix: CTA, CUOTA, C. — avoid false positives on dates
   const m = text.match(/\b(?:cta|cuota|ct)\.?\s*(\d{1,2})\s*[-/]\s*(\d{1,2})\b/i)
     || text.match(/\bC\.\s*(\d{1,2})\s*\/\s*(\d{1,2})\b/)
+    || text.match(/\b(?:cuota|cta)\.?\s*(\d{1,2})\s+de\s+(\d{1,2})\b/i)
   if (!m) return null
   const current = parseInt(m[1])
   const total = parseInt(m[2])
@@ -646,12 +647,14 @@ function sliceToConsumosSection(rows, { ocrMode = false } = {}) {
 // ─── Deduplicate ─────────────────────────────────────────────────────────────
 
 function dedupe(txs) {
-  const seen = new Set()
+  // Use a counter so legitimate duplicate purchases (e.g. two identical installments)
+  // are preserved — only collapse exact same key seen more times than expected.
+  const counts = new Map()
   return txs.filter(t => {
-    const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
+    const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}|${t.installment ? `${t.installment.current}/${t.installment.total}` : ''}`
+    const n = (counts.get(key) || 0) + 1
+    counts.set(key, n)
+    return n === 1
   })
 }
 

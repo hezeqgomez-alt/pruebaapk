@@ -118,19 +118,15 @@ function FreedCapitalSummary({ findings }) {
   )
 }
 
-function SavingsCalculator({ findings, transactions }) {
+function SavingsCalculator({ findings }) {
   const [dismissed, setDismissed] = useState(new Set())
 
   const subs = findings.filter(f => f.type === 'subscription' && !dismissed.has(f.description))
   if (subs.length === 0) return null
 
-  // Estimate monthly cost: total spend / number of distinct months spanned
-  const months = new Set(transactions.map(t => t.date.slice(0, 7)))
-  const monthCount = Math.max(months.size, 1)
-
   const subsWithCost = subs.map(f => ({
     ...f,
-    monthly: f.total / monthCount,
+    monthly: f.count > 0 ? f.total / f.count : f.total,
   }))
 
   const totalMonthly = subsWithCost.reduce((s, f) => s + f.monthly, 0)

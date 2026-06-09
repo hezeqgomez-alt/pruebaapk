@@ -40,9 +40,15 @@ export default async function handler(req, res) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Buscar usuario por email
-  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-  if (listError) return res.status(500).json({ error: listError.message })
+  // Buscar usuario por email (paginado)
+  let users = [], page = 1
+  while (true) {
+    const { data, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+    if (listError) return res.status(500).json({ error: listError.message })
+    users.push(...data.users)
+    if (data.users.length < 1000) break
+    page++
+  }
 
   const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
   if (!user) return res.status(404).json({ error: `Usuario ${email} no encontrado` })

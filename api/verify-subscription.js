@@ -44,22 +44,32 @@ export default async function handler(req, res) {
   // Search by external_reference (userId) first, then by payer email as fallback
   let preapproval = null
 
-  const byId = await fetch(
-    `https://api.mercadopago.com/preapproval/search?external_reference=${encodeURIComponent(userId)}&preapproval_plan_id=${MP_PLAN_ID}&status=authorized`,
-    { headers: { Authorization: `Bearer ${MP_TOKEN}` } }
-  )
-  if (!byId.ok) return res.status(502).json({ error: `MP API error: ${byId.status}` })
-  const dataById = await byId.json()
-  preapproval = dataById.results?.[0] || null
-
-  if (!preapproval && email) {
-    const byEmail = await fetch(
-      `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&preapproval_plan_id=${MP_PLAN_ID}&status=authorized`,
+  try {
+    const byId = await fetch(
+      `https://api.mercadopago.com/preapproval/search?external_reference=${encodeURIComponent(userId)}&preapproval_plan_id=${MP_PLAN_ID}&status=authorized`,
       { headers: { Authorization: `Bearer ${MP_TOKEN}` } }
     )
-    if (!byEmail.ok) return res.status(502).json({ error: `MP API error: ${byEmail.status}` })
-    const dataByEmail = await byEmail.json()
-    preapproval = dataByEmail.results?.[0] || null
+    if (!byId.ok) return res.status(502).json({ error: `MP API error: ${byId.status}` })
+    const dataById = await byId.json()
+    preapproval = dataById.results?.[0] || null
+
+    if (!preapproval && email) {
+      const byEmail = await fetch(
+        `https://api.mercadopago.com/preapproval/search?payer_email=${encodeURIComponent(email)}&preapproval_plan_id=${MP_PLAN_ID}&status=authorized`,
+        { headers: { Authorization: `Bearer ${MP_TOKEN}` } }
+      )
+      if (!byEmail.ok) return res.status(502).json({ error: `MP API error: ${byEmail.status}` })
+      const dataByEmail = await byEmail.json()
+      const candidate = dataByEmail.results?.[0] || null
+      // Only trust if the subscription belongs to this user (or has no external_reference set)
+      if (candidate && candidate.external_reference && candidate.external_reference !== userId) {
+        preapproval = null
+      } else {
+        preapproval = candidate
+      }
+    }
+  } catch (err) {
+    return res.status(502).json({ error: `MP fetch failed: ${err.message}` })
   }
 
   if (!preapproval) {
