@@ -67,7 +67,7 @@ function formatCompletedDate(dateStr) {
 function FreedCapitalSummary({ findings }) {
   const [dismissed, setDismissed] = useState(new Set())
   const completed = findings
-    .filter(f => f.type === 'lastInstallment' && f.transactions?.[0] && !dismissed.has(f.transactions[0].description))
+    .filter(f => f.type === 'lastInstallment' && f.transactions?.[0] && !dismissed.has(`${f.transactions[0].description}|${f.transactions[0].date}|${f.total}`))
   if (completed.length === 0) return null
   const totalFreed = completed.reduce((s, f) => s + f.total, 0)
   return (
@@ -102,7 +102,7 @@ function FreedCapitalSummary({ findings }) {
               {fmt(f.total)}/mes
             </div>
             <button
-              onClick={() => setDismissed(d => new Set([...d, f.transactions[0]?.description]))}
+              onClick={() => setDismissed(d => new Set([...d, `${f.transactions[0]?.description}|${f.transactions[0]?.date}|${f.total}`]))}
               title="Descartar"
               className="w-5 h-5 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
             >

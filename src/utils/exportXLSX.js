@@ -41,7 +41,11 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
 
   // ── Sheet 2: Por categoría ────────────────────────────────────────────────
   const byCategory = {}
-  for (const t of debits) byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+  const catCounts  = {}
+  for (const t of debits) {
+    byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+    catCounts[t.category]  = (catCounts[t.category]  || 0) + 1
+  }
   const catRows = [['Categoría', 'Total ($)', '% del total', 'Movimientos']]
   Object.entries(byCategory)
     .sort(([, a], [, b]) => b - a)
@@ -50,7 +54,7 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
         sanitizeCell(CATEGORIES[cat]?.label || cat),
         fmtNum(amt),
         totalD > 0 ? fmtNum((amt / totalD) * 100) : 0,
-        debits.filter(t => t.category === cat).length,
+        catCounts[cat] || 0,
       ])
     })
   catRows.push(['TOTAL', fmtNum(totalD), 100, debits.length])
@@ -59,10 +63,12 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
   XLSX.utils.book_append_sheet(wb, wsCat, 'Por categoría')
 
   // ── Sheet 3: Por mes ──────────────────────────────────────────────────────
-  const byMonth = {}
+  const byMonth   = {}
+  const moCounts  = {}
   for (const t of debits) {
     const mo = t.date.slice(0, 7)
-    byMonth[mo] = (byMonth[mo] || 0) + t.amount
+    byMonth[mo]  = (byMonth[mo]  || 0) + t.amount
+    moCounts[mo] = (moCounts[mo] || 0) + 1
   }
   const moRows = [['Mes', 'Total ($)', 'Movimientos', 'Variación %']]
   const moSorted = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b))
@@ -72,7 +78,7 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
     moRows.push([
       format(parseISO(mo + '-01'), 'MMMM yyyy', { locale: es }),
       fmtNum(amt),
-      debits.filter(t => t.date.startsWith(mo)).length,
+      moCounts[mo] || 0,
       variation,
     ])
   })

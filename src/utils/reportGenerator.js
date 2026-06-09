@@ -113,7 +113,11 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef,
 
   // By category
   const byCategory = {}
-  for (const t of debits) byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+  const catCounts  = {}
+  for (const t of debits) {
+    byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+    catCounts[t.category]  = (catCounts[t.category]  || 0) + 1
+  }
   const catSorted = Object.entries(byCategory).sort(([, a], [, b]) => b - a)
 
   // By month
@@ -205,7 +209,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef,
       catLabel(cat),
       fmt(amt),
       totalDebits > 0 ? `${((amt / totalDebits) * 100).toFixed(1)}%` : '—',
-      debits.filter(t => t.category === cat).length,
+      catCounts[cat] || 0,
     ]),
     foot: [['Total gastos', fmt(totalDebits), '100%', debits.length]],
     showFoot: 'lastPage',

@@ -63,6 +63,19 @@ export default async function handler(req, res) {
   }
 
   if (!preapproval) {
+    // Check for pending subscriptions (e.g. payment processing, cash payment)
+    let pending = null
+    const byIdPending = await fetch(
+      `https://api.mercadopago.com/preapproval/search?external_reference=${encodeURIComponent(userId)}&preapproval_plan_id=${MP_PLAN_ID}&status=pending`,
+      { headers: { Authorization: `Bearer ${MP_TOKEN}` } }
+    )
+    if (byIdPending.ok) {
+      const dataPending = await byIdPending.json()
+      pending = dataPending.results?.[0] || null
+    }
+    if (pending) {
+      return res.status(200).json({ found: false, pending: true, message: 'Tu pago está siendo procesado. Puede tardar unos minutos en acreditarse.' })
+    }
     return res.status(200).json({ found: false, message: 'No se encontró suscripción activa en MercadoPago' })
   }
 

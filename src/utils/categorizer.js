@@ -322,24 +322,25 @@ function extractMerchant(desc) {
   return null
 }
 
+// Pre-normalize keywords once at module load — avoids re-normalizing ~300 kw × n transactions
+const RULES_N = RULES.map(rule => ({ cat: rule.cat, kw: rule.kw.map(normalizeKw) }))
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function categorize(description) {
   if (!description) return 'otros'
-  const n = normalize(description)
-  const np = ' ' + n + ' '
+  const np = ' ' + normalize(description) + ' '
 
-  for (const rule of RULES) {
-    if (rule.kw.some(k => np.includes(normalizeKw(k)))) return rule.cat
+  for (const rule of RULES_N) {
+    if (rule.kw.some(k => np.includes(k))) return rule.cat
   }
 
   // If it's a gateway transaction, extract the merchant name and retry
   const merchant = extractMerchant(description)
   if (merchant && merchant.length >= 3) {
-    const mn = normalize(merchant)
-    const mnp = ' ' + mn + ' '
-    for (const rule of RULES) {
-      if (rule.kw.some(k => mnp.includes(normalizeKw(k)))) return rule.cat
+    const mnp = ' ' + normalize(merchant) + ' '
+    for (const rule of RULES_N) {
+      if (rule.kw.some(k => mnp.includes(k))) return rule.cat
     }
   }
 

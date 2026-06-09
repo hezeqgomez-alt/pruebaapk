@@ -154,7 +154,8 @@ export default function App() {
 
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
-    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories }).catch(console.warn), 2000)
+    const t = setTimeout(() => cloudSave(user.id, { transactions, budgets, customCategories })
+      .catch(() => setToast('⚠️ No se pudo sincronizar con la nube')), 2000)
     return () => clearTimeout(t)
   }, [transactions, budgets, customCategories, user?.id])
 
