@@ -281,7 +281,11 @@ function shouldSkipDesc(desc) {
   // "TARJETA (9992) TOTAL CONSUMOS..." subtotal rows
   if (/tarjeta\s*\(?\d+\)?\s*total/i.test(desc)) return true
   // Summary keywords anywhere in description (with/without accents)
-  if (/saldo\s+anterior|saldo\s+actual|cierre\s+actual|vencimiento\s+actual|pr[oó]ximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  if (/saldo\s+anterior|saldo\s+actual|saldo\s+deudor|saldo\s+acreedor|cierre\s+actual|vencimiento\s+actual|pr[oó]ximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  // Period totals and compensation rows (CABAL and others)
+  if (/\btotal\s+(?:del?\s+per[ií]odo|factura|a\s+pagar|facturado|periodo)\b/i.test(desc)) return true
+  if (/\ba\s+compensar\b|\ba\s+comp\b/i.test(desc)) return true
+  if (/^compensar\b/i.test(desc)) return true
   // Page header rows (cardholder name + card type)
   if (/\b(?:visa|mastercard|amex|american\s+express|cabal|naranja)\s+(?:signature|platinum|classic|gold|black|infinite)\b/i.test(desc)) return true
   if (/\bhoja\s+\d+\b/i.test(desc)) return true
@@ -486,6 +490,9 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
     const desc = cleanDesc(row.text)
     if (shouldSkipDesc(desc)) continue
 
+    // Sanity cap: single transaction > 50M ARS is almost certainly a balance/total row
+    if (Math.abs(amountVal) > 50_000_000) continue
+
     const installment = detectInstallment(row.text)
     const fx = detectForeignCurrency(row.text)
 
@@ -579,6 +586,9 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
 
     const desc = cleanDesc(rawDesc)
     if (shouldSkipDesc(desc)) continue
+
+    // Sanity cap: single transaction > 50M ARS is almost certainly a balance/total row
+    if (Math.abs(amount) > 50_000_000) continue
 
     const installment = detectInstallment(text)
     const fx = detectForeignCurrency(text)
