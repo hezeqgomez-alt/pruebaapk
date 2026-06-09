@@ -266,10 +266,10 @@ export default function App() {
     const rows = [
       ['Fecha', 'Descripcion', 'Categoria', 'Tipo', 'Importe', 'Origen'],
       ...data.map(t => [
-        t.date,
+        csvCell(t.date),
         csvCell(t.description),
-        sanitizeCell(t.category),
-        t.type || 'debit',
+        csvCell(t.category),
+        csvCell(t.type || 'debit'),
         t.type === 'credit' ? t.amount : -t.amount,
         csvCell(t.source),
       ]),

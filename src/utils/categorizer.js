@@ -283,7 +283,7 @@ const RULES = [
 
 function normalize(s) {
   return String(s).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -294,7 +294,7 @@ function normalize(s) {
 // padded description (' ' + n + ' ').
 function normalizeKw(s) {
   return String(s).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')
 }

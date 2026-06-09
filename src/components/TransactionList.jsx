@@ -369,7 +369,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   }
 
   function deleteOne(id) {
-    onUpdate(transactions.filter(t => t.id !== id))
+    onUpdate(prev => prev.filter(t => t.id !== id))
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n })
   }
 

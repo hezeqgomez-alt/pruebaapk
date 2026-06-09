@@ -209,7 +209,7 @@ export default function InsightsPanel({ findings, transactions }) {
     })),
   ]
 
-  if (topCat && topCat[1] / total > 0.35) {
+  if (topCat && total > 0 && topCat[1] / total > 0.35) {
     insights.push({
       type: 'concentration',
       title: 'Concentración de gasto',
@@ -255,7 +255,7 @@ export default function InsightsPanel({ findings, transactions }) {
           return (
             <div
               key={i}
-              className={`relative overflow-hidden rounded-xl border p-4 ${cfg.bg} ${cfg.border} ${refreshing ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}
+              className={`relative overflow-hidden rounded-xl border p-4 ${cfg.bg} ${cfg.border} transition-opacity`}
             >
               <div className="flex items-start gap-3">
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${cfg.gradient} flex items-center justify-center shrink-0 shadow-sm`}>

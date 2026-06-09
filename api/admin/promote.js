@@ -18,6 +18,10 @@ export default async function handler(req, res) {
 
   const { email, secret, plan = 'paid' } = req.body || {}
 
+  if (!['paid', 'expired', 'trial'].includes(plan)) {
+    return res.status(400).json({ error: 'Invalid plan value' })
+  }
+
   if (!secret) return res.status(401).json({ error: 'Unauthorized' })
   const secretsMatch = (() => {
     try {

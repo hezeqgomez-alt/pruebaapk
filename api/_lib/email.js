@@ -102,6 +102,8 @@ export function onboardingEmail(email) {
     `.trim(),
   }
 }
+
+export function proActivationEmail(email) {
   return {
     to: email,
     subject: 'Estás a un paso de empezar a usar EasyResumen 🚀',

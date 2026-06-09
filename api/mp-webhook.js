@@ -14,20 +14,22 @@ import { sendEmail, proActivationEmail } from './_lib/email.js'
 
 function verifyMPSignature(req) {
   const secret = process.env.MP_WEBHOOK_SECRET
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') return false
-    return true // skip signature check in dev/test only
-  }
+  if (!secret) return false // always fail-closed
 
   const xSignature  = req.headers['x-signature']  || ''
   const xRequestId  = req.headers['x-request-id'] || ''
-  const dataId      = req.query?.['data.id']       || req.body?.data?.id || ''
+  // MP sends id in query string; body fallback for manual tests
+  const dataId      = req.query?.['data.id'] || req.body?.data?.id || ''
 
   // MP signature format: ts=<timestamp>,v1=<hmac>
   const parts = Object.fromEntries(xSignature.split(',').map(p => p.split('=')))
   const ts    = parts['ts'] || ''
   const v1    = parts['v1'] || ''
   if (!ts || !v1) return false
+
+  // Reject replayed webhooks older than 5 minutes
+  const tsMs = Number(ts) * 1000
+  if (Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) return false
 
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
   const expected = createHmac('sha256', secret).update(manifest).digest('hex')
