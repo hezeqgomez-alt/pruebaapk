@@ -1,17 +1,15 @@
 /**
  * POST /api/track-pdf
- * Server-side PDF tracking: validates trial limits and increments counter
- * in app_metadata (service_role — clients cannot self-reset the counter).
+ * Server-side PDF tracking: validates trial expiry and increments counter.
+ * The counter is informational only — there is no per-PDF cap on trial accounts.
  * Requires header: Authorization: Bearer <supabase_access_token>
  *
  * Returns:
- *   { allowed: true, pdfCount, pdfLimit }
+ *   { allowed: true, pdfCount }
  *   { allowed: false, expired: true, message }
- *   { allowed: false, pdfLimit, pdfCount, message }
  */
 import { createClient } from '@supabase/supabase-js'
 
-const PDF_LIMIT = 3
 const ALLOWED_ORIGINS = ['https://easyresumen.com.ar', 'https://www.easyresumen.com.ar']
 
 export default async function handler(req, res) {
@@ -39,11 +37,10 @@ export default async function handler(req, res) {
 
   const userId = authUser.id
 
-  // Get full user with app_metadata via service_role
   const { data: { user: sbUser }, error: getErr } = await supabase.auth.admin.getUserById(userId)
   if (getErr) return res.status(500).json({ error: getErr.message })
 
-  // Paid users have no limit
+  // Paid users — always allowed, skip counting
   if (sbUser.app_metadata?.plan === 'paid') {
     return res.status(200).json({ allowed: true, pdfCount: null })
   }
@@ -61,19 +58,8 @@ export default async function handler(req, res) {
     })
   }
 
-  // Read pdf_count from app_metadata (authoritative) with fallback to user_metadata (legacy)
+  // Increment pdf_count in app_metadata for analytics (no cap enforced)
   const currentCount = sbUser.app_metadata?.pdf_count ?? sbUser.user_metadata?.pdf_count ?? 0
-
-  if (currentCount >= PDF_LIMIT) {
-    return res.status(200).json({
-      allowed: false,
-      pdfLimit: PDF_LIMIT,
-      pdfCount: currentCount,
-      message: `Límite de prueba: ya analizaste ${PDF_LIMIT} resúmenes. Suscribite para continuar.`,
-    })
-  }
-
-  // Increment in app_metadata — only writable server-side
   const newCount = currentCount + 1
   const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
     app_metadata: {
@@ -83,5 +69,5 @@ export default async function handler(req, res) {
   })
   if (updateErr) return res.status(500).json({ error: updateErr.message })
 
-  return res.status(200).json({ allowed: true, pdfCount: newCount, pdfLimit: PDF_LIMIT })
+  return res.status(200).json({ allowed: true, pdfCount: newCount })
 }

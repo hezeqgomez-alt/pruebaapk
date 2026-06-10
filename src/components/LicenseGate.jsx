@@ -118,7 +118,7 @@ function ActivationForm({ onActivated }) {
 
 // ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
-export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
+export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) { // pdfCount is informational only — no PDF cap on trial
   const [showModal,   setShowModal]   = useState(false)
   const [showVerify,  setShowVerify]  = useState(false)
   const [checking,    setChecking]    = useState(false)

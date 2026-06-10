@@ -265,12 +265,8 @@ export default function App() {
         setElectronLicense(s => s?.status === 'trial' ? { ...s, pdfCount: check.pdfCount } : s)
       } else if (isSupabaseConfigured && user) {
         const check = await webTrackPDF()
-        if (!check.allowed) {
-          if (check.expired) {
-            setToast(`❌ Tu período de prueba expiró. Suscribite para continuar.`)
-          } else {
-            setToast(`❌ Límite de prueba: ya analizaste ${check.pdfLimit} resúmenes. Suscribite para continuar.`)
-          }
+        if (!check.allowed && check.expired) {
+          setToast(`❌ Tu período de prueba expiró. Suscribite para continuar.`)
           continue
         }
       }
@@ -575,7 +571,7 @@ export default function App() {
       </div>
 
       {/* ── License gates ── */}
-      {licenseStatus?.status === 'trial' && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} pdfLimit={licenseStatus.pdfLimit} onActivated={refreshLicense} />}
+      {licenseStatus?.status === 'trial' && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} onActivated={refreshLicense} />}
       {showSubPromo && <SubscribeModal user={user} onClose={dismissSubPromo} />}
       <UpdateToast />
 
