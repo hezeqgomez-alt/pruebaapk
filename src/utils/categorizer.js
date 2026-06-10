@@ -162,6 +162,9 @@ const RULES = [
     // Neumáticos y mecánica
     'neumen', 'neumatico', 'gomeria', 'auxilio mecanico',
     'taller mecanico', 'mecanica automotriz', 'repuesto automotor',
+    // Estacionamiento
+    'seeker',     // Seeker Parking — reserva de cocheras en eventos (MERPAGOSEEKER)
+    'parkimovil', 'estacionamiento', 'cochera', 'parking',
   ]},
 
   // ── Combustible ──────────────────────────────────────────────────────────────
@@ -361,9 +364,15 @@ function extractMerchant(desc) {
 // Keys are lowercase normalized merchant names (or prefixes).
 function resolveAlias(merchant) {
   const m = merchant.toLowerCase().trim()
-  // Starbucks uses SBUX (stock ticker) as internal abbreviation across all
-  // locations → "SBUXESPEJO", "SBUXRECOLETA", etc.
+  // Starbucks uses SBUX (stock ticker) as internal abbreviation
+  // e.g. SBUXESPEJO, SBUXRECOLETA, SBUX*PALERMO
   if (m.startsWith('sbux')) return 'starbucks'
+  // McDonald's uses MCD in some gateways
+  if (m.startsWith('mcd') && m.length <= 8) return 'mcdonalds'
+  // YPF may appear abbreviated
+  if (m === 'ypf' || m.startsWith('ypf ') || m.startsWith('ypf*')) return 'ypf'
+  // Pedidos Ya shorthand
+  if (m.startsWith('pedya') || m.startsWith('pdya')) return 'pedidosya'
   return merchant
 }
 
