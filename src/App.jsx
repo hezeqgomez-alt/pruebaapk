@@ -139,7 +139,8 @@ export default function App() {
   const chartDonutRef   = useRef(null)
   const chartBarRef     = useRef(null)
   const addBtnRef       = useRef(null)
-  const cloudLoadedRef  = useRef(false) // gates debounced save until first cloud load completes
+  const cloudLoadedRef      = useRef(false) // 'ok' | false — gates debounced save until first cloud load succeeds
+  const cloudSyncErrShown   = useRef(false) // show sync-error toast at most once per session
 
   // Init analytics once on mount
   useEffect(() => { initAnalytics() }, [])
@@ -205,8 +206,11 @@ export default function App() {
       if (cloud?.custom_categories && Object.keys(cloud.custom_categories).length > 0) {
         setCustomCategories(cloud.custom_categories)
       }
-    }).catch(console.warn).finally(() => {
-      if (!cancelled) cloudLoadedRef.current = true
+    }).then(() => {
+      if (!cancelled) cloudLoadedRef.current = 'ok'
+    }).catch(e => {
+      console.warn('cloud load error:', e)
+      // Don't set cloudLoadedRef so the save effect won't run after a failed load
     })
     return () => { cancelled = true }
   }, [user?.id])
@@ -217,19 +221,23 @@ export default function App() {
   }, [transactions])
 
   useEffect(() => {
-    if (window.electronAPI || !user?.id || !cloudLoadedRef.current) return
+    if (window.electronAPI || !user?.id || cloudLoadedRef.current !== 'ok') return
     const id = user.id
     const data = { transactions, budgets, customCategories }
     const t = setTimeout(async () => {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           await cloudSave(id, data)
+          cloudSyncErrShown.current = false // reset on success so future errors are shown
           return
         } catch {
           if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)))
         }
       }
-      setToast('⚠️ No se pudo sincronizar con la nube')
+      if (!cloudSyncErrShown.current) {
+        cloudSyncErrShown.current = true
+        setToast('⚠️ No se pudo sincronizar con la nube')
+      }
     }, 2000)
     return () => clearTimeout(t)
   }, [transactions, budgets, customCategories, user?.id])
