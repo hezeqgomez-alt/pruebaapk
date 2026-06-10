@@ -48,7 +48,8 @@ const RULES = [
   // ── Donaciones ───────────────────────────────────────────────────────────────
   { cat: 'donaciones', kw: [
     'garrahan', 'fund garrahan', 'fundgarrahan', 'fundacion', 'fund ',
-    'donacion', 'donativo', 'caritas', 'unicef', 'greenpeace', 'techo ',
+    'donacion', 'donativo', 'caritas', 'unicef', 'greenpeace',
+    'fundacion techo', 'techo argentina',
     'red solidaria', 'banco de alimentos', 'medicos sin fronteras',
     'aldeas infantiles', 'oxfam', 'acnur',
   ]},
@@ -62,8 +63,9 @@ const RULES = [
 
   // ── Supermercados ────────────────────────────────────────────────────────────
   { cat: 'supermercado', kw: [
-    'carrefour', 'disco ', 'jumbo', 'walmart', 'coto ', 'dia ', 'vea ',
+    'carrefour', ' disco ', 'jumbo', 'walmart', ' coto ', ' dia ', ' vea ',
     'la anonima', 'chango mas', 'changomas', 'makro', 'atomo',
+    'hiper libertad', 'la gallega', ' toledo ', 'cencosud',
     'hipermayor', 'yaguar', 'diarco', 'maxiconsumo', 'el super', 'mi super',
     'tattersall', 'vital', 'supermercado', 'supermarket',
     'almacen', 'despensa', 'autoservicio', 'minimarket',
@@ -91,6 +93,7 @@ const RULES = [
     'primevideo', 'prime video', 'amazon prime',
     'flow ', 'directv', 'telecentro', 'cablevision', 'fibertel',
     'spotify', 'deezer', 'tidal', 'apple music',
+    'crunchyroll', 'mubi ', 'hbo max', 'youtube',
     // Apple: antes de que 'apple ' genérico quede sin categoría
     'apple.com', 'apple com', 'apple tv', 'apple one', 'apple arcade',
     'apple storage', 'icloud',
@@ -115,7 +118,7 @@ const RULES = [
     'restaurant', 'restoran', 'barra ', 'asador', 'parrilla', 'tenedor libre',
     'bodegon', 'cantina', 'trattoria', 'sushi', 'wok ', 'china ',
     'buffet', 'comedor', 'gastronomia', 'grill ', 'burger ',
-    'hamburgues', 'pizzeria', 'pizza ', 'empanada', 'sandwicheria',
+    'hamburgu', 'pizzeria', 'pizza ', ' pizz ', 'empanada', 'sandwicheria',
     'arabe ', 'thai ', 'mexicano', 'vegetarian',
     'tosta', 'selectos', 'parrillada', 'churrasco',
   ]},
@@ -124,7 +127,7 @@ const RULES = [
   { cat: 'cafeterias', kw: [
     'starbucks', 'cafe martinez', 'cafe havanna', 'cafe tortoni', 'havanna',
     'freddo', 'grido', 'via resto', 'bonafide', 'tienda de cafe',
-    'cafe ', 'cafeteria', 'bar ', 'confiteria',
+    'cafe ', 'cafeteria', 'caffe', ' bar ', 'confiteria',
     'heladeria', 'gelateria', 'helado', 'factura ', 'medialunas',
     'caramel', 'nero ', 'rapanui', 'laquinta', 'el noble',
   ]},
@@ -144,10 +147,12 @@ const RULES = [
   { cat: 'transporte', kw: [
     'uber', 'cabify', 'didi ', 'beat ', 'indriver', 'in driver',
     'taxi', 'remis', 'transfer ', 'shuttle', 'colectivo', 'subte',
-    'sube ', 'tren ', 'metrobus', 'movibus', 'ecobici', 'scooter',
+    ' sube ', ' tren ', 'metrobus', 'movibus', 'ecobici', 'scooter',
     'moto taxi', 'aeropuerto bus', 'omnibus',
     'flecha bus', 'flechabus', 'via bariloche', 'andesmar',
-    'cata ', 'jac ', 'plusmar', 'el rapido', 'flybondi express',
+    ' cata ', ' jac ', 'plusmar', 'el rapido', 'flybondi express',
+    // Peajes
+    'telepase', 'peaje', 'ausol', 'aubasa', 'caminos del rio', 'autopistas del sol',
     // Neumáticos y mecánica
     'neumen', 'neumatico', 'gomeria', 'auxilio mecanico',
     'taller mecanico', 'mecanica automotriz', 'repuesto automotor',
@@ -168,6 +173,7 @@ const RULES = [
     'consultorio', 'medico', 'doctor', 'odontologia', 'dentista',
     'odontologo', 'optica', 'laboratorio', 'bioquimica', 'diagnostico',
     'prepaga', 'obra social', 'emergencias', 'ambulancia',
+    'pami ', 'ioma ', 'vacunatorio', 'farmaplus',
     'fisioterapia', 'kinesiologia', 'psicologia', 'psiquiatria',
     'nutricionista', 'gym', 'gimnasio', 'personal trainer',
     'pilates', 'yoga', 'meditacion',
@@ -176,6 +182,7 @@ const RULES = [
 
   // ── Indumentaria ─────────────────────────────────────────────────────────────
   { cat: 'indumentaria', kw: [
+    'stock center', 'dafiti', 'dexter', 'sportline', 'grimoldi', 'solodeportes',
     'zara', 'h&m', 'pull&bear', 'bershka', 'stradivarius',
     'adidas', 'nike ', 'puma ', 'lacoste', 'levis', 'levi ',
     'tommy', 'gap ', 'forever 21', 'rapsodia', 'legacy ', 'mimo ',
@@ -206,21 +213,31 @@ const RULES = [
     // Muebles / decoración
     'muebles', 'colchon', 'sommier', 'bazar', 'menaje',
     'vajilla', 'manteleria', 'cortinas', 'alfombra',
-    // Limpieza
-    'limpieza', 'ala ', 'ariel ', 'skip ', 'drive ', 'ace ',
+    // Limpieza — marcas cortas con espacio inicial y final para evitar
+    // falsos positivos por substring ("uala " → 'ala ', "space " → 'ace ')
+    'limpieza', ' ala ', ' ariel ', ' skip ', ' drive ', ' ace ',
     'lysoform', 'detergente', 'desodorante ambiental', 'iluminacion',
+    // Electro / hogar argentinos
+    ' rodo ', 'hiper rodo', 'cetrogar', 'naldo', 'ribeiro', 'on city',
+    // Energía provincial
+    'ecogas', 'litoral gas', 'epec ', 'edemsa', 'edea ',
   ]},
 
   // ── Educación ─────────────────────────────────────────────────────────────────
   { cat: 'educacion', kw: [
-    'universidad', 'facultad', 'uba ', 'uca ', 'udesa', 'austral',
-    'palermo', 'belgrano', 'uade', 'utn ', 'unlp', 'unsam',
+    // Universidades: nombres completos — 'austral'/'palermo'/'belgrano' solos son
+    // aerolíneas y barrios, no universidades
+    'universidad', 'facultad', 'uba ', 'uca ', 'udesa',
+    'universidad austral', 'univ austral',
+    'universidad de palermo', 'univ palermo',
+    'universidad de belgrano', 'univ belgrano',
+    'uade', 'utn ', 'unlp', 'unsam',
     'colegio', 'escuela', 'instituto', 'jardin', 'guarderia',
     'academia', 'capacitacion', 'curso ', 'seminario',
     'platzi', 'udemy', 'coursera', 'edx ', 'domestika',
     'coderhouse', 'acamica', 'henry ', 'digitalhouse', 'wolox',
     'egg ', 'scholarships',
-    'libreria', 'librerias', 'el ateneo', 'distal', 'el libro',
+    'libreria', 'librerias', 'el ateneo', 'distal', ' libro ',
     'rayuela', 'crisol', 'yenny',
   ]},
 
@@ -229,9 +246,10 @@ const RULES = [
     'despegar', 'booking', 'airbnb', 'hotels', 'trivago', 'tripadvisor',
     'expedia', 'hotel ', 'apart ', 'hostel', 'motel ', 'cabana',
     'posada', 'alojamiento',
-    'aerolineas', 'aerolineas', 'latam', 'flybondi', 'jetsmart',
-    'aeromexico', 'american airlines', 'copa ', 'gol ', 'lan ', 'vuelo',
+    'aerolineas', 'austral lineas', 'latam', 'flybondi', 'jetsmart',
+    'aeromexico', 'american airlines', ' copa ', ' gol ', ' lan ', 'vuelo',
     'pasaje', 'turismo', 'agencia de viajes',
+    'almundo', 'hoteles', 'assist card', 'assistcard',
     'rent a car', 'avis ', 'hertz ', 'europcar',
     'carlos paz', 'bariloche', 'ushuaia', 'iguazu',
   ]},
@@ -243,7 +261,7 @@ const RULES = [
     'dell ', 'hp ', 'lenovo', 'asus ', 'intel ', 'amd ', 'nvidia',
     'crucial', 'kingston', 'western digital', 'seagate',
     'pc factory', 'compuservice', 'megatone', 'maxihogar',
-    'full ', 'nexo ', 'bangho', 'compumundo',
+    'nexo ', 'bangho', 'compumundo', 'grupo nucleo',
     'notebook', 'monitor', 'teclado', 'mouse ', 'impresora',
     'camara', 'celular', 'smartphone', 'tablet',
     'auricular', 'parlante', 'proyector', 'cable ',
@@ -261,6 +279,7 @@ const RULES = [
     'seguro de vida', 'seguro de tarjeta',
     'retiro atm', 'extraccion cajero',
     'brubank', 'uala ', 'naranja x', 'naranja ', 'prex ', 'lemon ',
+    'modo ', 'cuenta dni', 'western union',
     'cuenta dolar', 'fci ', 'fondo comun', 'cauciones', 'plazo fijo',
     'mobbex', 'todopago', 'todo pago', 'pomelo',
   ]},
@@ -275,8 +294,8 @@ const RULES = [
     'allianz', 'zurich', 'mapfre', 'sancor seguros',
     'federacion patronal', 'berkley', 'rio uruguay', 'nacion seguros',
     // Cobro / envíos / pagos
-    'trenes argentinos', 'autopistas', 'aubasa', 'ausa ', 'osm ',
-    'correo argentino', 'andreani', 'oca ', 'fedex ', 'dhl ',
+    'trenes argentinos', 'autopistas', 'ausa ', 'osm ',
+    'correo argentino', 'andreani', ' oca ', 'fedex ', 'dhl ',
     'rapipago', 'pagofacil', 'cobroexpress', 'pago mis cuentas',
   ]},
 ]

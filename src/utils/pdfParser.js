@@ -125,9 +125,9 @@ function parseDate(str, refYear) {
 
 function detectInstallment(text) {
   // Require explicit keyword prefix: CTA, CUOTA, C. — avoid false positives on dates
-  const m = text.match(/\b(?:cta|cuota|ct)\.?\s*(\d{1,2})\s*[-/]\s*(\d{1,2})\b/i)
-    || text.match(/\bC\.\s*(\d{1,2})\s*\/\s*(\d{1,2})\b/)
-    || text.match(/\b(?:cuota|cta)\.?\s*(\d{1,2})\s+de\s+(\d{1,2})\b/i)
+  const m = text.match(/\b(?:cta|cuota|cuo|ct)\.?\s*(\d{1,2})\s*[-/]\s*(\d{1,2})\b/i)
+    || text.match(/\bC\.?\s*(\d{1,2})\s*\/\s*(\d{1,2})\b/)
+    || text.match(/\b(?:cuota|cta|cuo)\.?\s*(\d{1,2})\s+de\s+(\d{1,2})\b/i)
   if (!m) return null
   const current = parseInt(m[1])
   const total = parseInt(m[2])
@@ -137,7 +137,7 @@ function detectInstallment(text) {
 
 // ─── Foreign currency detection ─────────────────────────────────────────────
 
-const FX_RE = /\b(U\$[DS]|USD|EUR|GBP|BRL|CLP|UYU)\s+([\d.,]+)/i
+const FX_RE = /\b(U\$[DS]|USD|DLS|EUR|GBP|BRL|CLP|UYU)\s*([\d.,]+)/i
 const FX_NORM = { 'U$D': 'USD', 'U$S': 'USD' }
 
 function detectForeignCurrency(text) {
@@ -188,10 +188,12 @@ function detectBank(text) {
   if (t.includes('santander'))         return 'Santander'
   if (t.includes('hsbc'))              return 'HSBC'
   if (t.includes('icbc'))              return 'ICBC'
-  if (t.includes('macro'))             return 'Macro'
+  if (/\bbanco\s+macro\b|\bmacro\b/.test(t)) return 'Macro'
   if (t.includes('itaú') || t.includes('itau')) return 'Itaú'
-  if (t.includes('nacion') || t.includes('nación') || t.includes('bna')) return 'Banco Nación'
-  if (t.includes('ciudad'))            return 'Banco Ciudad'
+  // Word-boundary patterns: bare 'nacion' substring would match "internacional"/"nacional"
+  // and mislabel other banks' statements (e.g. Banco Ciudad with FX operations).
+  if (/\bbanco\s+(?:de\s+la\s+)?naci[oó]n\b|\bbco\.?\s*naci[oó]n\b|\bbna\b/.test(t)) return 'Banco Nación'
+  if (/\bbanco\s+ciudad\b|\bbancociudad\b|\bciudad\b/.test(t)) return 'Banco Ciudad'
   return null
 }
 
@@ -214,6 +216,13 @@ function detectCardBrand(text) {
 function detectYear(allText) {
   const currentYear = new Date().getFullYear()
   const matches = [...allText.matchAll(/\b(20[2-4]\d)\b/g)].map(m => parseInt(m[1]))
+  // Also harvest 2-digit years from full date tokens (dd-mm-yy / dd/mm/yy / dd.mm.yy) —
+  // many statements (BNA) never print a 4-digit year in the transaction section,
+  // and a stray "2020" in legal boilerplate must not win over actual dates.
+  for (const m of allText.matchAll(/\b\d{1,2}[-/.]\d{1,2}[-/.](\d{2})\b/g)) {
+    const y = 2000 + parseInt(m[1])
+    if (y >= 2020 && y <= 2049) matches.push(y)
+  }
   if (!matches.length) return currentYear
   // Prefer years within ±1 of current year — avoids picking up loan maturity dates (2031, 2048, etc.)
   const nearby = matches.filter(y => Math.abs(y - currentYear) <= 1)
@@ -246,8 +255,10 @@ function cleanDesc(raw) {
   // Remove leading/trailing noise chars (including asterisks used as CABAL row markers)
   desc = desc.replace(/^[\s\-.|/_(*]+|[\s\-.|/_()]+$/g, '').trim()
 
-  // Strip leading comprobante/voucher codes: 4-7 digits + letter (e.g. "645184*", "005067K", "1998C")
-  desc = desc.replace(/^\d{4,7}[A-Z*K]\s*/i, '').trim()
+  // Strip leading comprobante/voucher codes: 4-7 digits + separator (e.g. "645184*", "005067K", "1998C").
+  // Asterisk separators may be glued to the merchant ("961947*MOVISTAR"); letter
+  // separators require a boundary so "1006FARMACITY" does NOT become "ARMACITY".
+  desc = desc.replace(/^\d{4,7}(?:\*\s*|[A-Z](?=\s|$)\s*)/i, '').trim()
 
   // Strip leading 3-4 digit voucher numbers (CABAL, Credicoop format: "4259 MERCHANT")
   desc = desc.replace(/^\d{3,4}\s+(?=[A-Z])/i, '').trim()
@@ -258,6 +269,8 @@ function cleanDesc(raw) {
     const gw = desc.match(/^(dlopedidosya|merpago|mercpago|sipago|mobbex|todopago|payu\*?ar\*?|payu|dlo|mp)[*\s]+/i)
     if (gw && gw[0].length < desc.length) desc = desc.slice(gw[0].length).trim()
   }
+  // PVS terminal prefix may be glued to the merchant ("PVSCAFFE TRUFFA" → "CAFFE TRUFFA")
+  desc = desc.replace(/^PVS(?=[A-Z*\s])[*\s]*/, '').trim()
 
   // Remove trailing installment keyword remnants (e.g. "MERCHANT cta", "AYSA C.")
   desc = desc.replace(/\s+(?:cta|cuota|c)\.?\s*$/i, '').trim()
@@ -276,8 +289,16 @@ function cleanDesc(raw) {
   // (e.g. "PARANA6543" → "PARANA", "EXPRESS12345" → "EXPRESS")
   desc = desc.replace(/\b([A-Z]{5,})\d{4,7}\b/g, '$1').trim()
 
-  // Strip trailing noise fragments of 1–2 letters left after prior strips (e.g. " V A")
-  desc = desc.replace(/(\s+[A-Z]{1,2})+$/, '').trim()
+  // Strip trailing single-letter noise fragments left after prior strips (e.g. " V A").
+  // Single letters only — two-letter suffixes like "SA"/"SC" are legitimate company forms.
+  desc = desc.replace(/(\s+[A-Z])+$/, '').trim()
+
+  // Strip trailing FX reference codes glued to the currency token
+  // (e.g. "Google One A75835791USD" → "Google One")
+  desc = desc.replace(/\s+[A-Z]?\d{6,}\s*(?:USD|U\$[SD]|EUR)$/i, '').trim()
+
+  // Card-not-present rows print only a reference path (e.g. "CNP 21/00074081/050/05")
+  desc = desc.replace(/^(CNP)\s+[\d/]+$/i, 'Compra CNP').trim()
 
   return desc
 }
@@ -286,9 +307,10 @@ function shouldSkipDesc(desc) {
   if (!desc || desc.length < 3) return true
   // Barcode / binary noise rows
   if (desc.startsWith('<')) return true
-  // Known header/summary keywords at start of line
+  // Known header/summary keywords at start of line — word-bounded so real merchants
+  // like "SALDOS Y RETAZOS", "TOTALINE", "CUENTAS CLARAS BAR" are not falsely dropped.
   // Note: 'tarjeta' and 'cuota' are included — in CC statements they never start a merchant name
-  if (/^(total|subtotal|saldo|vencimiento|fecha|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|titular|nombre|cuenta|numero|operacion|viene\s+de|continua\s+en|tarjeta|cuota)/i.test(desc)) return true
+  if (/^(total|subtotal|saldo|vencimiento|fecha|resumen|periodo|apertura|cierre|limite|disponible|pagos|debitos|creditos|vto\.?|nro\.?|titular|nombre|cuenta|numero|operacion(?:es)?|viene\s+de|continua\s+en|tarjeta|cuota)\b/i.test(desc)) return true
   // Payment lines: "pago" at start OR common payment phrases anywhere
   if (/^pago\b/i.test(desc)) return true
   if (/\bsu\s+pago\b|\bpago\s+en\s+pesos\b|\bpago\s+m[ií]nimo\b|\bpago\s+de\s+tarjeta\b/i.test(desc)) return true
@@ -305,8 +327,8 @@ function shouldSkipDesc(desc) {
   // Page header rows (cardholder name + card type)
   if (/\b(?:visa|mastercard|amex|american\s+express|cabal|naranja)\s+(?:signature|platinum|classic|gold|black|infinite)\b/i.test(desc)) return true
   if (/\bhoja\s+\d+\b/i.test(desc)) return true
-  // Address fragments
-  if (/\bvilla\s+adelina\b/i.test(desc)) return true
+  // Address/header fragments: postal-code rows ("CP 1607", "C.P. B1607") with street info
+  if (/\bc\.?p\.?\s*:?\s*[A-Z]?\d{4}\b/i.test(desc)) return true
   // Installment schedule rows: 2+ "Month/YY" or "Month-YY" tokens (e.g. "ENE/25 FEB/25")
   if ((desc.match(/\b(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|setiembre|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)[-/]\d{2}\b/gi) || []).length >= 2) return true
   // Argentine CC fiscal/fee rows: taxes, commissions — not merchant purchases
@@ -483,29 +505,39 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
     const date = parseDate(row.text, refYear)
     if (!date) continue
 
+    // Statement-header summary rows carry empty-column placeholders ("-,--")
+    // merged with the holder's address by Y grouping — never a transaction.
+    if (/-,--/.test(row.text)) continue
+
     // Find amounts in this row
     let amounts = findAmounts(row.text)
 
-    // If no amount on this row, check next row
-    if (amounts.length === 0 && i + 1 < rows.length) {
+    // If no amount on this row, check next row — but only when the next row is a
+    // continuation (no own date). Borrowing from a dated row would duplicate its amount.
+    if (amounts.length === 0 && i + 1 < rows.length && !parseDate(rows[i + 1].text, refYear)) {
       amounts = findAmounts(rows[i + 1].text)
     }
 
     if (amounts.length === 0) continue
 
+    // Prefer formatted amounts (with . or , separators) over bare integers —
+    // unformatted 5+ digit tokens are usually comprobante/cupón codes, and a
+    // trailing code must not beat the real amount (e.g. "MERCHANT 10.000,00 12345").
+    const formatted = amounts.filter(a => /[.,]/.test(a.raw))
+    const pool = formatted.length ? formatted : amounts
+
     // Rightmost (last) amount = cargo/débito.
     // Exception: for credit rows (all-negative), pick the most-negative value —
     // dual-currency statements (VISA/CABAL) place the smaller USD credit last.
-    let amountVal = amounts[amounts.length - 1].val
-    if (amountVal < 0 && amounts.length > 1 && amounts.every(a => a.val < 0)) {
-      amountVal = amounts.reduce((min, a) => a.val < min.val ? a : min).val
+    let amountVal = pool[pool.length - 1].val
+    if (amountVal < 0 && pool.length > 1 && pool.every(a => a.val < 0)) {
+      amountVal = pool.reduce((min, a) => a.val < min.val ? a : min).val
     }
     // The last amount may be a running balance (date | desc | importe | saldo).
     // When it's 5× larger than the first positive amount on the same row, prefer the first.
-    // Guard: only apply when firstPos.raw is a formatted amount (has . or ,) — bare integers
-    // like comprobante codes (449917, 008580) must not trigger this heuristic.
-    if (amounts.length >= 2 && amountVal > 0) {
-      const firstPos = amounts.find(a => a.val > 0)
+    // Operates on the formatted pool only — bare integers (comprobante codes) are excluded.
+    if (pool.length >= 2 && amountVal > 0) {
+      const firstPos = pool.find(a => a.val > 0)
       if (firstPos && amountVal > firstPos.val * 5 && /[.,]/.test(firstPos.raw)) amountVal = firstPos.val
     }
     const type = amountVal < 0 ? 'credit' : 'debit'
@@ -571,14 +603,24 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
 
     if (cols.length < 2) continue
 
+    // Statement-header summary rows carry empty-column placeholders ("-,--")
+    if (/-,--/.test(text)) continue
+
     // First column: try to find a date
     const dateCol = cols.find(c => parseDate(c.text, refYear))
     if (!dateCol) continue
 
     const date = parseDate(dateCol.text, refYear)
 
-    // Last column: try to find an amount — avoid running balance column
-    const amtCols = [...cols].reverse().filter(c => parseAmount(c.text) !== null)
+    // Last column: try to find an amount — avoid running balance column.
+    // Gate through the strict AMT_RE: bare parseAmount is too permissive and turns
+    // installment tokens ("C.13/18" → 1318) and dates ("12/05/2025" → 12052025)
+    // into phantom amounts that then poison the balance heuristic below.
+    const isAmountToken = c => {
+      AMT_RE.lastIndex = 0
+      return AMT_RE.test(' ' + c.text.trim() + ' ') && parseAmount(c.text) !== null
+    }
+    const amtCols = [...cols].reverse().filter(isAmountToken)
     if (!amtCols.length) continue
     let amtCol = amtCols[0]
 
@@ -588,7 +630,7 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
     if (amtCols.length >= 2) {
       const lastAmt = parseAmount(amtCols[0].text)
       const prevAmt = parseAmount(amtCols[1].text)
-      if (lastAmt > 0 && prevAmt > 0 && lastAmt > prevAmt * 5 && /[.,]/.test(amtCols[1].text)) amtCol = amtCols[1]
+      if (lastAmt > 0 && prevAmt > 0 && lastAmt > prevAmt * 5 && /[.,]\d{1,2}\s*-?$/.test(amtCols[1].text.trim())) amtCol = amtCols[1]
     }
 
     if (amtCol === dateCol) continue
@@ -691,11 +733,10 @@ function sliceToConsumosSection(rows, { ocrMode = false } = {}) {
 // ─── Deduplicate ─────────────────────────────────────────────────────────────
 
 function dedupe(txs) {
-  // Two-pass dedup: first count total occurrences per key, then keep at most
-  // ceil(total/2) copies. This collapses OCR triple/quadruple reads (artifacts)
-  // while preserving genuine duplicate transactions (same merchant, same day).
-  // A genuine pair (total=2) is kept in full; an OCR double (total=2) passes through
-  // too — that's an acceptable tradeoff since OCR triple-reads are essentially impossible.
+  // Two-pass dedup: first count total occurrences per key, then cap copies.
+  // Pairs (total=2) are kept in full — two identical purchases on the same day are
+  // common and legitimate (two coffees, two tips). Higher totals are halved: they
+  // come from OCR double-reads of multi-page artifacts.
   const totals = new Map()
   for (const t of txs) {
     const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}|${t.installment ? `${t.installment.current}/${t.installment.total}` : ''}`
@@ -706,7 +747,8 @@ function dedupe(txs) {
     const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}|${t.installment ? `${t.installment.current}/${t.installment.total}` : ''}`
     const n = (counts.get(key) || 0) + 1
     counts.set(key, n)
-    return n <= Math.ceil((totals.get(key) || 1) / 2)
+    const total = totals.get(key) || 1
+    return n <= (total <= 2 ? total : Math.ceil(total / 2))
   })
 }
 
@@ -898,7 +940,8 @@ export async function parsePDF(file, { onProgress } = {}) {
   const consumosRows = sliceToConsumosSection(allPageRows)
   const colTxs = parseColumnar(consumosRows, file.name, refYear, bank, docBrand)
   const rowTxs = parseRows(consumosRows, file.name, refYear, false, bank, docBrand)
-  const transactions = colTxs.length >= rowTxs.length ? colTxs : rowTxs
+  // Dedupe caps 3+ repeats (extraction artifacts) while keeping legitimate pairs
+  const transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
 
   // Fallback: if text parsing found nothing on a small PDF, try OCR.
   // Covers PDFs that pdfjs partially extracts (metadata only) but are
