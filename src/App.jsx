@@ -19,6 +19,7 @@ import AddTransactionModal from './components/AddTransactionModal'
 import BankGuideModal from './components/BankGuideModal'
 import CategoryManagerModal from './components/CategoryManagerModal'
 import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
+import SubscribeModal from './components/SubscribeModal'
 import AuthGate from './components/AuthGate'
 import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -90,6 +91,20 @@ export default function App() {
   // In Electron: use electronAPI license. On web: use auth context.
   const [electronLicense, setElectronLicense] = useState(null)
   const licenseStatus = window.electronAPI ? electronLicense : trialStatus
+
+  // Post-login subscription invite: web only, users WITHOUT an active plan,
+  // once per session (dismissal stored in sessionStorage).
+  const [showSubPromo, setShowSubPromo] = useState(false)
+  useEffect(() => {
+    if (window.electronAPI || !user || !trialStatus) return
+    if (trialStatus.status === 'active') return
+    if (sessionStorage.getItem('er_sub_promo_seen')) return
+    setShowSubPromo(true)
+  }, [user, trialStatus])
+  const dismissSubPromo = () => {
+    sessionStorage.setItem('er_sub_promo_seen', '1')
+    setShowSubPromo(false)
+  }
 
   const chartDonutRef   = useRef(null)
   const chartBarRef     = useRef(null)
@@ -491,6 +506,7 @@ export default function App() {
       {/* ── License gates ── */}
       {licenseStatus?.status === 'expired' && <ExpiredGate onActivated={refreshLicense} />}
       {licenseStatus?.status === 'trial'   && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} pdfLimit={licenseStatus.pdfLimit} onActivated={refreshLicense} />}
+      {showSubPromo && licenseStatus?.status !== 'expired' && <SubscribeModal user={user} onClose={dismissSubPromo} />}
       <UpdateToast />
 
       {/* ── Mobile Drawer ── */}
