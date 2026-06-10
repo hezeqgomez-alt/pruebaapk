@@ -24,8 +24,8 @@ import AuthGate from './components/AuthGate'
 import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
-import { detectUnnecessary } from './utils/categorizer'
-import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories } from './utils/storage'
+import { detectUnnecessary, CATEGORIZER_VERSION, recategorizeAll } from './utils/categorizer'
+import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
 import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
@@ -87,7 +87,12 @@ function Toast({ msg, onDone }) {
 export default function App() {
   const [transactions, setTransactions]           = useState(() => {
     const saved = loadData()
-    return saved.transactions?.length > 0 ? saved.transactions : []
+    let txs = saved.transactions?.length > 0 ? saved.transactions : []
+    if (txs.length > 0 && loadCategorizerVersion() < CATEGORIZER_VERSION) {
+      txs = recategorizeAll(txs)
+      saveCategorizerVersion(CATEGORIZER_VERSION)
+    }
+    return txs
   })
   const [loading, setLoading]                     = useState([])
   const [toasts, setToasts]                       = useState([]) // [{ id, msg }]
@@ -180,10 +185,11 @@ export default function App() {
             localSeen.set(k, n)
             return n > (cloudCounts.get(k) ?? 0)
           })
-          const merged     = [...cloudValid, ...localOnly]
+          const merged = recategorizeAll([...cloudValid, ...localOnly])
           if (localOnly.length > 0) {
             cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats }).catch(console.warn)
           }
+          saveCategorizerVersion(CATEGORIZER_VERSION)
           return merged
         })
         setToast(`📥 Movimientos cargados desde la nube`)

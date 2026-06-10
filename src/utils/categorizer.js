@@ -379,6 +379,14 @@ function resolveAlias(merchant) {
 // Pre-normalize keywords once at module load — avoids re-normalizing ~300 kw × n transactions
 const RULES_N = RULES.map(rule => ({ cat: rule.cat, kw: rule.kw.map(normalizeKw) }))
 
+// Bump this whenever categorize() logic changes so cached transactions get re-categorized on next load.
+export const CATEGORIZER_VERSION = 2
+
+// Re-run categorize() on a transaction array, preserving user-edited categories (userCat: true).
+export function recategorizeAll(transactions) {
+  return transactions.map(t => t.userCat ? t : { ...t, category: categorize(t.description) })
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function categorize(description) {

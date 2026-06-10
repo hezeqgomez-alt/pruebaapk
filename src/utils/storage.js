@@ -3,6 +3,14 @@ const KEY_BUD   = 'easyresumen_budgets'
 const KEY_FILT  = 'easyresumen_filters'
 const KEY_DARK  = 'easyresumen_dark'
 const KEY_CATS  = 'easyresumen_custom_categories'
+const KEY_CATV  = 'easyresumen_cat_version'
+
+export function loadCategorizerVersion() {
+  return Number(localStorage.getItem(KEY_CATV) ?? 0)
+}
+export function saveCategorizerVersion(v) {
+  try { localStorage.setItem(KEY_CATV, String(v)) } catch { /* quota */ }
+}
 
 function isValidDate(d) {
   if (!d || typeof d !== 'string') return false

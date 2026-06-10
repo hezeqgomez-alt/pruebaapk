@@ -361,7 +361,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   }
 
   function updateCategory(id, category) {
-    onUpdate(prev => prev.map(t => t.id === id ? { ...t, category } : t))
+    onUpdate(prev => prev.map(t => t.id === id ? { ...t, category, userCat: true } : t))
   }
 
   function updateNote(id, note) {
