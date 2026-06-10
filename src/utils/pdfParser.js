@@ -252,18 +252,32 @@ function cleanDesc(raw) {
   // Strip leading 3-4 digit voucher numbers (CABAL, Credicoop format: "4259 MERCHANT")
   desc = desc.replace(/^\d{3,4}\s+(?=[A-Z])/i, '').trim()
 
+  // Strip payment gateway prefixes for cleaner display names
+  // (e.g. "DLOPEDIDOSYA PROPINA" → "PROPINA", "SIPAGO GALVAN" → "GALVAN")
+  {
+    const gw = desc.match(/^(dlopedidosya|merpago|mercpago|sipago|mobbex|todopago|payu\*?ar\*?|payu|dlo|mp)[*\s]+/i)
+    if (gw && gw[0].length < desc.length) desc = desc.slice(gw[0].length).trim()
+  }
+
   // Remove trailing installment keyword remnants (e.g. "MERCHANT cta", "AYSA C.")
   desc = desc.replace(/\s+(?:cta|cuota|c)\.?\s*$/i, '').trim()
 
   // Strip stray currency symbols and remaining noise
   desc = desc.replace(/^\$\s*|\s*\$\s*$/g, '').replace(/[*\-,]+$/g, '').replace(/\s+/g, ' ').trim()
 
-  // Strip trailing CABAL/Credicoop coupon codes (e.g. "MERCHANT 0700" → "MERCHANT")
-  desc = desc.replace(/\s+0\d{3,4}$/, '').trim()
+  // Strip trailing CABAL/Credicoop/BancoCiudad coupon codes (e.g. "MERCHANT 0700", "MOVISTAR ARENA 005241")
+  desc = desc.replace(/\s+0\d{3,5}$/, '').trim()
 
   // Strip long embedded reference codes attached directly to a word
   // (e.g. "SEGURCOOP0256467940000003" → "SEGURCOOP", "AUTOPISTA1234567890" → "AUTOPISTA")
   desc = desc.replace(/\b([A-Z]{3,})\d{8,}/g, '$1').trim()
+
+  // Strip branch/location codes of 4–7 digits attached to merchant names ≥5 letters
+  // (e.g. "PARANA6543" → "PARANA", "EXPRESS12345" → "EXPRESS")
+  desc = desc.replace(/\b([A-Z]{5,})\d{4,7}\b/g, '$1').trim()
+
+  // Strip trailing noise fragments of 1–2 letters left after prior strips (e.g. " V A")
+  desc = desc.replace(/(\s+[A-Z]{1,2})+$/, '').trim()
 
   return desc
 }

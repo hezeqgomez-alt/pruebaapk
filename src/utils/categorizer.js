@@ -30,6 +30,8 @@ const RULES = [
   { cat: 'intereses', kw: [
     'interes financiero', 'intereses financieros',
     'interes por financiacion', 'intereses por financiacion',
+    'interes financiacion', 'intereses financiacion',
+    'interes de financiacion', 'intereses de financiacion',
     'interes s/ saldo', 'intereses s/ saldo', 'interes s/saldo',
     'cargo financiero', 'financiacion automatica', 'financiacion automat',
     'interes mora', 'intereses mora', 'recargo financiero',
@@ -269,7 +271,7 @@ const RULES = [
     'tasa ', 'ingresos brutos', 'iva ', 'sellado', 'abl ', 'patente',
     'automotor', 'bien de uso',
     // Seguros
-    'seguro ', 'seguros', 'cia seg', 'aseguradora',
+    'seguro ', 'seguros', 'cia seg', 'aseguradora', 'segurcoop',
     'allianz', 'zurich', 'mapfre', 'sancor seguros',
     'federacion patronal', 'berkley', 'rio uruguay', 'nacion seguros',
     // Cobro / envíos / pagos
@@ -312,6 +314,7 @@ const GATEWAY_PREFIXES = [
   /^mobbex[*\s]*/i,
   /^todopago[*\s]*/i,
   /^cnp[*\s]+\d+[/\d]*/i,
+  /^pvs[*\s]*/i,
 ]
 
 function extractMerchant(desc) {
