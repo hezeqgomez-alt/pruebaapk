@@ -20,7 +20,12 @@ export default function StatsCards({ transactions, tabs, onTab }) {
 
   const debits      = transactions.filter(t => t.type !== 'credit')
   const totalDebits = debits.reduce((s, t) => s + t.amount, 0)
+  // Tarjetas: cada "source" es un banco+marca+tarjeta distinto.
   const sources     = [...new Set(transactions.map(t => t.source))]
+  // Resúmenes: cada PDF subido (fileName). Datos antiguos pueden no tenerlo.
+  const files       = [...new Set(transactions.map(t => t.fileName).filter(Boolean))]
+  const cardCount   = sources.length
+  const fileCount   = files.length
 
   const navTabs = tabs?.filter(t => t.id !== 'dashboard') ?? []
 
@@ -37,8 +42,16 @@ export default function StatsCards({ transactions, tabs, onTab }) {
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Resúmenes</div>
-          <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none mb-1">{sources.length}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Tarjetas y resúmenes</div>
+          <div className="flex items-baseline gap-1.5 leading-none mb-1">
+            <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{cardCount}</span>
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{cardCount === 1 ? 'tarjeta' : 'tarjetas'}</span>
+          </div>
+          {fileCount > 0 && (
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+              en {fileCount} {fileCount === 1 ? 'resumen' : 'resúmenes'}
+            </div>
+          )}
           <div className="text-xs text-slate-400 dark:text-slate-500 truncate" title={sources.join(', ')}>
             {sources.slice(0, 2).join(', ')}{sources.length > 2 ? ` +${sources.length - 2}` : ''}
           </div>

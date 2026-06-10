@@ -560,6 +560,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
       installment,
       category: categorize(desc),
       source: buildSource(bank, docBrand, filename, currentCard),
+      fileName: filename,
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     }
@@ -666,6 +667,7 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
       installment,
       category: categorize(desc),
       source: buildSource(bank, docBrand, filename, currentCard),
+      fileName: filename,
       ...(currentCard?.holder ? { cardHolder: currentCard.holder } : {}),
       ...(fx || {}),
     }
