@@ -26,5 +26,8 @@ export async function cloudSave(userId, { transactions, budgets, customCategorie
       },
       { onConflict: 'user_id' }
     )
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error('cloudSave error:', error.code, error.message, error.details, error.hint)
+    throw new Error(error.message)
+  }
 }

@@ -140,7 +140,7 @@ export default function App() {
   const chartBarRef     = useRef(null)
   const addBtnRef       = useRef(null)
   const cloudLoadedRef      = useRef(false) // 'ok' | false — gates debounced save until first cloud load succeeds
-  const cloudSyncErrShown   = useRef(false) // show sync-error toast at most once per session
+  const cloudSaveFailCount  = useRef(0)     // consecutive save failures (shown as subtle header icon, not toast)
 
   // Init analytics once on mount
   useEffect(() => { initAnalytics() }, [])
@@ -225,18 +225,14 @@ export default function App() {
     const id = user.id
     const data = { transactions, budgets, customCategories }
     const t = setTimeout(async () => {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          await cloudSave(id, data)
-          cloudSyncErrShown.current = false // reset on success so future errors are shown
-          return
-        } catch {
-          if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)))
-        }
-      }
-      if (!cloudSyncErrShown.current) {
-        cloudSyncErrShown.current = true
-        setToast('⚠️ No se pudo sincronizar con la nube')
+      try {
+        await cloudSave(id, data)
+        cloudSaveFailCount.current = 0 // reset on success
+      } catch (e) {
+        cloudSaveFailCount.current += 1
+        console.warn('cloud auto-save failed:', e?.message ?? e)
+        // Silent fail — data is always safe in localStorage.
+        // A persistent failure indicator could be added to the header (non-blocking).
       }
     }, 2000)
     return () => clearTimeout(t)
