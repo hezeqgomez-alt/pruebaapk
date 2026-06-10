@@ -310,6 +310,13 @@ function shouldSkipDesc(desc) {
   if (/\bpuntos?\s+a\s+vencer\b|\bpuntos?\s+acumulados?\b|\bpuntos?\s+disponibles?\b|\bpuntos?\s+cabal\b|\bprog(?:rama)?\s+de\s+puntos\b/i.test(desc)) return true
   if (/^ptos\b/i.test(desc)) return true
   if (/^total\s+puntos\b/i.test(desc)) return true
+  // Banco Nación SumaPuntos and puntaje rows (loyalty scoring, not purchases)
+  if (/^sumapuntos\b/i.test(desc)) return true
+  if (/^puntaje\b/i.test(desc)) return true
+  // Aerolíneas Plus / millas rows (Credicoop, BNA and others)
+  if (/\baerol[ií]neas\s+plus\b|\bmillas?\s+acumuladas?\b|\bmillas?\s+disponibles?\b|\bmillas?\s+totales?\b/i.test(desc)) return true
+  if (/^millas?\b/i.test(desc)) return true
+  if (/^programas?\s+de\s+beneficios?\b/i.test(desc)) return true
   // T&C / legal section headers — backup for when section slicer doesn't cut them
   if (/^(t[eé]rminos?\s+y\s+condiciones?|condiciones?\s+(?:generales?|de\s+uso)|informaci[oó]n\s+importante|aviso\s+legal|reglamento\s+de\s+(?:uso|la\s+tarjeta))/i.test(desc)) return true
   // Notification letter / legal boilerplate embedded in some PDFs
