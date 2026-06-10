@@ -1,7 +1,9 @@
 import { List, PiggyBank, CreditCard, Landmark, BarChart2, AlertTriangle } from 'lucide-react'
 
+// Total con centavos: el redondeo a pesos enteros hacía que, p.ej., $1.579.501,94
+// se mostrara como $1.579.502 y no coincidiera con el SALDO ACTUAL del resumen.
 function fmt(n) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 }
 
 const NAV_ICONS = {

@@ -16,8 +16,9 @@ const RED      = [220, 38, 38]
 const WHITE    = [255, 255, 255]
 const LIGHT    = [248, 250, 252]  // slate-50
 
+// Centavos exactos para que los importes del informe coincidan al peso con el resumen
 function fmt(n) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 }
 
 function hexToRgb(hex) {

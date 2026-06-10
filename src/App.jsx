@@ -335,7 +335,7 @@ export default function App() {
     setSharing(true)
     const txs = filteredForReport ?? transactions
     const total = txs.filter(t => t.type !== 'credit').reduce((s, t) => s + t.amount, 0)
-    const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+    const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
     const months = [...new Set(txs.map(t => t.date.slice(0, 7)))].sort()
     const period = months.length === 1 ? months[0] : `${months[0]} al ${months[months.length - 1]}`
     const text = `📊 *Resumen EasyResumen* — ${period}\n💳 Total gastos: ${fmt(total)}\n📦 ${txs.length} movimientos\n\nGenerado en www.easyresumen.com.ar`
