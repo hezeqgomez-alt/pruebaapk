@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { X, Zap, Check, Lock } from 'lucide-react'
 import { getMpCheckoutUrl } from './LicenseGate'
 
@@ -15,9 +16,24 @@ export default function SubscribeModal({ user, onClose }) {
   const firstName = (user?.user_metadata?.full_name || user?.user_metadata?.name || '')
     .split(/\s+/)[0] || null
 
+  // Close on Escape
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Suscribite a EasyResumen PRO"
+        className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative"
+      >
         <button
           onClick={onClose}
           aria-label="Cerrar invitación"

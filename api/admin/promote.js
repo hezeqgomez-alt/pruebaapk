@@ -53,15 +53,15 @@ export default async function handler(req, res) {
   const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
   if (!user) return res.status(404).json({ error: `Usuario ${email} no encontrado` })
 
-  // Actualizar metadata
+  // Plan en app_metadata: solo escribible con service_role (el cliente no puede auto-promoverse)
   const { data, error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
-    user_metadata: { ...user.user_metadata, plan },
+    app_metadata: { ...user.app_metadata, plan },
   })
 
   if (updateError) return res.status(500).json({ error: updateError.message })
 
   return res.status(200).json({
     ok: true,
-    user: { id: data.user.id, email: data.user.email, plan: data.user.user_metadata?.plan },
+    user: { id: data.user.id, email: data.user.email, plan: data.user.app_metadata?.plan },
   })
 }

@@ -7,7 +7,9 @@ function computeTrialStatus(user) {
   if (!user) return null
   const meta = user.user_metadata || {}
 
-  if (meta.plan === 'paid') return { status: 'active' }
+  // Plan lives in app_metadata: only the server (service_role) can write it,
+  // so a user can't self-promote from the browser console.
+  if (user.app_metadata?.plan === 'paid') return { status: 'active' }
 
   const startedAt = new Date(meta.trial_started_at || user.created_at)
   const daysElapsed = Math.floor((Date.now() - startedAt) / 86_400_000)
@@ -103,7 +105,7 @@ export function AuthProvider({ children }) {
     if (!freshUser) return { allowed: true }
 
     const meta = freshUser.user_metadata || {}
-    if (meta.plan === 'paid') return { allowed: true }
+    if (freshUser.app_metadata?.plan === 'paid') return { allowed: true }
 
     const currentCount = meta.pdf_count || 0
     setUser(freshUser)

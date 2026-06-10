@@ -84,12 +84,13 @@ export default async function handler(req, res) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Helper: update user preserving existing metadata
+  // Helper: update user preserving existing metadata.
+  // Plan lives in app_metadata (service_role only) so clients can't self-promote.
   async function activateUser(id, newMeta) {
     const { data: { user }, error: getErr } = await supabase.auth.admin.getUserById(id)
     if (getErr) return getErr
     const { error } = await supabase.auth.admin.updateUserById(id, {
-      user_metadata: { ...(user?.user_metadata || {}), ...newMeta },
+      app_metadata: { ...(user?.app_metadata || {}), ...newMeta },
     })
     return error
   }

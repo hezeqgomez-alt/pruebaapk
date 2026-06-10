@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw, Zap } from 'lucide-react'
+import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw, Zap, Download, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -229,7 +229,7 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
 
 // ─── Expired gate (blocking) ──────────────────────────────────────────────────
 
-export function ExpiredGate({ onActivated }) {
+export function ExpiredGate({ onActivated, onExportCSV, onSignOut }) {
   const { user, refreshTrial } = useAuth()
   const [checking, setChecking] = useState(false)
   const [checked,  setChecked]  = useState(false)
@@ -319,6 +319,27 @@ export function ExpiredGate({ onActivated }) {
           <p className="mt-4 text-xs text-slate-600 leading-relaxed">
             Después de suscribirte en MercadoPago, volvé acá y hacé clic en <strong className="text-slate-500">"Ya me suscribí"</strong>.
           </p>
+
+          {(onExportCSV || onSignOut) && (
+            <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-center gap-4">
+              {onExportCSV && (
+                <button
+                  onClick={onExportCSV}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <Download size={12} /> Descargar mis datos (CSV)
+                </button>
+              )}
+              {onSignOut && (
+                <button
+                  onClick={onSignOut}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <LogOut size={12} /> Cerrar sesión
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     )

@@ -93,9 +93,11 @@ export default async function handler(req, res) {
   const { data: { user: sbUser }, error: getErr } = await supabase.auth.admin.getUserById(userId)
   if (getErr) return res.status(500).json({ error: getErr.message })
 
+  // Plan lives in app_metadata: only writable with service_role, so the client
+  // can never self-promote via supabase.auth.updateUser()
   const { error } = await supabase.auth.admin.updateUserById(userId, {
-    user_metadata: {
-      ...(sbUser?.user_metadata || {}),
+    app_metadata: {
+      ...(sbUser?.app_metadata || {}),
       plan: 'paid',
       mp_preapproval_id: preapproval.id,
       activated_at: new Date().toISOString(),

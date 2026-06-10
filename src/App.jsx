@@ -36,7 +36,7 @@ function Toast({ msg, onDone }) {
   const isWarning = msg.startsWith('⚠️')
   const isSuccess = msg.startsWith('✅') || msg.startsWith('📄') || msg.startsWith('📥') || msg.startsWith('🗑️')
 
-  const base = 'fixed bottom-6 right-6 flex items-start gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm z-50 max-w-sm border backdrop-blur-sm'
+  const base = 'flex items-start gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm max-w-sm border backdrop-blur-sm pointer-events-auto'
   const style = isError
     ? `${base} bg-red-50 border-red-200 text-red-800 dark:bg-red-900/80 dark:border-red-700 dark:text-red-100`
     : isWarning
@@ -46,10 +46,12 @@ function Toast({ msg, onDone }) {
   const Icon = isError ? AlertTriangle : isWarning ? AlertTriangle : isSuccess ? CheckCircle : Info
   const iconColor = isError ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-indigo-500'
 
+  // Errors stay until the user dismisses them; the rest auto-dismiss
   useEffect(() => {
-    const t = setTimeout(onDone, 3800)
+    if (isError) return
+    const t = setTimeout(onDone, isWarning ? 6000 : 3800)
     return () => clearTimeout(t)
-  }, [onDone])
+  }, [onDone, isError, isWarning])
 
   return (
     <div className={style} role="alert" aria-live="assertive">
@@ -68,12 +70,14 @@ export default function App() {
     return saved.transactions?.length > 0 ? saved.transactions : []
   })
   const [loading, setLoading]                     = useState([])
-  const [toastState, setToastState]               = useState(null) // { id, msg }
+  const [toasts, setToasts]                       = useState([]) // [{ id, msg }]
   const toastIdRef                                = useRef(0)
-  const setToast = useCallback((msg) => msg
-    ? setToastState({ id: ++toastIdRef.current, msg })
-    : setToastState(null)
-  , [])
+  const setToast = useCallback((msg) => {
+    if (!msg) return
+    const id = ++toastIdRef.current
+    setToasts(ts => [...ts.slice(-3), { id, msg }]) // máx. 4 visibles
+  }, [])
+  const dismissToast = useCallback((id) => setToasts(ts => ts.filter(t => t.id !== id)), [])
   const [activeTab, setActiveTab]                 = useState('dashboard')
   const [generating, setGenerating]               = useState(false)
   const [sharing, setSharing]                     = useState(false)
@@ -93,16 +97,17 @@ export default function App() {
   const licenseStatus = window.electronAPI ? electronLicense : trialStatus
 
   // Post-login subscription invite: web only, users WITHOUT an active plan,
-  // once per session (dismissal stored in sessionStorage).
+  // at most once every 7 days (dismissal timestamp in localStorage).
   const [showSubPromo, setShowSubPromo] = useState(false)
   useEffect(() => {
     if (window.electronAPI || !user || !trialStatus) return
     if (trialStatus.status === 'active') return
-    if (sessionStorage.getItem('er_sub_promo_seen')) return
+    const lastSeen = Number(localStorage.getItem('er_sub_promo_seen_at') || 0)
+    if (Date.now() - lastSeen < 7 * 86_400_000) return
     setShowSubPromo(true)
   }, [user, trialStatus])
   const dismissSubPromo = () => {
-    sessionStorage.setItem('er_sub_promo_seen', '1')
+    localStorage.setItem('er_sub_promo_seen_at', String(Date.now()))
     setShowSubPromo(false)
   }
 
@@ -490,6 +495,18 @@ export default function App() {
     return <AuthGate />
   }
 
+  // Trial expirado: early return — el dashboard no se monta detrás del gate,
+  // así los datos no quedan accesibles quitando el overlay desde DevTools
+  if (licenseStatus?.status === 'expired') {
+    return (
+      <ExpiredGate
+        onActivated={refreshLicense}
+        onExportCSV={hasData ? exportCSV : null}
+        onSignOut={isSupabaseConfigured && !window.electronAPI && user ? signOut : null}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:bg-[#0f0f1a] dark:bg-none relative overflow-x-hidden">
 
@@ -504,9 +521,8 @@ export default function App() {
       </div>
 
       {/* ── License gates ── */}
-      {licenseStatus?.status === 'expired' && <ExpiredGate onActivated={refreshLicense} />}
-      {licenseStatus?.status === 'trial'   && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} pdfLimit={licenseStatus.pdfLimit} onActivated={refreshLicense} />}
-      {showSubPromo && licenseStatus?.status !== 'expired' && <SubscribeModal user={user} onClose={dismissSubPromo} />}
+      {licenseStatus?.status === 'trial' && <TrialBanner daysLeft={licenseStatus.daysLeft} pdfCount={licenseStatus.pdfCount} pdfLimit={licenseStatus.pdfLimit} onActivated={refreshLicense} />}
+      {showSubPromo && <SubscribeModal user={user} onClose={dismissSubPromo} />}
       <UpdateToast />
 
       {/* ── Mobile Drawer ── */}
@@ -704,12 +720,10 @@ export default function App() {
           </div>
         )}
 
-        {hasData && (
-          <>
-            <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} />
+        {hasData && <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} />}
 
-            {/* Tabs — solo desktop */}
-            <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-white/5 dark:border dark:border-white/10 rounded-2xl p-1 w-fit overflow-x-auto">
+        {/* Tabs siempre visibles: Préstamos y Balance funcionan sin transacciones */}
+        <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-white/5 dark:border dark:border-white/10 rounded-2xl p-1 w-fit overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
@@ -739,49 +753,47 @@ export default function App() {
               ))}
             </div>
 
-            {activeTab === 'dashboard' && (
-              <div className="grid lg:grid-cols-2 gap-5">
-                <CategoryChart ref={chartDonutRef} transactions={transactions} />
-                <MonthComparison ref={chartBarRef} transactions={transactions} />
-              </div>
-            )}
-
-            {/* Always mounted to preserve page/sort state when switching tabs */}
-            <div className={activeTab !== 'movimientos' ? 'hidden' : ''}>
-              <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} />
-            </div>
-
-            {activeTab === 'presupuesto' && (
-              <BudgetPanel
-                transactions={transactions}
-                budgets={budgets}
-                onBudgetsChange={handleBudgetsChange}
-                customCategories={customCategories}
-              />
-            )}
-
-            {activeTab === 'cuotas' && (
-              <InstallmentsPanel transactions={transactions} />
-            )}
-
-            {activeTab === 'prestamos' && (
-              <LoansPanel />
-            )}
-
-            {activeTab === 'balance' && (
-              <BalancePanel transactions={transactions} />
-            )}
-
-            {activeTab === 'insights' && (
-              <InsightsPanel
-                findings={findings}
-                transactions={transactions}
-              />
-            )}
-          </>
+        {activeTab === 'dashboard' && hasData && (
+          <div className="grid lg:grid-cols-2 gap-5">
+            <CategoryChart ref={chartDonutRef} transactions={transactions} />
+            <MonthComparison ref={chartBarRef} transactions={transactions} />
+          </div>
         )}
 
-        {!hasData && !loading.length && (
+        {/* Always mounted to preserve page/sort state when switching tabs */}
+        <div className={!hasData || activeTab !== 'movimientos' ? 'hidden' : ''}>
+          <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} />
+        </div>
+
+        {activeTab === 'presupuesto' && hasData && (
+          <BudgetPanel
+            transactions={transactions}
+            budgets={budgets}
+            onBudgetsChange={handleBudgetsChange}
+            customCategories={customCategories}
+          />
+        )}
+
+        {activeTab === 'cuotas' && hasData && (
+          <InstallmentsPanel transactions={transactions} />
+        )}
+
+        {activeTab === 'prestamos' && (
+          <LoansPanel />
+        )}
+
+        {activeTab === 'balance' && (
+          <BalancePanel transactions={transactions} />
+        )}
+
+        {activeTab === 'insights' && hasData && (
+          <InsightsPanel
+            findings={findings}
+            transactions={transactions}
+          />
+        )}
+
+        {!hasData && !loading.length && !['prestamos', 'balance'].includes(activeTab) && (
           <div className="text-center py-12">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:bg-white/5 dark:border dark:border-white/10 dark:bg-none flex items-center justify-center mx-auto mb-4">
               <ReceiptText size={28} className="text-indigo-400" />
@@ -817,7 +829,13 @@ export default function App() {
         />
       )}
 
-      {toastState && <Toast key={toastState.id} msg={toastState.msg} onDone={() => setToast(null)} />}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end pointer-events-none">
+          {toasts.map(t => (
+            <Toast key={t.id} msg={t.msg} onDone={() => dismissToast(t.id)} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

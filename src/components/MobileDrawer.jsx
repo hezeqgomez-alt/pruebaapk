@@ -28,11 +28,17 @@ export default function MobileDrawer({
   isSupabaseConfigured,
 }) {
   const pdfInputRef = useRef(null)
-  // Bloquear scroll del body cuando el drawer está abierto
+  // Bloquear scroll del body cuando el drawer está abierto + cerrar con Escape
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+    if (!open) return () => { document.body.style.overflow = '' }
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', h)
+    }
+  }, [open, onClose])
 
   const hasFilter = filteredCount != null && filteredCount < totalCount
 
@@ -88,8 +94,8 @@ export default function MobileDrawer({
             </button>
           </div>
 
-          {/* ── Navegación ── */}
-          {hasData && tabs.length > 0 && (
+          {/* ── Navegación: siempre visible — Préstamos y Balance no requieren transacciones ── */}
+          {tabs.length > 0 && (
             <section>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 px-1">
                 Vistas
