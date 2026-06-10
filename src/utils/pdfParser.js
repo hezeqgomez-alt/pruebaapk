@@ -243,8 +243,8 @@ function cleanDesc(raw) {
     .replace(/\s+/g, ' ')
     .trim()
 
-  // Remove leading/trailing noise chars (including underscores and parens)
-  desc = desc.replace(/^[\s\-.|/_()]+|[\s\-.|/_()]+$/g, '').trim()
+  // Remove leading/trailing noise chars (including asterisks used as CABAL row markers)
+  desc = desc.replace(/^[\s\-.|/_(*]+|[\s\-.|/_()]+$/g, '').trim()
 
   // Strip leading comprobante/voucher codes: 4-7 digits + letter (e.g. "645184*", "005067K", "1998C")
   desc = desc.replace(/^\d{4,7}[A-Z*K]\s*/i, '').trim()
@@ -282,6 +282,8 @@ function shouldSkipDesc(desc) {
   if (/tarjeta\s*\(?\d+\)?\s*total/i.test(desc)) return true
   // Summary keywords anywhere in description (with/without accents)
   if (/saldo\s+anterior|saldo\s+actual|saldo\s+deudor|saldo\s+acreedor|cierre\s+actual|vencimiento\s+actual|pr[oó]ximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
+  // CABAL / Credicoop account summary rows (e.g. "* RESUMEN DE SU CUENTA CORRIENTE")
+  if (/\bresumen\s+de\s+su\s+cuenta\b/i.test(desc)) return true
   // Period totals and compensation rows (CABAL and others)
   if (/\btotal\s+(?:del?\s+per[ií]odo|factura|a\s+pagar|facturado|periodo)\b/i.test(desc)) return true
   if (/\ba\s+compensar\b|\ba\s+comp\b/i.test(desc)) return true
