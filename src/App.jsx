@@ -31,6 +31,24 @@ import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
 import { importFromXLSX, importFromCSV } from './utils/importFile'
 
+function translatePdfError(msg) {
+  if (!msg) return 'Error desconocido'
+  const m = msg.toLowerCase()
+  if (m.includes('empty') && m.includes('zero bytes')) {
+    return 'El archivo está vacío (0 bytes). Si lo seleccionaste desde Google Drive u otra nube, descargalo primero al dispositivo e intentá de nuevo.'
+  }
+  if (m.includes('invalid pdf structure') || m.includes('missing pdf')) {
+    return 'El archivo no es un PDF válido o está dañado.'
+  }
+  if (m.includes('password')) {
+    return 'El PDF está protegido con contraseña. Quitá la contraseña antes de subirlo.'
+  }
+  if (m.includes('no such file') || m.includes('not found')) {
+    return 'No se encontró el archivo.'
+  }
+  return msg
+}
+
 function Toast({ msg, onDone }) {
   const isError   = msg.startsWith('❌')
   const isWarning = msg.startsWith('⚠️')
@@ -230,6 +248,12 @@ export default function App() {
         await webTrackPDF()
       }
 
+      // Detect cloud-picked files that haven't fully downloaded yet (common on Android)
+      if (file.size === 0) {
+        setToast(`❌ "${file.name}" está vacío (0 bytes). Si lo seleccionaste desde Google Drive u otra nube, descargalo primero al dispositivo e intentá de nuevo.`)
+        continue
+      }
+
       setLoading(l => [...l, file.name])
       try {
         const result = await parsePDF(file, {
@@ -284,7 +308,9 @@ export default function App() {
       } catch (e) {
         setOcrProgress(null)
         console.error('parsePDF error:', e)
-        setToast(`❌ Error en "${file.name}": ${e?.message || String(e)}`)
+        const rawMsg = e?.message || String(e)
+        const friendlyMsg = translatePdfError(rawMsg)
+        setToast(`❌ Error en "${file.name}": ${friendlyMsg}`)
       }
       setLoading(l => l.filter(n => n !== file.name))
     }
