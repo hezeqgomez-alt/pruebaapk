@@ -36,11 +36,18 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-charts': ['chart.js', 'react-chartjs-2'],
-          'vendor-pdf': ['pdfjs-dist'],
-          'vendor-date': ['date-fns'],
+        // Function form required by Rollup 4 (Vite 6+). pdfjs-dist excluded
+        // intentionally — it has a separate worker asset that can't be chunked.
+        manualChunks(id) {
+          if (id.includes('/node_modules/react-dom/') || id.includes('/node_modules/react/')) {
+            return 'vendor-react'
+          }
+          if (id.includes('/node_modules/chart.js/') || id.includes('/node_modules/react-chartjs-2/')) {
+            return 'vendor-charts'
+          }
+          if (id.includes('/node_modules/date-fns/')) {
+            return 'vendor-date'
+          }
         },
       },
     },
