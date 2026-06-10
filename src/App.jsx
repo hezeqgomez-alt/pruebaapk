@@ -123,8 +123,20 @@ export default function App() {
         setTransactions(prev => {
           const base = prev.length > 0 ? prev : (loadData().transactions ?? [])
           const cloudValid = cloud.transactions.filter(t => t && t.date && t.amount > 0)
-          const cloudKeys  = new Set(cloudValid.map(txKey))
-          const localOnly  = base.filter(t => !cloudKeys.has(txKey(t)))
+          // Count-based merge: keep all cloud copies, then add local copies that exceed the cloud count.
+          // A Set-based approach would lose legitimate duplicate transactions (same merchant/date/amount).
+          const cloudCounts = new Map()
+          for (const t of cloudValid) {
+            const k = txKey(t)
+            cloudCounts.set(k, (cloudCounts.get(k) ?? 0) + 1)
+          }
+          const localSeen = new Map()
+          const localOnly = base.filter(t => {
+            const k = txKey(t)
+            const n = (localSeen.get(k) ?? 0) + 1
+            localSeen.set(k, n)
+            return n > (cloudCounts.get(k) ?? 0)
+          })
           const merged     = [...cloudValid, ...localOnly]
           if (localOnly.length > 0) {
             cloudSave(user.id, { transactions: merged, budgets: localBudg, customCategories: localCats }).catch(console.warn)

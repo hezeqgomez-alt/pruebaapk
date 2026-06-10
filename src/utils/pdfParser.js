@@ -677,14 +677,22 @@ function sliceToConsumosSection(rows, { ocrMode = false } = {}) {
 // ─── Deduplicate ─────────────────────────────────────────────────────────────
 
 function dedupe(txs) {
-  // Use a counter so legitimate duplicate purchases (e.g. two identical installments)
-  // are preserved — only collapse exact same key seen more times than expected.
+  // Two-pass dedup: first count total occurrences per key, then keep at most
+  // ceil(total/2) copies. This collapses OCR triple/quadruple reads (artifacts)
+  // while preserving genuine duplicate transactions (same merchant, same day).
+  // A genuine pair (total=2) is kept in full; an OCR double (total=2) passes through
+  // too — that's an acceptable tradeoff since OCR triple-reads are essentially impossible.
+  const totals = new Map()
+  for (const t of txs) {
+    const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}|${t.installment ? `${t.installment.current}/${t.installment.total}` : ''}`
+    totals.set(key, (totals.get(key) || 0) + 1)
+  }
   const counts = new Map()
   return txs.filter(t => {
     const key = `${t.date}|${t.amount}|${t.description.slice(0,20)}|${t.source}|${t.installment ? `${t.installment.current}/${t.installment.total}` : ''}`
     const n = (counts.get(key) || 0) + 1
     counts.set(key, n)
-    return n === 1
+    return n <= Math.ceil((totals.get(key) || 1) / 2)
   })
 }
 
