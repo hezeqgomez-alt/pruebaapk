@@ -37,6 +37,8 @@ export default async function handler(req, res) {
 
   const userId = authUser.id
   const email  = authUser.email
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email format' })
 
   const MP_TOKEN = process.env.MP_ACCESS_TOKEN
   if (!MP_TOKEN) return res.status(500).json({ error: 'MP_ACCESS_TOKEN not configured' })
@@ -108,5 +110,5 @@ export default async function handler(req, res) {
 
   if (email) await sendEmail(proActivationEmail(email))
 
-  return res.status(200).json({ found: true, activated: true, preapprovalId: preapproval.id })
+  return res.status(200).json({ found: true, activated: true })
 }

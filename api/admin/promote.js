@@ -16,7 +16,12 @@ export default async function handler(req, res) {
   const adminSecret = process.env.ADMIN_SECRET
   if (!adminSecret) return res.status(500).json({ error: 'ADMIN_SECRET not configured' })
 
-  const { email, secret, plan = 'paid' } = req.body || {}
+  // Secret via Authorization header (prevents logging in request body)
+  const authHeader = req.headers.authorization || ''
+  const headerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  // Also support legacy body secret for backward compat (will be removed)
+  const { email, secret: bodySecret, plan = 'paid' } = req.body || {}
+  const secret = headerSecret || bodySecret
 
   if (!['paid', 'expired', 'trial'].includes(plan)) {
     return res.status(400).json({ error: 'Invalid plan value' })
@@ -33,6 +38,8 @@ export default async function handler(req, res) {
   if (!secretsMatch) return res.status(401).json({ error: 'Unauthorized' })
 
   if (!email) return res.status(400).json({ error: 'Missing email' })
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email format' })
 
   const supabase = createClient(
     process.env.SUPABASE_URL,

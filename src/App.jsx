@@ -30,6 +30,7 @@ import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
 import { importFromXLSX, importFromCSV } from './utils/importFile'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function translatePdfError(msg) {
   if (!msg) return 'Error desconocido'
@@ -781,42 +782,58 @@ export default function App() {
 
         {activeTab === 'dashboard' && hasData && (
           <div className="grid lg:grid-cols-2 gap-5">
-            <CategoryChart ref={chartDonutRef} transactions={transactions} />
-            <MonthComparison ref={chartBarRef} transactions={transactions} />
+            <ErrorBoundary label="Error en gráfico de categorías">
+              <CategoryChart ref={chartDonutRef} transactions={transactions} />
+            </ErrorBoundary>
+            <ErrorBoundary label="Error en comparación mensual">
+              <MonthComparison ref={chartBarRef} transactions={transactions} />
+            </ErrorBoundary>
           </div>
         )}
 
         {/* Always mounted to preserve page/sort state when switching tabs */}
         <div className={!hasData || activeTab !== 'movimientos' ? 'hidden' : ''}>
-          <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} />
+          <ErrorBoundary label="Error en la lista de movimientos">
+            <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} />
+          </ErrorBoundary>
         </div>
 
         {activeTab === 'presupuesto' && hasData && (
-          <BudgetPanel
-            transactions={transactions}
-            budgets={budgets}
-            onBudgetsChange={handleBudgetsChange}
-            customCategories={customCategories}
-          />
+          <ErrorBoundary label="Error en presupuesto">
+            <BudgetPanel
+              transactions={transactions}
+              budgets={budgets}
+              onBudgetsChange={handleBudgetsChange}
+              customCategories={customCategories}
+            />
+          </ErrorBoundary>
         )}
 
         {activeTab === 'cuotas' && hasData && (
-          <InstallmentsPanel transactions={transactions} />
+          <ErrorBoundary label="Error en cuotas">
+            <InstallmentsPanel transactions={transactions} />
+          </ErrorBoundary>
         )}
 
         {activeTab === 'prestamos' && (
-          <LoansPanel />
+          <ErrorBoundary label="Error en préstamos">
+            <LoansPanel />
+          </ErrorBoundary>
         )}
 
         {activeTab === 'balance' && (
-          <BalancePanel transactions={transactions} />
+          <ErrorBoundary label="Error en balance">
+            <BalancePanel transactions={transactions} />
+          </ErrorBoundary>
         )}
 
         {activeTab === 'insights' && hasData && (
-          <InsightsPanel
-            findings={findings}
-            transactions={transactions}
-          />
+          <ErrorBoundary label="Error en insights">
+            <InsightsPanel
+              findings={findings}
+              transactions={transactions}
+            />
+          </ErrorBoundary>
         )}
 
         {!hasData && !loading.length && !['prestamos', 'balance'].includes(activeTab) && (
