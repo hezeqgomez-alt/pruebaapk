@@ -40,6 +40,17 @@ export default async function handler(req, res) {
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email format' })
 
+  // Rate limit: max 1 call per 30s per user (stored in app_metadata, requires service_role)
+  const { data: { user: rateUser } } = await supabase.auth.admin.getUserById(userId)
+  const lastVerifyAt = rateUser?.app_metadata?.last_verify_at
+  if (lastVerifyAt && (Date.now() - new Date(lastVerifyAt)) < 30_000) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Esperá 30 segundos antes de reintentar.' })
+  }
+  // Update timestamp before the slow MP call so parallel requests are also blocked
+  await supabase.auth.admin.updateUserById(userId, {
+    app_metadata: { ...(rateUser?.app_metadata || {}), last_verify_at: new Date().toISOString() },
+  })
+
   const MP_TOKEN = process.env.MP_ACCESS_TOKEN
   if (!MP_TOKEN) return res.status(500).json({ error: 'MP_ACCESS_TOKEN not configured' })
 
@@ -91,18 +102,15 @@ export default async function handler(req, res) {
     return res.status(200).json({ found: false, message: 'No se encontró suscripción activa en MercadoPago' })
   }
 
-  // Fetch existing metadata to preserve fields like trial_started_at, pdf_count
-  const { data: { user: sbUser }, error: getErr } = await supabase.auth.admin.getUserById(userId)
-  if (getErr) return res.status(500).json({ error: getErr.message })
-
   // Plan lives in app_metadata: only writable with service_role, so the client
   // can never self-promote via supabase.auth.updateUser()
   const { error } = await supabase.auth.admin.updateUserById(userId, {
     app_metadata: {
-      ...(sbUser?.app_metadata || {}),
+      ...(rateUser?.app_metadata || {}),
       plan: 'paid',
       mp_preapproval_id: preapproval.id,
       activated_at: new Date().toISOString(),
+      last_verify_at: new Date().toISOString(),
     },
   })
 

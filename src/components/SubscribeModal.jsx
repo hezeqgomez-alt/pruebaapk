@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { X, Zap, Check, Lock } from 'lucide-react'
 import { getMpCheckoutUrl } from './LicenseGate'
+import { trackEvent } from '../utils/analytics'
 
 const FEATURES = [
   ['PDFs ilimitados', 'subí todos los resúmenes que quieras'],
@@ -78,6 +79,7 @@ export default function SubscribeModal({ user, onClose }) {
             href={getMpCheckoutUrl(user?.id)}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackEvent('subscribe_click', { source: 'subscribe_modal' })}
             className="block w-full text-center bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white text-[15px] font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 transition-all hover:-translate-y-px"
           >
             Suscribirme ahora

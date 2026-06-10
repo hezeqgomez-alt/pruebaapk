@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw, Zap, Download, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { trackEvent } from '../utils/analytics'
 
 async function getAccessToken() {
   const { data } = await supabase.auth.getSession()
@@ -128,7 +129,7 @@ export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) {
 
   const ctaLabel  = IS_WEB ? 'Suscribirme' : 'Activar licencia'
   const ctaAction = IS_WEB
-    ? () => { window.open(getMpCheckoutUrl(user?.id), '_blank'); setShowVerify(true) }
+    ? () => { trackEvent('subscribe_click', { source: 'trial_banner' }); window.open(getMpCheckoutUrl(user?.id), '_blank'); setShowVerify(true) }
     : () => setShowModal(true)
 
   async function handleVerify() {
@@ -291,6 +292,7 @@ export function ExpiredGate({ onActivated, onExportCSV, onSignOut }) {
               href={getMpCheckoutUrl(user?.id)}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackEvent('subscribe_click', { source: 'expired_gate' })}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
             >
               Suscribirme con MercadoPago <ExternalLink size={14} />

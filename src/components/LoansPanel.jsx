@@ -197,21 +197,32 @@ function LoanCard({ loan, onDelete, onUpdatePagados }) {
         <span>Total <strong className="text-slate-700 dark:text-slate-200">{fmt(loan.monto)}</strong></span>
         <span className="ml-auto">{pct.toFixed(0)}% pagado</span>
 
-        {/* Pagadas counter */}
+        {/* Pagadas counter — 44px touch targets */}
         <div className="flex items-center gap-1 ml-1">
-          <button onClick={() => onUpdatePagados(loan.id, -1)} disabled={loan.mesesPagados <= 0}
-            className="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed">
-            <ChevronDown size={12} />
+          <button
+            onClick={() => onUpdatePagados(loan.id, -1)}
+            disabled={loan.mesesPagados <= 0}
+            aria-label="Quitar cuota pagada"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronDown size={14} />
           </button>
-          <button onClick={() => onUpdatePagados(loan.id, +1)} disabled={loan.mesesPagados >= loan.plazo}
-            className="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed">
-            <ChevronUp size={12} />
+          <button
+            onClick={() => onUpdatePagados(loan.id, +1)}
+            disabled={loan.mesesPagados >= loan.plazo}
+            aria-label="Agregar cuota pagada"
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronUp size={14} />
           </button>
         </div>
 
-        <button onClick={() => onDelete(loan.id)}
-          className="ml-1 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 transition-colors">
-          <Trash2 size={13} />
+        <button
+          onClick={() => onDelete(loan.id)}
+          aria-label="Eliminar préstamo"
+          className="ml-1 w-11 h-11 flex items-center justify-center rounded-xl text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
+          <Trash2 size={14} />
         </button>
       </div>
     </div>

@@ -5,21 +5,18 @@ const TRIAL_DAYS = 30
 
 function computeTrialStatus(user) {
   if (!user) return null
-  const meta = user.user_metadata || {}
+  const appMeta = user.app_metadata || {}
+  const meta    = user.user_metadata || {}
 
-  // Plan lives in app_metadata: only the server (service_role) can write it,
-  // so a user can't self-promote from the browser console.
-  if (user.app_metadata?.plan === 'paid') return { status: 'active' }
+  if (appMeta.plan === 'paid') return { status: 'active' }
 
-  const startedAt = new Date(meta.trial_started_at || user.created_at)
+  const startedAt   = new Date(meta.trial_started_at || user.created_at)
   const daysElapsed = Math.floor((Date.now() - startedAt) / 86_400_000)
-  const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
-  const pdfCount = meta.pdf_count || 0
+  const daysLeft    = Math.max(0, TRIAL_DAYS - daysElapsed)
+  // app_metadata.pdf_count is authoritative (server-set); user_metadata is legacy fallback
+  const pdfCount    = appMeta.pdf_count ?? meta.pdf_count ?? 0
 
-  if (daysLeft === 0) {
-    return { status: 'expired', daysLeft, pdfCount }
-  }
-
+  if (daysLeft === 0) return { status: 'expired', daysLeft, pdfCount }
   return { status: 'trial', daysLeft, pdfCount }
 }
 
@@ -100,28 +97,29 @@ export function AuthProvider({ children }) {
   const trackPDF = useCallback(async () => {
     if (!isSupabaseConfigured) return { allowed: true }
 
-    const { data: fresh } = await supabase.auth.getUser()
-    const freshUser = fresh?.user
-    if (!freshUser) return { allowed: true }
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData.session?.access_token
+    if (!token) return { allowed: true }
 
-    const meta = freshUser.user_metadata || {}
-    if (freshUser.app_metadata?.plan === 'paid') return { allowed: true }
+    try {
+      const res = await fetch('/api/track-pdf', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
 
-    const currentCount = meta.pdf_count || 0
-    setUser(freshUser)
-    setTrialStatus(computeTrialStatus(freshUser))
+      // Refresh local user so UI reflects updated pdf_count in app_metadata
+      const { data: fresh } = await supabase.auth.getUser()
+      if (fresh?.user) {
+        setUser(fresh.user)
+        setTrialStatus(computeTrialStatus(fresh.user))
+      }
 
-    const newCount = currentCount + 1
-    const { data, error } = await supabase.auth.updateUser({
-      data: { pdf_count: newCount },
-    })
-
-    if (!error && data?.user) {
-      setUser(data.user)
-      setTrialStatus(computeTrialStatus(data.user))
+      return json // { allowed, pdfCount, pdfLimit?, expired?, message? }
+    } catch {
+      // Fail open on network error so a connectivity blip doesn't block the user
+      return { allowed: true }
     }
-
-    return { allowed: true, pdfCount: newCount }
   }, [])
 
   const resetPassword = useCallback(async (email) => {

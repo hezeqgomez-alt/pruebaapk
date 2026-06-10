@@ -31,6 +31,7 @@ import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
 import { importFromXLSX, importFromCSV } from './utils/importFile'
 import ErrorBoundary from './components/ErrorBoundary'
+import { initAnalytics, trackEvent } from './utils/analytics'
 
 function translatePdfError(msg) {
   if (!msg) return 'Error desconocido'
@@ -134,6 +135,9 @@ export default function App() {
   const chartBarRef     = useRef(null)
   const addBtnRef       = useRef(null)
   const cloudLoadedRef  = useRef(false) // gates debounced save until first cloud load completes
+
+  // Init analytics once on mount
+  useEffect(() => { initAnalytics() }, [])
 
   // Electron-only license check on mount
   useEffect(() => {
@@ -246,7 +250,15 @@ export default function App() {
         }
         setElectronLicense(s => s?.status === 'trial' ? { ...s, pdfCount: check.pdfCount } : s)
       } else if (isSupabaseConfigured && user) {
-        await webTrackPDF()
+        const check = await webTrackPDF()
+        if (!check.allowed) {
+          if (check.expired) {
+            setToast(`❌ Tu período de prueba expiró. Suscribite para continuar.`)
+          } else {
+            setToast(`❌ Límite de prueba: ya analizaste ${check.pdfLimit} resúmenes. Suscribite para continuar.`)
+          }
+          continue
+        }
       }
 
       // Detect cloud-picked files that haven't fully downloaded yet (common on Android)
@@ -303,6 +315,7 @@ export default function App() {
             const dupeCount = result.transactions.length - newOnes.length
             const dupeMsg = dupeCount > 0 ? ` · ${dupeCount} duplicada${dupeCount > 1 ? 's' : ''} omitida${dupeCount > 1 ? 's' : ''}` : ''
             setToast(`✅ ${newOnes.length} movimientos de ${result.bank}${detail}${ocrTag}${dupeMsg}`)
+            trackEvent('pdf_uploaded', { bank: result.bank, transactions: newOnes.length, ocr: !!result.ocr })
             return [...prev, ...newOnes]
           })
         }
@@ -682,6 +695,7 @@ export default function App() {
             {isSupabaseConfigured && !window.electronAPI && user && (
               <button
                 onClick={signOut}
+                aria-label={`Cerrar sesión (${user.email})`}
                 title={`Cerrar sesión (${user.email})`}
                 className="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
               >
@@ -695,6 +709,7 @@ export default function App() {
             <button
               ref={addBtnRef}
               onClick={() => setShowAddModal(true)}
+              aria-label="Agregar movimiento"
               className="w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900"
             >
               <Plus size={17} />
@@ -731,18 +746,44 @@ export default function App() {
         </div>
         <OnboardingTooltip hasData={hasData} />
 
-        {/* Processing indicator */}
+        {/* Processing indicator + skeleton */}
         {(loading.length > 0 || ocrProgress) && (
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-2xl px-4 py-3 flex items-center gap-3 text-indigo-700 dark:text-indigo-300 text-sm">
-            <RefreshCw size={15} className="animate-spin shrink-0" />
-            {ocrProgress ? (
-              <span>
-                OCR página {ocrProgress.page}/{ocrProgress.total} de{' '}
-                <span className="font-medium">{ocrProgress.file}</span>
-                {ocrProgress.pct != null && ` (${Math.round(ocrProgress.pct)}%)`}
-              </span>
-            ) : (
-              <span>Procesando: <span className="font-medium">{loading.join(', ')}</span>…</span>
+          <div className="space-y-3">
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-2xl px-4 py-3 flex items-center gap-3 text-indigo-700 dark:text-indigo-300 text-sm">
+              <RefreshCw size={15} className="animate-spin shrink-0" />
+              {ocrProgress ? (
+                <div className="flex-1 min-w-0">
+                  <span>
+                    OCR página {ocrProgress.page}/{ocrProgress.total} de{' '}
+                    <span className="font-medium">{ocrProgress.file}</span>
+                  </span>
+                  {ocrProgress.pct != null && (
+                    <div className="mt-1.5 h-1.5 rounded-full bg-indigo-200 dark:bg-indigo-800 overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.round(ocrProgress.pct)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span>Procesando: <span className="font-medium">{loading.join(', ')}</span>…</span>
+              )}
+            </div>
+            {/* Skeleton rows while processing */}
+            {!hasData && (
+              <div className="space-y-2 animate-pulse">
+                {[80, 60, 72, 50, 65].map((w, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className={`h-3 bg-slate-200 dark:bg-slate-700 rounded-full`} style={{ width: `${w}%` }} />
+                      <div className="h-2.5 w-24 bg-slate-100 dark:bg-slate-700/60 rounded-full" />
+                    </div>
+                    <div className="w-16 h-3 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0" />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
