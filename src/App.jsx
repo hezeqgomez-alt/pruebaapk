@@ -554,7 +554,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 dark:bg-[#0f0f1a] dark:bg-none relative overflow-x-hidden">
+    <div className="min-h-screen dark:bg-[#0f0f1a] dark:[background-image:none] relative overflow-x-hidden">
 
       {/* ── Dark mode animated background ── */}
       <div className="hidden dark:block fixed inset-0 pointer-events-none -z-10 overflow-hidden">
@@ -634,12 +634,12 @@ export default function App() {
                 </button>
                 <button
                   onClick={handleExportXLSX}
-                  className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-emerald-200 dark:border-emerald-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
+                  className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
                 >
                   <FileSpreadsheet size={14} />
                   Excel{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
                   {filteredForReport && filteredForReport.length < transactions.length && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-400" />
                   )}
                 </button>
                 <button
@@ -649,7 +649,7 @@ export default function App() {
                   <Download size={14} />
                   CSV{filteredForReport && filteredForReport.length < transactions.length ? ` (${filteredForReport.length})` : ''}
                   {filteredForReport && filteredForReport.length < transactions.length && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-400" />
                   )}
                 </button>
                 <button
@@ -670,7 +670,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={handleClearAll}
-                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-red-200 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 font-medium transition-colors"
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 hover:text-red-500 dark:hover:text-red-400 text-slate-400 dark:text-slate-500 font-medium transition-colors"
                   aria-label="Borrar todos los movimientos"
                 >
                   <Trash2 size={14} />
@@ -678,7 +678,7 @@ export default function App() {
                 </button>
               </>
             )}
-            <label className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium transition-colors cursor-pointer">
+            <label className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors cursor-pointer">
               <Upload size={14} />
               Importar
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />

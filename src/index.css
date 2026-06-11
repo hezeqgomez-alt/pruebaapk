@@ -9,7 +9,10 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(99,102,241,.06) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(124,58,237,.05) 0, transparent 50%);
   color: #1e293b;
 }
 

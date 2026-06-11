@@ -34,17 +34,18 @@ export default function StatsCards({ transactions, tabs, onTab }) {
 
       {/* Info: total gastos + fuentes */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl p-4 text-white shadow-lg shadow-indigo-200/50 dark:shadow-indigo-900/30">
+        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl p-4 text-white shadow-lg shadow-indigo-200/60 dark:shadow-indigo-900/40 ring-1 ring-indigo-400/20">
           <div className="text-[10px] font-semibold uppercase tracking-widest opacity-70 mb-2">Total gastos</div>
-          <div className="text-2xl font-extrabold leading-none mb-1">{fmt(totalDebits)}</div>
+          <div className="text-3xl font-extrabold leading-none mb-1 tabular-nums">{fmt(totalDebits)}</div>
           <div className="text-xs opacity-70">{debits.length} movimientos</div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/10" />
+          <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/5" />
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
           <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Tarjetas y resúmenes</div>
           <div className="flex items-baseline gap-1.5 leading-none mb-1">
-            <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{cardCount}</span>
+            <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">{cardCount}</span>
             <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{cardCount === 1 ? 'tarjeta' : 'tarjetas'}</span>
           </div>
           {fileCount > 0 && (
@@ -69,10 +70,10 @@ export default function StatsCards({ transactions, tabs, onTab }) {
               <button
                 key={tab.id}
                 onClick={() => onTab(tab.id)}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-95 transition-all shadow-sm"
+                className="group flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-200 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-90 active:bg-indigo-100 dark:active:bg-indigo-900/50 transition-all shadow-sm"
               >
                 <div className="relative">
-                  <Icon size={18} />
+                  <Icon size={18} className="transition-transform duration-200 group-hover:scale-110 group-active:scale-95" />
                   {green != null && (
                     <span className="absolute -top-1.5 -right-2.5 text-[9px] font-bold px-1 py-px rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 leading-tight">
                       {green}

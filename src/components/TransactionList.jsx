@@ -526,13 +526,13 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                   <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} allCategories={allCategories} />
                 </div>
                 {t.installment && (
-                  <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold mt-0.5 block">
+                  <span className="inline-flex text-[10px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold px-1.5 py-0.5 rounded-full mt-0.5">
                     Cuota {t.installment.current}/{t.installment.total}
                   </span>
                 )}
               </div>
               <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
-                <span className={`text-sm font-bold ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                <span className={`text-sm font-bold tabular-nums ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                   {isCredit ? '+' : ''}{fmt(t.amount)}
                 </span>
                 <button
@@ -591,7 +591,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                 const isCredit   = t.type === 'credit'
                 const isSelected = selected.has(t.id)
                 return (
-                  <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
+                  <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-[inset_3px_0_0_#6366f1] dark:shadow-[inset_3px_0_0_#818cf8]' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
                     <td className="py-2.5 pr-3 w-8">
                       <input type="checkbox" checked={isSelected} onChange={() => toggleOne(t.id)}
                         className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
@@ -602,8 +602,8 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                     <td className="py-2.5 pr-4 max-w-xs">
                       <div className="truncate text-slate-700 dark:text-slate-200" title={t.description}>{t.description}</div>
                       <div className="flex gap-1.5 mt-0.5 flex-wrap">
-                        {t.installment && <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">Cuota {t.installment.current}/{t.installment.total}</span>}
-                        {isCredit && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">↩ Crédito</span>}
+                        {t.installment && <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold px-1.5 py-0.5 rounded-full">Cuota {t.installment.current}/{t.installment.total}</span>}
+                        {isCredit && <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold px-1.5 py-0.5 rounded-full">↩ Crédito</span>}
                         {t.originalCurrency && (
                           <span className="text-[10px] text-sky-500 dark:text-sky-400 font-semibold font-mono">
                             {t.originalCurrency} {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.originalAmount)}
@@ -631,7 +631,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                       <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>{t.source}</span>
                       {t.cardHolder && <span className="truncate block text-[10px] text-slate-300 dark:text-slate-600">{t.cardHolder}</span>}
                     </td>
-                    <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                    <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm tabular-nums ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                       {isCredit ? '+' : ''}{fmt(t.amount)}
                     </td>
                     <td className="py-2.5 w-10">
