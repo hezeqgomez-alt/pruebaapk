@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag, ChevronDown, CreditCard,
 } from 'lucide-react'
 import MobileDrawer from './components/MobileDrawer'
 import UploadZone from './components/UploadZone'
@@ -141,9 +141,21 @@ export default function App() {
   const addBtnRef       = useRef(null)
   const cloudLoadedRef      = useRef(false) // 'ok' | false — gates debounced save until first cloud load succeeds
   const cloudSaveFailCount  = useRef(0)     // consecutive save failures (shown as subtle header icon, not toast)
+  const reportPickerRef     = useRef(null)
+  const [showReportPicker, setShowReportPicker] = useState(false)
+
+  const sources = useMemo(() => [...new Set(transactions.map(t => t.source))].sort(), [transactions])
 
   // Init analytics once on mount
   useEffect(() => { initAnalytics() }, [])
+
+  // Close report picker on outside click
+  useEffect(() => {
+    if (!showReportPicker) return
+    function handle(e) { if (reportPickerRef.current && !reportPickerRef.current.contains(e.target)) setShowReportPicker(false) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [showReportPicker])
 
   // Electron-only license check on mount
   useEffect(() => {
@@ -476,15 +488,19 @@ export default function App() {
     }
   }, [])
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (source = null) => {
     if (generating) return
+    setShowReportPicker(false)
     setActiveTab('dashboard')
     setGenerating(true)
     await new Promise(r => setTimeout(r, 300))
     try {
-      const reportTxs = filteredForReport ?? transactions
+      const reportTxs = source
+        ? transactions.filter(t => t.source === source)
+        : (filteredForReport ?? transactions)
       const fileName = await generateReport({ transactions: reportTxs, chartDonutRef, chartBarRef })
-      setToast(`📄 Informe guardado: ${fileName}`)
+      const label = source ? `"${source}"` : 'Informe'
+      setToast(`📄 ${label} guardado: ${fileName}`)
     } catch (e) {
       setToast(`❌ Error generando informe: ${e.message}`)
     }
@@ -580,7 +596,9 @@ export default function App() {
         onTab={setActiveTab}
         hasData={hasData}
         generating={generating}
-        onReport={handleGenerateReport}
+        onReport={() => handleGenerateReport()}
+        onReportSource={handleGenerateReport}
+        sources={sources}
         onExcelExport={handleExportXLSX}
         onCSVExport={exportCSV}
         onClear={handleClearAll}
@@ -624,14 +642,48 @@ export default function App() {
           <div className="hidden lg:flex items-center gap-2">
             {hasData && (
               <>
-                <button
-                  onClick={handleGenerateReport}
-                  disabled={generating}
-                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-medium shadow-sm shadow-indigo-200 dark:shadow-indigo-900 transition-all disabled:opacity-60"
-                >
-                  {generating ? <RefreshCw size={14} className="animate-spin" /> : <FileBarChart2 size={14} />}
-                  {generating ? 'Generando…' : 'Informe PDF'}
-                </button>
+                <div ref={reportPickerRef} className="relative">
+                  <button
+                    onClick={() => sources.length > 1 ? setShowReportPicker(v => !v) : handleGenerateReport()}
+                    disabled={generating}
+                    className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-medium shadow-sm shadow-indigo-200 dark:shadow-indigo-900 transition-all disabled:opacity-60"
+                  >
+                    {generating ? <RefreshCw size={14} className="animate-spin" /> : <FileBarChart2 size={14} />}
+                    {generating ? 'Generando…' : 'Informe PDF'}
+                    {sources.length > 1 && !generating && (
+                      <ChevronDown size={12} className={`transition-transform duration-200 ${showReportPicker ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+
+                  {showReportPicker && sources.length > 1 && (
+                    <div className="absolute top-full left-0 mt-1.5 w-64 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl z-50 overflow-hidden">
+                      <button
+                        onClick={() => handleGenerateReport()}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                      >
+                        <FileBarChart2 size={14} className="text-indigo-500 shrink-0" />
+                        <span className="flex-1 text-left">Informe completo</span>
+                        <span className="text-[10px] text-slate-400 tabular-nums">{transactions.length} mov.</span>
+                      </button>
+                      <div className="border-t border-slate-100 dark:border-slate-700">
+                        {sources.map(src => {
+                          const cnt = transactions.filter(t => t.source === src).length
+                          return (
+                            <button
+                              key={src}
+                              onClick={() => handleGenerateReport(src)}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                            >
+                              <CreditCard size={13} className="text-slate-400 shrink-0" />
+                              <span className="flex-1 text-left truncate">{src}</span>
+                              <span className="text-[10px] text-slate-400 tabular-nums shrink-0">{cnt}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={handleExportXLSX}
                   className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium transition-colors"
