@@ -3,6 +3,7 @@ const KEY_BUD   = 'easyresumen_budgets'
 const KEY_FILT  = 'easyresumen_filters'
 const KEY_DARK  = 'easyresumen_dark'
 const KEY_CATS  = 'easyresumen_custom_categories'
+const KEY_CARDS = 'easyresumen_card_names'
 const KEY_CATV  = 'easyresumen_cat_version'
 
 export function loadCategorizerVersion() {
@@ -88,6 +89,21 @@ export function loadCustomCategories() {
 
 export function saveCustomCategories(cats) {
   try { localStorage.setItem(KEY_CATS, JSON.stringify(cats)) } catch { /* quota/private-mode */ }
+}
+
+// ── Card names (alias por "source") ─────────────────────────────────────────────
+// Mapa { "Credicoop *0085": "Mi Visa" }. No toca el source real de cada movimiento,
+// así el alias sobrevive cuando volvés a subir el mismo resumen el mes siguiente.
+
+export function loadCardNames() {
+  try {
+    const raw = localStorage.getItem(KEY_CARDS)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+export function saveCardNames(names) {
+  try { localStorage.setItem(KEY_CARDS, JSON.stringify(names)) } catch { /* quota/private-mode */ }
 }
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────

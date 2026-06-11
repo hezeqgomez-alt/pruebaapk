@@ -15,8 +15,9 @@ function sanitizeCell(v) {
   return /^[=+\-@\t\r]/.test(v) ? "'" + v : v
 }
 
-export function exportXLSX(transactions, { asBlob = false } = {}) {
+export function exportXLSX(transactions, { asBlob = false, cardNames = {} } = {}) {
   const wb = XLSX.utils.book_new()
+  const dn = s => cardNames[s] || s
 
   const debits  = transactions.filter(t => t.type !== 'credit')
   const credits = transactions.filter(t => t.type === 'credit')
@@ -33,7 +34,7 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
     ['Total créditos / devoluciones', fmtNum(totalC)],
     ['Neto', fmtNum(totalD - totalC)],
     ['Cantidad de movimientos', debits.length + credits.length],
-    ['Tarjetas cargadas', [...new Set(transactions.map(t => t.source))].join(', ')],
+    ['Tarjetas cargadas', [...new Set(transactions.map(t => dn(t.source)))].join(', ')],
   ]
   const wsRes = XLSX.utils.aoa_to_sheet(resumen)
   wsRes['!cols'] = [{ wch: 35 }, { wch: 22 }]
@@ -100,7 +101,7 @@ export function exportXLSX(transactions, { asBlob = false } = {}) {
       t.originalAmount ? fmtNum(t.originalAmount) : '',
       t.installment ? `${t.installment.current}/${t.installment.total}` : '',
       sanitizeCell(t.note || ''),
-      sanitizeCell(t.source),
+      sanitizeCell(dn(t.source)),
     ])]
   const wsTx = XLSX.utils.aoa_to_sheet(txRows)
   wsTx['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 30 }, { wch: 30 }]

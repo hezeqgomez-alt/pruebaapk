@@ -102,9 +102,10 @@ function kpiCard(doc, x, y, w, h, label, value, sub, accentRgb) {
   doc.setTextColor(...DARK)
 }
 
-export async function generateReport({ transactions, chartDonutRef, chartBarRef, asBlob = false }) {
+export async function generateReport({ transactions, chartDonutRef, chartBarRef, asBlob = false, cardNames = {} }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pw = doc.internal.pageSize.getWidth()
+  const dn = s => cardNames[s] || s
 
   const debits  = transactions.filter(t => t.type !== 'credit')
   const credits = transactions.filter(t => t.type === 'credit')
@@ -166,7 +167,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef,
     { label: 'Total gastos',     value: fmt(totalDebits),  sub: `${debits.length} movimientos`, color: INDIGO },
     { label: 'Créditos / devol.', value: fmt(totalCredits), sub: credits.length > 0 ? `${credits.length} créditos` : '—', color: [...GREEN] },
     { label: 'Neto',             value: fmt(net),           sub: null, color: net > totalDebits * 0.9 ? [...RED] : [...MID] },
-    { label: 'Tarjetas',         value: sources.length,     sub: sources.slice(0, 2).join(', '), color: VIOLET },
+    { label: 'Tarjetas',         value: sources.length,     sub: sources.slice(0, 2).map(dn).join(', '), color: VIOLET },
   ]
   kpis.forEach((c, i) => {
     kpiCard(doc, 14 + i * (cardW + 2), 65, cardW, 27, c.label, c.value, c.sub, c.color)
@@ -184,7 +185,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef,
     doc.setTextColor(...INDIGO)
     doc.text('•', lx, y + row * 6)
     doc.setTextColor(...MID)
-    doc.text(src, lx + 4, y + row * 6)
+    doc.text(dn(src), lx + 4, y + row * 6)
   })
   y += Math.ceil(sources.length / 2) * 6 + 4
   doc.setTextColor(...DARK)

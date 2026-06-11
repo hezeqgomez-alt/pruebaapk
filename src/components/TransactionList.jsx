@@ -115,7 +115,8 @@ function InlineNote({ value, onSave }) {
   )
 }
 
-function SourceFilter({ sources, selected, onChange }) {
+function SourceFilter({ sources, selected, onChange, cardNames = {} }) {
+  const dn = s => cardNames[s] || s
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -135,7 +136,7 @@ function SourceFilter({ sources, selected, onChange }) {
   const label = allSelected
     ? 'Todas las tarjetas'
     : selected.length === 1
-      ? selected[0]
+      ? dn(selected[0])
       : `${selected.length} de ${sources.length} tarjetas`
 
   function toggle(source) {
@@ -203,7 +204,7 @@ function SourceFilter({ sources, selected, onChange }) {
                       className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer shrink-0"
                     />
                     <span className={`text-sm truncate ${checked ? 'font-medium text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200'}`}>
-                      {source}
+                      {dn(source)}
                     </span>
                   </label>
                 </li>
@@ -232,8 +233,9 @@ function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
   )
 }
 
-export default function TransactionList({ transactions, onUpdate, onFilteredChange, customCategories = {} }) {
+export default function TransactionList({ transactions, onUpdate, onFilteredChange, customCategories = {}, cardNames = {} }) {
   const allCategories = useMemo(() => ({ ...CATEGORIES, ...customCategories }), [customCategories])
+  const dn = s => cardNames[s] || s
   const [_p] = useState(loadFilterPrefs)
   const [searchInput, setSearchInput] = useState(_p.search || '')
   const [search, setSearch]           = useState(_p.search || '')
@@ -446,6 +448,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
               sources={sources}
               selected={filterSources}
               onChange={v => { setFilterSources(v); setPage(1) }}
+              cardNames={cardNames}
             />
           )}
           <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }}
@@ -520,7 +523,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{t.description}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono">
                   {safeFormat(t.date, 'dd MMM yy', { locale: es })}
-                  {t.source && <span className="ml-1.5 not-italic font-sans">· {t.source}</span>}
+                  {t.source && <span className="ml-1.5 not-italic font-sans">· {dn(t.source)}</span>}
                 </p>
                 <div className="mt-1.5">
                   <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} allCategories={allCategories} />
@@ -610,8 +613,8 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                           </span>
                         )}
                         {t.source && (
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[140px]" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>
-                            {t.source}{t.cardHolder ? ` · ${t.cardHolder}` : ''}
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[140px]" title={t.cardHolder ? `${dn(t.source)} · ${t.cardHolder}` : dn(t.source)}>
+                            {dn(t.source)}{t.cardHolder ? ` · ${t.cardHolder}` : ''}
                           </span>
                         )}
                       </div>
@@ -628,7 +631,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                       </div>
                     </td>
                     <td className="py-2.5 pr-4 max-w-[120px] hidden lg:table-cell">
-                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>{t.source}</span>
+                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.cardHolder ? `${dn(t.source)} · ${t.cardHolder}` : dn(t.source)}>{dn(t.source)}</span>
                       {t.cardHolder && <span className="truncate block text-[10px] text-slate-300 dark:text-slate-600">{t.cardHolder}</span>}
                     </td>
                     <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm tabular-nums ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>

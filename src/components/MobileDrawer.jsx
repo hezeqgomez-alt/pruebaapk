@@ -20,7 +20,7 @@ export default function MobileDrawer({
   open, onClose,
   tabs, activeTab, onTab,
   hasData, generating,
-  onReport, onReportSource, sources = [],
+  onReport, onReportSource, sources = [], cardNames = {},
   onExcelExport, onCSVExport, onClear,
   onImport, onPDFFiles,
   darkMode, onDarkMode,
@@ -170,7 +170,7 @@ export default function MobileDrawer({
                           className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                         >
                           <CreditCard size={11} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{src}</span>
+                          <span className="truncate">{cardNames[src] || src}</span>
                         </button>
                       ))}
                     </div>

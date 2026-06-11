@@ -1,4 +1,4 @@
-import { List, PiggyBank, CreditCard, Landmark, BarChart2, AlertTriangle } from 'lucide-react'
+import { List, PiggyBank, CreditCard, Landmark, BarChart2, AlertTriangle, Settings2 } from 'lucide-react'
 
 // Total con centavos: el redondeo a pesos enteros hacía que, p.ej., $1.579.501,94
 // se mostrara como $1.579.502 y no coincidiera con el SALDO ACTUAL del resumen.
@@ -15,13 +15,15 @@ const NAV_ICONS = {
   insights:    AlertTriangle,
 }
 
-export default function StatsCards({ transactions, tabs, onTab }) {
+export default function StatsCards({ transactions, tabs, onTab, cardNames = {}, onManage }) {
   if (transactions.length === 0) return null
 
   const debits      = transactions.filter(t => t.type !== 'credit')
   const totalDebits = debits.reduce((s, t) => s + t.amount, 0)
   // Tarjetas: cada "source" es un banco+marca+tarjeta distinto.
   const sources     = [...new Set(transactions.map(t => t.source))]
+  // Nombre a mostrar: alias si existe, si no el source original.
+  const displayNames = sources.map(s => cardNames[s] || s)
   // Resúmenes: cada PDF subido (fileName). Datos antiguos pueden no tenerlo.
   const files       = [...new Set(transactions.map(t => t.fileName).filter(Boolean))]
   const cardCount   = sources.length
@@ -42,8 +44,15 @@ export default function StatsCards({ transactions, tabs, onTab }) {
           <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/5" />
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Tarjetas y resúmenes</div>
+        <button
+          onClick={onManage}
+          disabled={!onManage}
+          className="group text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm transition-all enabled:hover:border-indigo-300 dark:enabled:hover:border-indigo-700 enabled:hover:shadow-md enabled:active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Tarjetas y resúmenes</span>
+            {onManage && <Settings2 size={13} className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" />}
+          </div>
           <div className="flex items-baseline gap-1.5 leading-none mb-1">
             <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">{cardCount}</span>
             <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{cardCount === 1 ? 'tarjeta' : 'tarjetas'}</span>
@@ -53,10 +62,15 @@ export default function StatsCards({ transactions, tabs, onTab }) {
               en {fileCount} {fileCount === 1 ? 'resumen' : 'resúmenes'}
             </div>
           )}
-          <div className="text-xs text-slate-400 dark:text-slate-500 truncate" title={sources.join(', ')}>
-            {sources.slice(0, 2).join(', ')}{sources.length > 2 ? ` +${sources.length - 2}` : ''}
+          <div className="text-xs text-slate-400 dark:text-slate-500 truncate" title={displayNames.join(', ')}>
+            {displayNames.slice(0, 2).join(', ')}{displayNames.length > 2 ? ` +${displayNames.length - 2}` : ''}
           </div>
-        </div>
+          {onManage && (
+            <div className="text-[10px] font-medium text-indigo-400 dark:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+              Tocá para renombrar o eliminar →
+            </div>
+          )}
+        </button>
       </div>
 
       {/* Nav buttons — solo mobile (en desktop está el tab strip) */}

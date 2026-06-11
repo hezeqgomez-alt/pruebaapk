@@ -18,6 +18,7 @@ import LoansPanel from './components/LoansPanel'
 import AddTransactionModal from './components/AddTransactionModal'
 import BankGuideModal from './components/BankGuideModal'
 import CategoryManagerModal from './components/CategoryManagerModal'
+import CardManagerModal from './components/CardManagerModal'
 import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
 import SubscribeModal from './components/SubscribeModal'
 import AuthGate from './components/AuthGate'
@@ -25,7 +26,7 @@ import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary, CATEGORIZER_VERSION, recategorizeAll } from './utils/categorizer'
-import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
+import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCardNames, saveCardNames, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
 import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
@@ -109,9 +110,11 @@ export default function App() {
   const [budgets, setBudgets]                     = useState(() => loadBudgets())
   const [darkMode, setDarkMode]                   = useState(() => loadDarkMode())
   const [customCategories, setCustomCategories]   = useState(() => loadCustomCategories())
+  const [cardNames, setCardNames]                 = useState(() => loadCardNames())
   const [showAddModal, setShowAddModal]           = useState(false)
   const [showBankGuide, setShowBankGuide]         = useState(false)
   const [showCatManager, setShowCatManager]       = useState(false)
+  const [showCardManager, setShowCardManager]     = useState(false)
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
@@ -260,6 +263,38 @@ export default function App() {
     saveCustomCategories(cats)
   }, [])
 
+  const handleCardNamesChange = useCallback((names) => {
+    setCardNames(names)
+    saveCardNames(names)
+  }, [])
+
+  const handleDeleteSource = useCallback((source) => {
+    setTransactions(prev => {
+      const next = prev.filter(t => t.source !== source)
+      if (user?.id && !window.electronAPI) {
+        cloudSave(user.id, { transactions: next, budgets, customCategories }).catch(console.warn)
+      }
+      return next
+    })
+    // Limpiar el alias de esa tarjeta
+    setCardNames(prev => {
+      if (!prev[source]) return prev
+      const next = { ...prev }; delete next[source]; saveCardNames(next); return next
+    })
+    setToast(`🗑️ Tarjeta "${cardNames[source] || source}" eliminada`)
+  }, [user, budgets, customCategories, cardNames, setToast])
+
+  const handleDeleteFile = useCallback((fileName) => {
+    setTransactions(prev => {
+      const next = prev.filter(t => t.fileName !== fileName)
+      if (user?.id && !window.electronAPI) {
+        cloudSave(user.id, { transactions: next, budgets, customCategories }).catch(console.warn)
+      }
+      return next
+    })
+    setToast(`🗑️ Resumen "${fileName}" eliminado`)
+  }, [user, budgets, customCategories, setToast])
+
   const handleFiles = useCallback(async (files) => { // eslint-disable-line react-hooks/exhaustive-deps
     for (const file of files) {
       // Check PDF limit for trial users before parsing
@@ -375,7 +410,7 @@ export default function App() {
         csvCell(t.category),
         csvCell(t.type || 'debit'),
         t.type === 'credit' ? t.amount : -t.amount,
-        csvCell(t.source),
+        csvCell(cardNames[t.source] || t.source),
       ]),
     ]
     const csv = rows.map(r => r.join(',')).join('\n')
@@ -406,8 +441,8 @@ export default function App() {
         // Wait two animation frames so charts have time to mount and paint
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
         const [pdfResult, xlsxResult] = await Promise.all([
-          generateReport({ transactions: txs, chartDonutRef, chartBarRef, asBlob: true }),
-          Promise.resolve(exportXLSX(txs, { asBlob: true })),
+          generateReport({ transactions: txs, chartDonutRef, chartBarRef, asBlob: true, cardNames }),
+          Promise.resolve(exportXLSX(txs, { asBlob: true, cardNames })),
         ])
         const files = [
           new File([pdfResult.blob], pdfResult.fileName, { type: 'application/pdf' }),
@@ -436,12 +471,12 @@ export default function App() {
       setToast('✅ Resumen copiado al portapapeles')
     }
     setSharing(false)
-  }, [sharing, transactions, filteredForReport, chartDonutRef, chartBarRef])
+  }, [sharing, transactions, filteredForReport, chartDonutRef, chartBarRef, cardNames])
 
   const handleExportXLSX = () => {
     try {
       const data = filteredForReport ?? transactions
-      exportXLSX(data)
+      exportXLSX(data, { cardNames })
       setToast('📥 Excel exportado')
     } catch (e) {
       setToast(`❌ Error exportando Excel: ${e.message}`)
@@ -498,7 +533,7 @@ export default function App() {
       const reportTxs = source
         ? transactions.filter(t => t.source === source)
         : (filteredForReport ?? transactions)
-      const fileName = await generateReport({ transactions: reportTxs, chartDonutRef, chartBarRef })
+      const fileName = await generateReport({ transactions: reportTxs, chartDonutRef, chartBarRef, cardNames })
       const label = source ? `"${source}"` : 'Informe'
       setToast(`📄 ${label} guardado: ${fileName}`)
     } catch (e) {
@@ -599,6 +634,7 @@ export default function App() {
         onReport={() => handleGenerateReport()}
         onReportSource={handleGenerateReport}
         sources={sources}
+        cardNames={cardNames}
         onExcelExport={handleExportXLSX}
         onCSVExport={exportCSV}
         onClear={handleClearAll}
@@ -675,7 +711,7 @@ export default function App() {
                               className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
                             >
                               <CreditCard size={13} className="text-slate-400 shrink-0" />
-                              <span className="flex-1 text-left truncate">{src}</span>
+                              <span className="flex-1 text-left truncate">{cardNames[src] || src}</span>
                               <span className="text-[10px] text-slate-400 tabular-nums shrink-0">{cnt}</span>
                             </button>
                           )
@@ -846,7 +882,7 @@ export default function App() {
           </div>
         )}
 
-        {hasData && <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} />}
+        {hasData && <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} cardNames={cardNames} onManage={() => setShowCardManager(true)} />}
 
         {/* Tabs siempre visibles: Préstamos y Balance funcionan sin transacciones */}
         <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-white/5 dark:border dark:border-white/10 rounded-2xl p-1 w-fit overflow-x-auto">
@@ -893,7 +929,7 @@ export default function App() {
         {/* Always mounted to preserve page/sort state when switching tabs */}
         <div className={!hasData || activeTab !== 'movimientos' ? 'hidden' : ''}>
           <ErrorBoundary label="Error en la lista de movimientos">
-            <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} />
+            <TransactionList transactions={transactions} onUpdate={setTransactions} onFilteredChange={f => setFilteredForReport(f && f.length < transactions.length ? f : null)} customCategories={customCategories} cardNames={cardNames} />
           </ErrorBoundary>
         </div>
 
@@ -968,6 +1004,17 @@ export default function App() {
           customCategories={customCategories}
           onChange={handleCustomCategoriesChange}
           onClose={() => setShowCatManager(false)}
+        />
+      )}
+
+      {showCardManager && (
+        <CardManagerModal
+          transactions={transactions}
+          cardNames={cardNames}
+          onCardNamesChange={handleCardNamesChange}
+          onDeleteSource={handleDeleteSource}
+          onDeleteFile={handleDeleteFile}
+          onClose={() => setShowCardManager(false)}
         />
       )}
 
