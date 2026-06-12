@@ -197,11 +197,15 @@ export default function App() {
   }, [darkMode])
 
   // Start guided tour after first PDF upload (only once per browser)
+  // ?tour param forces it on for screenshots / demos
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('tour')) {
+      setTimeout(() => { setActiveTab('dashboard'); setTourStep(0) }, 400)
+      return
+    }
     const prev = prevTxLenRef.current
     prevTxLenRef.current = transactions.length
     if (prev === 0 && transactions.length > 0 && !localStorage.getItem('er_tour_done')) {
-      // Small delay so the UI has time to render the data first
       setTimeout(() => {
         setActiveTab('dashboard')
         setTourStep(0)
