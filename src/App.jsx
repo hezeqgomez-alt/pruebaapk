@@ -19,6 +19,7 @@ import AddTransactionModal from './components/AddTransactionModal'
 import BankGuideModal from './components/BankGuideModal'
 import CategoryManagerModal from './components/CategoryManagerModal'
 import CardManagerModal from './components/CardManagerModal'
+import TourGuide from './components/TourGuide'
 import { TrialBanner, ExpiredGate, UpdateToast } from './components/LicenseGate'
 import SubscribeModal from './components/SubscribeModal'
 import AuthGate from './components/AuthGate'
@@ -116,6 +117,28 @@ export default function App() {
   const [showCatManager, setShowCatManager]       = useState(false)
   const [showCardManager, setShowCardManager]     = useState(false)
   const openCardManager = useCallback(() => setShowCardManager(true), [])
+  const [tourStep, setTourStep] = useState(null) // null = inactive, 0-4 = active step
+  const prevTxLenRef = useRef(transactions.length)
+
+  const handleTourNext = useCallback(() => {
+    setTourStep(prev => {
+      const TOUR_TABS = ['dashboard', 'dashboard', 'movimientos', 'insights', 'insights']
+      const next = prev + 1
+      if (next >= TOUR_TABS.length) {
+        localStorage.setItem('er_tour_done', '1')
+        return null
+      }
+      const nextTab = TOUR_TABS[next]
+      if (nextTab) setActiveTab(nextTab)
+      return next
+    })
+  }, [])
+
+  const handleTourSkip = useCallback(() => {
+    localStorage.setItem('er_tour_done', '1')
+    setTourStep(null)
+  }, [])
+
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
@@ -172,6 +195,19 @@ export default function App() {
     document.documentElement.classList.toggle('dark', darkMode)
     saveDarkMode(darkMode)
   }, [darkMode])
+
+  // Start guided tour after first PDF upload (only once per browser)
+  useEffect(() => {
+    const prev = prevTxLenRef.current
+    prevTxLenRef.current = transactions.length
+    if (prev === 0 && transactions.length > 0 && !localStorage.getItem('er_tour_done')) {
+      // Small delay so the UI has time to render the data first
+      setTimeout(() => {
+        setActiveTab('dashboard')
+        setTourStep(0)
+      }, 800)
+    }
+  }, [transactions.length])
 
   // Load from cloud when user logs in (web only)
   useEffect(() => {
@@ -1027,6 +1063,16 @@ export default function App() {
             <Toast key={t.id} msg={t.msg} onDone={() => dismissToast(t.id)} />
           ))}
         </div>
+      )}
+
+      {tourStep !== null && (
+        <TourGuide
+          step={tourStep}
+          totalSteps={5}
+          onNext={handleTourNext}
+          onSkip={handleTourSkip}
+          darkMode={darkMode}
+        />
       )}
     </div>
   )
