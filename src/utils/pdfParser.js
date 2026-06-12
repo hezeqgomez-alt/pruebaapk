@@ -81,7 +81,7 @@ function parseAmount(str) {
 
 // ─── Date parsing ────────────────────────────────────────────────────────────
 
-const MONTHS_ES = { ene:1, feb:2, mar:3, abr:4, may:5, jun:6, jul:7, ago:8, sep:9, oct:10, nov:11, dic:12, enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6, julio:7, agosto:8, septiembre:9, octubre:10, noviembre:11, diciembre:12 }
+const MONTHS_ES = { ene:1, feb:2, mar:3, abr:4, may:5, jun:6, jul:7, ago:8, sep:9, oct:10, nov:11, dic:12, enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6, julio:7, agosto:8, septiembre:9, setiembre:9, octubre:10, noviembre:11, diciembre:12, noviem:11, agost:8, setiemb:9, octu:10, dici:12 }
 
 function parseDate(str, refYear) {
   if (!str) return null
@@ -114,6 +114,17 @@ function parseDate(str, refYear) {
     if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
       return `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
+  // YY MonthName DD — ICBC format ("26 Mayo 04", "25 Noviem. 28")
+  // Must be checked BEFORE the dd-MonthName pattern to avoid misparsing the year as a day
+  m = s.toLowerCase().match(/\b(2\d)\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|s[ae]t(?:iembre)?|oct(?:ubre)?|nov(?:iem(?:bre)?)?|dic(?:iembre)?)\.?\s+(\d{1,2})\b/)
+  if (m) {
+    const moRaw = m[2].replace(/\.+$/, '')
+    const mo = MONTHS_ES[moRaw] || MONTHS_ES[moRaw.slice(0, 3)]
+    const y2 = 2000 + parseInt(m[1])
+    const dy = parseInt(m[3])
+    if (mo && dy >= 1 && dy <= 31 && y2 >= 2020 && y2 <= 2035)
+      return `${y2}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
+  }
   // dd ENE, dd ENERO, etc.
   m = s.toLowerCase().match(/\b(\d{1,2})\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/)
   if (m) {
@@ -141,6 +152,11 @@ function detectInstallment(text) {
 
 const FX_RE = /\b(U\$[DS]|USD|DLS|EUR|GBP|BRL|CLP|UYU)\s*([\d.,]+)/i
 const FX_NORM = { 'U$D': 'USD', 'U$S': 'USD' }
+
+// ICBC format: "YY MonthName DD" — year comes BEFORE month name
+const ICBC_DATE_RE = /\b2\d\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|s[ae]t(?:iembre)?|oct(?:ubre)?|nov(?:iem(?:bre)?)?|dic(?:iembre)?)\.?\s+\d{1,2}\b/i
+// ICBC continuation: day + 5-6 digit comprobante + asterisk (inherits month from prior row)
+const ICBC_CONT_RE = /^(\d{1,2})\s+\d{5,6}\s*\*/
 
 function detectForeignCurrency(text) {
   const m = norm(text).match(FX_RE)
@@ -188,7 +204,7 @@ function detectBank(text) {
   if (t.includes('cart.') && t.includes('liq.') && t.includes('resumen nro')) return 'Credicoop'
   if (t.includes('hipotecario'))       return 'Hipotecario'
   if (t.includes('supervielle'))       return 'Supervielle'
-  if (t.includes('patagonia'))         return 'Patagonia'
+  if (t.includes('patagonia') || t.includes('bancopatagonia')) return 'Patagonia'
   if (t.includes('galicia'))           return 'Galicia'
   if (t.includes('bbva'))              return 'BBVA'
   if (t.includes('santander'))         return 'Santander'
@@ -244,6 +260,8 @@ function detectYear(allText) {
 function cleanDesc(raw) {
   // Normalize unicode dashes to ASCII so all regex patterns work uniformly
   let desc = norm(raw)
+    // Remove ICBC YY-MonthName-DD date artifacts (e.g., "26 Noviem. 28", "25 Mayo 04")
+    .replace(/\b2\d\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|s[ae]t(?:iembre)?|oct(?:ubre)?|nov(?:iem(?:bre)?)?|dic(?:iembre)?)\.?\s+\d{1,2}\b/gi, '')
     // Remove date formats
     .replace(/\b\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?\b/g, '')
     .replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, '')
@@ -298,6 +316,9 @@ function cleanDesc(raw) {
   // Strip trailing single-letter noise fragments left after prior strips (e.g. " V A").
   // Single letters only — two-letter suffixes like "SA"/"SC" are legitimate company forms.
   desc = desc.replace(/(\s+[A-Z])+$/, '').trim()
+
+  // Strip ICBC continuation prefix: leading day + 5-6 digit comprobante + asterisk
+  desc = desc.replace(/^\d{1,2}\s+\d{5,6}\s*\*?\s*/, '').trim()
 
   // Strip trailing FX reference codes glued to the currency token
   // (e.g. "Google One A75835791USD" → "Google One")
@@ -482,12 +503,13 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
   let currentCard = null
   let lastCard = null        // card from the most recent end-of-section marker
   let pendingRetroactive = []
+  let icbcYearMonth = null  // tracks "YYYY-MM" for ICBC day-only continuation rows
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
 
     // Detect card section headers before date check (they have no parseable date)
-    if (isTitularReset(row.text)) { currentCard = null; lastCard = null; pendingRetroactive = []; continue }
+    if (isTitularReset(row.text)) { currentCard = null; lastCard = null; pendingRetroactive = []; icbcYearMonth = null; continue }
     const cardInfo = extractCardInfo(row.text)
     if (cardInfo) {
       // CABAL-style: "TARJETA (nnnn) TOTAL CONSUMOS DE NAME" appears at END of each section.
@@ -510,8 +532,21 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
       continue
     }
 
-    const date = parseDate(row.text, refYear)
+    let date = parseDate(row.text, refYear)
+
+    // ICBC continuation: rows with only a day number + comprobante, no month name
+    if (!date && icbcYearMonth) {
+      const cm = row.text.match(ICBC_CONT_RE)
+      if (cm) {
+        const dy = parseInt(cm[1])
+        if (dy >= 1 && dy <= 31) date = `${icbcYearMonth}-${String(dy).padStart(2,'0')}`
+      }
+    }
+
     if (!date) continue
+
+    // Update ICBC month context when we see a YY-Month-DD format row
+    if (ICBC_DATE_RE.test(row.text)) icbcYearMonth = date.slice(0, 7)
 
     // Statement-header summary rows carry empty-column placeholders ("-,--")
     // merged with the holder's address by Y grouping — never a transaction.
@@ -597,12 +632,13 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
   let currentCard = null
   let lastCard = null        // card from the most recent end-of-section marker
   let pendingRetroactive = []
+  let icbcYearMonth = null
 
   for (let i = 0; i < rows.length; i++) {
     const { cols, text } = rows[i]
 
     // Detect card section headers
-    if (isTitularReset(text)) { currentCard = null; lastCard = null; pendingRetroactive = []; continue }
+    if (isTitularReset(text)) { currentCard = null; lastCard = null; pendingRetroactive = []; icbcYearMonth = null; continue }
     const cardInfo = extractCardInfo(text)
     if (cardInfo) {
       const isEndOfSection = /\btotal\s+consumos\b/i.test(text)
@@ -629,10 +665,25 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
     if (/-,--/.test(text)) continue
 
     // First column: try to find a date
-    const dateCol = cols.find(c => parseDate(c.text, refYear))
-    if (!dateCol) continue
+    let dateCol = cols.find(c => parseDate(c.text, refYear))
 
-    const date = parseDate(dateCol.text, refYear)
+    // ICBC continuation: try to match day-only + comprobante pattern
+    let icbcContDay = null
+    if (!dateCol && icbcYearMonth) {
+      const cm = text.match(ICBC_CONT_RE)
+      if (cm) {
+        const dy = parseInt(cm[1])
+        if (dy >= 1 && dy <= 31) icbcContDay = dy
+      }
+    }
+    if (!dateCol && !icbcContDay) continue
+
+    const date = dateCol
+      ? parseDate(dateCol.text, refYear)
+      : `${icbcYearMonth}-${String(icbcContDay).padStart(2,'0')}`
+
+    // Update ICBC month context
+    if (dateCol && ICBC_DATE_RE.test(dateCol.text)) icbcYearMonth = date.slice(0, 7)
 
     // Last column: try to find an amount — avoid running balance column.
     // Gate through the strict AMT_RE: bare parseAmount is too permissive and turns
