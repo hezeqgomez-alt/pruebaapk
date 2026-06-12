@@ -27,7 +27,7 @@ import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary, CATEGORIZER_VERSION, recategorizeAll } from './utils/categorizer'
-import { loadData, saveData, clearData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCardNames, saveCardNames, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
+import { loadData, saveData, clearData, clearAllUserData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCardNames, saveCardNames, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
 import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
@@ -142,7 +142,18 @@ export default function App() {
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
-  const { user, trialStatus, trackPDF: webTrackPDF, refreshTrial, signOut, passwordRecovery } = useAuth()
+  const { user, trialStatus, trackPDF: webTrackPDF, refreshTrial, signOut: authSignOut, passwordRecovery } = useAuth()
+
+  // Clear all local data before signing out so it doesn't bleed into the next user's session
+  const signOut = useCallback(async () => {
+    setTransactions([])
+    setBudgets({})
+    setCustomCategories({})
+    cloudLoadedRef.current = false
+    prevUserIdRef.current = null
+    clearAllUserData()
+    await authSignOut()
+  }, [authSignOut])
 
   // In Electron: use electronAPI license. On web: use auth context.
   const [electronLicense, setElectronLicense] = useState(null)
@@ -168,6 +179,7 @@ export default function App() {
   const addBtnRef       = useRef(null)
   const cloudLoadedRef      = useRef(false) // 'ok' | false — gates debounced save until first cloud load succeeds
   const cloudSaveFailCount  = useRef(0)     // consecutive save failures (shown as subtle header icon, not toast)
+  const prevUserIdRef       = useRef(null)  // tracks last logged-in user ID to detect account switches
   const reportPickerRef     = useRef(null)
   const [showReportPicker, setShowReportPicker] = useState(false)
 
@@ -216,6 +228,15 @@ export default function App() {
   // Load from cloud when user logs in (web only)
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
+    // If a different user is logging in on the same device, wipe the previous user's
+    // local data first so it can't bleed into the new session or get pushed to their cloud.
+    if (prevUserIdRef.current && prevUserIdRef.current !== user.id) {
+      setTransactions([])
+      setBudgets({})
+      setCustomCategories({})
+      clearAllUserData()
+    }
+    prevUserIdRef.current = user.id
     // Reset gate so a save from the previous session can't fire before this load completes
     cloudLoadedRef.current = false
     let cancelled = false

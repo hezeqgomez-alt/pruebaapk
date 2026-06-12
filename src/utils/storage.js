@@ -52,6 +52,20 @@ export function clearData() {
   localStorage.removeItem(KEY)
 }
 
+// Clears ALL user-specific data — call on sign-out to prevent data leaking
+// to the next user on the same device.
+export function clearAllUserData() {
+  localStorage.removeItem(KEY)
+  localStorage.removeItem(KEY_BUD)
+  localStorage.removeItem(KEY_CATS)
+  localStorage.removeItem(KEY_CARDS)
+  localStorage.removeItem(KEY_FILT)
+  localStorage.removeItem('easyresumen_loans')
+  localStorage.removeItem('easyresumen_balance')
+  localStorage.removeItem('er_sub_promo_seen_at')
+  localStorage.removeItem('er_tour_done')
+}
+
 // ── Budgets ──────────────────────────────────────────────────────────────────
 
 export function loadBudgets() {
