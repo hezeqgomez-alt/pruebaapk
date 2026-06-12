@@ -178,9 +178,13 @@ function detectBank(text) {
   if (t.includes('mercado pago') || t.includes('mercadopago')) return 'Mercado Pago'
   if (t.includes('brubank'))           return 'Brubank'
   if (t.includes('ualá') || t.includes('uala')) return 'Ualá'
+  // Banco Ciudad: explicit name or URL takes priority over any structural heuristics below
+  // (Banco Ciudad statements share header fields like LIQ./RESUMEN NRO. with Credicoop)
+  if (/\bbanco\s+ciudad\b|\bbancociudad\b/.test(t))  return 'Banco Ciudad'
   if (t.includes('credicoop'))         return 'Credicoop'
   // Credicoop statements where the bank name is a graphic: detect by structural fields
-  // unique to Credicoop (CART. = cartera code, LIQ. = liquidación sequence)
+  // unique to Credicoop (CART. = cartera code, LIQ. = liquidación sequence).
+  // Require CART. with a dot — Banco Ciudad uses CART: (colon), so this never misfires.
   if (t.includes('cart.') && t.includes('liq.') && t.includes('resumen nro')) return 'Credicoop'
   if (t.includes('hipotecario'))       return 'Hipotecario'
   if (t.includes('supervielle'))       return 'Supervielle'
@@ -195,7 +199,7 @@ function detectBank(text) {
   // Word-boundary patterns: bare 'nacion' substring would match "internacional"/"nacional"
   // and mislabel other banks' statements (e.g. Banco Ciudad with FX operations).
   if (/\bbanco\s+(?:de\s+la\s+)?naci[oó]n\b|\bbco\.?\s*naci[oó]n\b|\bbna\b/.test(t)) return 'Banco Nación'
-  if (/\bbanco\s+ciudad\b|\bbancociudad\b|\bciudad\b/.test(t)) return 'Banco Ciudad'
+  if (/\bciudad\b/.test(t))            return 'Banco Ciudad'
   return null
 }
 
@@ -476,13 +480,14 @@ function extractCardInfo(text) {
 function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand = null) {
   const transactions = []
   let currentCard = null
+  let lastCard = null        // card from the most recent end-of-section marker
   let pendingRetroactive = []
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
 
     // Detect card section headers before date check (they have no parseable date)
-    if (isTitularReset(row.text)) { currentCard = null; pendingRetroactive = []; continue }
+    if (isTitularReset(row.text)) { currentCard = null; lastCard = null; pendingRetroactive = []; continue }
     const cardInfo = extractCardInfo(row.text)
     if (cardInfo) {
       // CABAL-style: "TARJETA (nnnn) TOTAL CONSUMOS DE NAME" appears at END of each section.
@@ -496,6 +501,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
           t.category = categorize(t.description)
         }
         pendingRetroactive = []
+        lastCard = cardInfo
         currentCard = null
       } else if (!isEndOfSection) {
         currentCard = cardInfo
@@ -570,6 +576,17 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
     if (!currentCard) pendingRetroactive.push(tx)
   }
 
+  // Fees/interest rows that follow a "Total Consumos" footer (e.g. Banco Ciudad)
+  // are left in pendingRetroactive with no card. Assign them to the last known card.
+  if (pendingRetroactive.length > 0 && lastCard) {
+    for (const t of pendingRetroactive) {
+      t.source = buildSource(bank, docBrand, filename, lastCard)
+      if (lastCard.holder) t.cardHolder = lastCard.holder
+      else delete t.cardHolder
+      t.category = categorize(t.description)
+    }
+  }
+
   return transactions
 }
 
@@ -578,13 +595,14 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
 function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
   const transactions = []
   let currentCard = null
+  let lastCard = null        // card from the most recent end-of-section marker
   let pendingRetroactive = []
 
   for (let i = 0; i < rows.length; i++) {
     const { cols, text } = rows[i]
 
     // Detect card section headers
-    if (isTitularReset(text)) { currentCard = null; pendingRetroactive = []; continue }
+    if (isTitularReset(text)) { currentCard = null; lastCard = null; pendingRetroactive = []; continue }
     const cardInfo = extractCardInfo(text)
     if (cardInfo) {
       const isEndOfSection = /\btotal\s+consumos\b/i.test(text)
@@ -596,6 +614,7 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
           t.category = categorize(t.description)
         }
         pendingRetroactive = []
+        lastCard = cardInfo
         currentCard = null
       } else if (!isEndOfSection) {
         currentCard = cardInfo
@@ -675,6 +694,17 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
     }
     transactions.push(tx)
     if (!currentCard) pendingRetroactive.push(tx)
+  }
+
+  // Fees/interest rows that follow a "Total Consumos" footer (e.g. Banco Ciudad)
+  // are left in pendingRetroactive with no card. Assign them to the last known card.
+  if (pendingRetroactive.length > 0 && lastCard) {
+    for (const t of pendingRetroactive) {
+      t.source = buildSource(bank, docBrand, filename, lastCard)
+      if (lastCard.holder) t.cardHolder = lastCard.holder
+      else delete t.cardHolder
+      t.category = categorize(t.description)
+    }
   }
 
   return transactions
