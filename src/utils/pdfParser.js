@@ -106,16 +106,8 @@ function parseDate(str, refYear) {
     if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
       return `${y}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
-  // dd/mm (sin año)
-  m = s.match(/\b(\d{1,2})[-/](\d{1,2})\b/)
-  if (m) {
-    const mo = parseInt(m[2])
-    const dy = parseInt(m[1])
-    if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
-      return `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
-  }
   // YY MonthName DD — ICBC format ("26 Mayo 04", "25 Noviem. 28")
-  // Must be checked BEFORE the dd-MonthName pattern to avoid misparsing the year as a day
+  // Checked BEFORE dd/mm to prevent installment codes like C.04/06 from matching first
   m = s.toLowerCase().match(/\b(2\d)\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|s[ae]t(?:iembre)?|oct(?:ubre)?|nov(?:iem(?:bre)?)?|dic(?:iembre)?)\.?\s+(\d{1,2})\b/)
   if (m) {
     const moRaw = m[2].replace(/\.+$/, '')
@@ -124,6 +116,14 @@ function parseDate(str, refYear) {
     const dy = parseInt(m[3])
     if (mo && dy >= 1 && dy <= 31 && y2 >= 2020 && y2 <= 2035)
       return `${y2}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
+  }
+  // dd/mm (sin año)
+  m = s.match(/\b(\d{1,2})[-/](\d{1,2})\b/)
+  if (m) {
+    const mo = parseInt(m[2])
+    const dy = parseInt(m[1])
+    if (mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31)
+      return `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`
   }
   // dd ENE, dd ENERO, etc.
   m = s.toLowerCase().match(/\b(\d{1,2})\s+(ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|sep(?:tiembre)?|oct(?:ubre)?|nov(?:iembre)?|dic(?:iembre)?)\b/)
@@ -260,6 +260,10 @@ function detectYear(allText) {
 function cleanDesc(raw) {
   // Normalize unicode dashes to ASCII so all regex patterns work uniformly
   let desc = norm(raw)
+  // Strip ICBC continuation prefix FIRST: "DD NNNNNN *" (day + 5-6 digit comprobante + asterisk)
+  // Must run before AMT_RE which would eat the bare-integer comprobante and prevent matching later
+  desc = desc.replace(/^\d{1,2}\s+\d{5,6}\s*\*\s*/, '').trim()
+  desc = desc
     // Remove ICBC YY-MonthName-DD date artifacts (e.g., "26 Noviem. 28", "25 Mayo 04")
     .replace(/\b2\d\s+(?:ene(?:ro)?|feb(?:rero)?|mar(?:zo)?|abr(?:il)?|may(?:o)?|jun(?:io)?|jul(?:io)?|ago(?:sto)?|s[ae]t(?:iembre)?|oct(?:ubre)?|nov(?:iem(?:bre)?)?|dic(?:iembre)?)\.?\s+\d{1,2}\b/gi, '')
     // Remove date formats
@@ -317,9 +321,6 @@ function cleanDesc(raw) {
   // Single letters only — two-letter suffixes like "SA"/"SC" are legitimate company forms.
   desc = desc.replace(/(\s+[A-Z])+$/, '').trim()
 
-  // Strip ICBC continuation prefix: leading day + 5-6 digit comprobante + asterisk
-  desc = desc.replace(/^\d{1,2}\s+\d{5,6}\s*\*?\s*/, '').trim()
-
   // Strip trailing FX reference codes glued to the currency token
   // (e.g. "Google One A75835791USD" → "Google One")
   desc = desc.replace(/\s+[A-Z]?\d{6,}\s*(?:USD|U\$[SD]|EUR)$/i, '').trim()
@@ -347,6 +348,11 @@ function shouldSkipDesc(desc) {
   if (/saldo\s+anterior|saldo\s+actual|saldo\s+deudor|saldo\s+acreedor|cierre\s+actual|vencimiento\s+actual|pr[oó]ximo\s+cierre|vto\.?\s+anterior|nro\.?\s+de\s+cuenta/i.test(desc)) return true
   // CABAL / Credicoop account summary rows (e.g. "* RESUMEN DE SU CUENTA CORRIENTE")
   if (/\bresumen\s+de\s+su\s+cuenta\b/i.test(desc)) return true
+  // ICBC page-header rows (account club info repeated on every page)
+  if (/\bicbc\s+club\b|\bcartera\s+(?:general|particular)\b/i.test(desc)) return true
+  // ICBC / generic account header fields: Prox.Cierre, Vto.Ant., credit limits
+  if (/\bprox(?:imo)?\.?\s*(?:cierre|vto\.?|vencimiento)\b|\bcierre\s+ant(?:erior)?\b|\bvto\.?\s+ant(?:erior)?\b/i.test(desc)) return true
+  if (/\blimites?\b.{0,40}\bcompra\b|\bfinanci[ao]ci[oó]n\s*[:$]/i.test(desc)) return true
   // Period totals and compensation rows (CABAL and others)
   if (/\btotal\s+(?:del?\s+per[ií]odo|factura|a\s+pagar|facturado|periodo)\b/i.test(desc)) return true
   if (/\ba\s+compensar\b|\ba\s+comp\b/i.test(desc)) return true
@@ -534,8 +540,10 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
 
     let date = parseDate(row.text, refYear)
 
-    // ICBC continuation: rows with only a day number + comprobante, no month name
-    if (!date && icbcYearMonth) {
+    // ICBC continuation: rows starting with "DD NNNNNN *" inherit the month from the
+    // prior ICBC-format dated row. Apply even when parseDate found something, because
+    // installment codes like C.04/06 can produce a false-positive dd/mm date match.
+    if (icbcYearMonth) {
       const cm = row.text.match(ICBC_CONT_RE)
       if (cm) {
         const dy = parseInt(cm[1])
@@ -668,19 +676,22 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
     let dateCol = cols.find(c => parseDate(c.text, refYear))
 
     // ICBC continuation: try to match day-only + comprobante pattern
+    // ICBC continuation: rows starting with "DD NNNNNN *" override even a false-positive date
     let icbcContDay = null
-    if (!dateCol && icbcYearMonth) {
+    if (icbcYearMonth) {
       const cm = text.match(ICBC_CONT_RE)
       if (cm) {
         const dy = parseInt(cm[1])
-        if (dy >= 1 && dy <= 31) icbcContDay = dy
+        if (dy >= 1 && dy <= 31) { icbcContDay = dy; dateCol = null }
       }
     }
     if (!dateCol && !icbcContDay) continue
 
-    const date = dateCol
-      ? parseDate(dateCol.text, refYear)
-      : `${icbcYearMonth}-${String(icbcContDay).padStart(2,'0')}`
+    const date = icbcContDay
+      ? `${icbcYearMonth}-${String(icbcContDay).padStart(2,'0')}`
+      : parseDate(dateCol.text, refYear)
+
+    if (!date) continue
 
     // Update ICBC month context
     if (dateCol && ICBC_DATE_RE.test(dateCol.text)) icbcYearMonth = date.slice(0, 7)
