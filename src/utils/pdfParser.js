@@ -805,19 +805,24 @@ let _ocrWorker = null
 let _ocrWorkerReady = false
 let _ocrWorkerIdleTimer = null
 
-async function getOcrWorker(base, onProgress, numPages) {
+async function getOcrWorker(base) {
   const { createWorker } = await import('tesseract.js')
   if (_ocrWorker && _ocrWorkerReady) {
-    // Actualizar el logger para este nuevo lote de páginas
     return _ocrWorker
   }
   _ocrWorkerReady = false
-  _ocrWorker = await createWorker('spa', 1, {
-    workerPath: `${base}/tesseract/worker.min.js`,
-    langPath:   `${base}/lang`,
-    corePath:   `${base}/tesseract-core/tesseract-core-lstm.wasm.js`,
-    logger: () => {},
-  })
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('OCR worker init timeout')), 30_000)
+  )
+  _ocrWorker = await Promise.race([
+    createWorker('spa', 1, {
+      workerPath: `${base}/tesseract/worker.min.js`,
+      langPath:   `${base}/lang`,
+      corePath:   `${base}/tesseract-core/tesseract-core-lstm.wasm.js`,
+      logger: () => {},
+    }),
+    timeout,
+  ])
   _ocrWorkerReady = true
   return _ocrWorker
 }
@@ -910,7 +915,11 @@ export async function parsePDF(file, { onProgress } = {}) {
     }
     try {
       onProgress({ stage: 'ocr', progress: 0, page: 0, total: pages.length })
-      const ocrText = await ocrPages(arrayBuffer, pages.length, onProgress)
+      const OCR_TIMEOUT_MS = 120_000 // 2 min hard cap for the full OCR pass
+      const ocrText = await Promise.race([
+        ocrPages(arrayBuffer, pages.length, onProgress),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('OCR timeout')), OCR_TIMEOUT_MS)),
+      ])
       onProgress({ stage: 'done', progress: 1 })
 
       if (!ocrText.trim()) {
@@ -977,10 +986,11 @@ export async function parsePDF(file, { onProgress } = {}) {
   // Dedupe caps 3+ repeats (extraction artifacts) while keeping legitimate pairs
   const transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
 
-  // Fallback: if text parsing found nothing on a small PDF, try OCR.
-  // Covers PDFs that pdfjs partially extracts (metadata only) but are
-  // actually scanned images for their transaction content.
-  if (transactions.length === 0 && pages.length <= 20 && onProgress) {
+  // Fallback: if text parsing found nothing AND the PDF has sparse text, try OCR.
+  // Only trigger when textItems is low — a native PDF with lots of text that yielded
+  // 0 transactions means an unsupported layout, not a scanned image; OCR won't help
+  // and the Tesseract worker load can hang indefinitely on missing assets.
+  if (transactions.length === 0 && pages.length <= 20 && textItems < 50 && onProgress) {
     return runOCR()
   }
 
