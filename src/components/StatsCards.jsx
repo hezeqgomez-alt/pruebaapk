@@ -33,7 +33,7 @@ function StatsCards({ transactions, tabs, onTab, cardNames = {}, onManage }) {
   const navTabs = tabs?.filter(t => t.id !== 'dashboard') ?? []
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-tour="stats-cards">
 
       {/* Info: total gastos + fuentes */}
       <div className="grid grid-cols-2 gap-3">

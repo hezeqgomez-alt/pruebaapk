@@ -721,7 +721,7 @@ export default function App() {
           <div className="hidden lg:flex items-center gap-2">
             {hasData && (
               <>
-                <div ref={reportPickerRef} className="relative">
+                <div ref={reportPickerRef} className="relative" data-tour="report-btn">
                   <button
                     onClick={() => sources.length > 1 ? setShowReportPicker(v => !v) : handleGenerateReport()}
                     disabled={generating}
@@ -959,7 +959,7 @@ export default function App() {
             </div>
 
         {activeTab === 'dashboard' && hasData && (
-          <div className="grid lg:grid-cols-2 gap-5">
+          <div className="grid lg:grid-cols-2 gap-5" data-tour="category-chart">
             <ErrorBoundary label="Error en gráfico de categorías">
               <CategoryChart ref={chartDonutRef} transactions={transactions} />
             </ErrorBoundary>
@@ -1006,12 +1006,14 @@ export default function App() {
         )}
 
         {activeTab === 'insights' && hasData && (
-          <ErrorBoundary label="Error en insights">
-            <InsightsPanel
-              findings={findings}
-              transactions={transactions}
-            />
-          </ErrorBoundary>
+          <div data-tour="insights-panel">
+            <ErrorBoundary label="Error en insights">
+              <InsightsPanel
+                findings={findings}
+                transactions={transactions}
+              />
+            </ErrorBoundary>
+          </div>
         )}
 
         {!hasData && !loading.length && !['prestamos', 'balance'].includes(activeTab) && (

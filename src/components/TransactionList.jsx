@@ -392,7 +392,7 @@ function TransactionList({ transactions, onUpdate, onFilteredChange, customCateg
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-2 flex-wrap">
+        <div className="ml-auto flex items-center gap-2 flex-wrap" data-tour="transaction-search">
           <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${searchInput ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-500'}`}>
             <Search size={13} className="text-slate-400 shrink-0" />
             <input
