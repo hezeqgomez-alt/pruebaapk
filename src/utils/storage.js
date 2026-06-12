@@ -64,6 +64,16 @@ export function clearAllUserData() {
   localStorage.removeItem('easyresumen_balance')
   localStorage.removeItem('er_sub_promo_seen_at')
   localStorage.removeItem('er_tour_done')
+  localStorage.removeItem('er_last_user_id')
+}
+
+// Persisted user ID — survives browser close so we detect cross-user logins
+// even when the previous user never explicitly signed out.
+export function getStoredUserId() {
+  return localStorage.getItem('er_last_user_id')
+}
+export function setStoredUserId(id) {
+  try { localStorage.setItem('er_last_user_id', id) } catch { /* quota */ }
 }
 
 // ── Budgets ──────────────────────────────────────────────────────────────────

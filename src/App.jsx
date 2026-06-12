@@ -27,7 +27,7 @@ import { useAuth } from './context/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
 import { parsePDF } from './utils/pdfParser'
 import { detectUnnecessary, CATEGORIZER_VERSION, recategorizeAll } from './utils/categorizer'
-import { loadData, saveData, clearData, clearAllUserData, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCardNames, saveCardNames, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
+import { loadData, saveData, clearData, clearAllUserData, getStoredUserId, setStoredUserId, loadBudgets, saveBudgets, loadDarkMode, saveDarkMode, loadCustomCategories, saveCustomCategories, loadCardNames, saveCardNames, loadCategorizerVersion, saveCategorizerVersion } from './utils/storage'
 import { cloudLoad, cloudSave } from './utils/cloudStorage'
 import { generateReport } from './utils/reportGenerator'
 import { exportXLSX } from './utils/exportXLSX'
@@ -230,12 +230,15 @@ export default function App() {
     if (window.electronAPI || !user?.id) return
     // If a different user is logging in on the same device, wipe the previous user's
     // local data first so it can't bleed into the new session or get pushed to their cloud.
-    if (prevUserIdRef.current && prevUserIdRef.current !== user.id) {
+    // Use localStorage (not a ref) so we detect cross-user logins even after browser close.
+    const storedId = getStoredUserId()
+    if (storedId && storedId !== user.id) {
       setTransactions([])
       setBudgets({})
       setCustomCategories({})
-      clearAllUserData()
+      clearAllUserData()   // also removes 'er_last_user_id'
     }
+    setStoredUserId(user.id)
     prevUserIdRef.current = user.id
     // Reset gate so a save from the previous session can't fire before this load completes
     cloudLoadedRef.current = false
