@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
   CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag, ChevronDown, CreditCard,
@@ -150,7 +150,6 @@ export default function App() {
     setBudgets({})
     setCustomCategories({})
     cloudLoadedRef.current = false
-    prevUserIdRef.current = null
     clearAllUserData()
     await authSignOut()
   }, [authSignOut])
@@ -179,7 +178,9 @@ export default function App() {
   const addBtnRef       = useRef(null)
   const cloudLoadedRef      = useRef(false) // 'ok' | false — gates debounced save until first cloud load succeeds
   const cloudSaveFailCount  = useRef(0)     // consecutive save failures (shown as subtle header icon, not toast)
-  const prevUserIdRef       = useRef(null)  // tracks last logged-in user ID to detect account switches
+  // Incremented when we force-clear data on user switch; passed as key to stateful
+  // panels (LoansPanel, BalancePanel) so they remount and re-read clean localStorage.
+  const [dataClearKey, setDataClearKey] = useState(0)
   const reportPickerRef     = useRef(null)
   const [showReportPicker, setShowReportPicker] = useState(false)
 
@@ -225,21 +226,28 @@ export default function App() {
     }
   }, [transactions.length])
 
-  // Load from cloud when user logs in (web only)
-  useEffect(() => {
+  // Synchronous user-switch guard — runs after DOM commit but BEFORE the browser
+  // paints. Any setState call here triggers a synchronous re-render before paint,
+  // so stale data from a previous user is never visible for even one frame.
+  // Also forces LoansPanel/BalancePanel to remount (via dataClearKey) so their
+  // lazy useState initializers re-read the already-cleared localStorage.
+  useLayoutEffect(() => {
     if (window.electronAPI || !user?.id) return
-    // If a different user is logging in on the same device, wipe the previous user's
-    // local data first so it can't bleed into the new session or get pushed to their cloud.
-    // Use localStorage (not a ref) so we detect cross-user logins even after browser close.
     const storedId = getStoredUserId()
     if (storedId && storedId !== user.id) {
       setTransactions([])
       setBudgets({})
       setCustomCategories({})
-      clearAllUserData()   // also removes 'er_last_user_id'
+      cloudLoadedRef.current = false
+      clearAllUserData()                // removes er_last_user_id too
+      setDataClearKey(k => k + 1)       // remount panels with clean localStorage
     }
     setStoredUserId(user.id)
-    prevUserIdRef.current = user.id
+  }, [user?.id])
+
+  // Load from cloud when user logs in (web only)
+  useEffect(() => {
+    if (window.electronAPI || !user?.id) return
     // Reset gate so a save from the previous session can't fire before this load completes
     cloudLoadedRef.current = false
     let cancelled = false
@@ -1019,13 +1027,13 @@ export default function App() {
 
         {activeTab === 'prestamos' && (
           <ErrorBoundary label="Error en préstamos">
-            <LoansPanel />
+            <LoansPanel key={dataClearKey} />
           </ErrorBoundary>
         )}
 
         {activeTab === 'balance' && (
           <ErrorBoundary label="Error en balance">
-            <BalancePanel transactions={transactions} />
+            <BalancePanel key={dataClearKey} transactions={transactions} />
           </ErrorBoundary>
         )}
 
