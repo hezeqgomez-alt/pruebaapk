@@ -115,6 +115,7 @@ export default function App() {
   const [showBankGuide, setShowBankGuide]         = useState(false)
   const [showCatManager, setShowCatManager]       = useState(false)
   const [showCardManager, setShowCardManager]     = useState(false)
+  const openCardManager = useCallback(() => setShowCardManager(true), [])
   const [ocrProgress, setOcrProgress]             = useState(null)
   const [filteredForReport, setFilteredForReport] = useState(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
@@ -175,8 +176,10 @@ export default function App() {
   // Load from cloud when user logs in (web only)
   useEffect(() => {
     if (window.electronAPI || !user?.id) return
+    // Reset gate so a save from the previous session can't fire before this load completes
+    cloudLoadedRef.current = false
     let cancelled = false
-    const txKey = t => `${t.date}|${t.amount}|${t.description}|${t.source}`
+    const txKey = t => t.id || `${t.date}|${t.amount}|${t.description}|${t.source}`
     cloudLoad(user.id).then(cloud => {
       if (cancelled) return
       const localBudg = loadBudgets()
@@ -882,7 +885,7 @@ export default function App() {
           </div>
         )}
 
-        {hasData && <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} cardNames={cardNames} onManage={() => setShowCardManager(true)} />}
+        {hasData && <StatsCards transactions={transactions} tabs={tabs} onTab={setActiveTab} cardNames={cardNames} onManage={openCardManager} />}
 
         {/* Tabs siempre visibles: Préstamos y Balance funcionan sin transacciones */}
         <div className="hidden lg:flex gap-1 bg-slate-100/80 dark:bg-white/5 dark:border dark:border-white/10 rounded-2xl p-1 w-fit overflow-x-auto">

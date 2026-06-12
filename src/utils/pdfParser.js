@@ -12,9 +12,11 @@ const randomUUID = typeof crypto !== 'undefined' && typeof crypto.randomUUID ===
     })
 
 
-// Normalize unicode minus signs / dashes to ASCII hyphen
+// Normalize unicode minus signs / dashes to ASCII hyphen; strip OCR control chars
 function norm(str) {
-  return str.replace(/[−‒–—―]/g, '-')
+  return str
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/[−‒–—―]/g, '-')
 }
 
 // Group text items into rows by their Y coordinate (within tolerance)

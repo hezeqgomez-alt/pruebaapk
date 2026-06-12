@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, memo } from 'react'
 import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag, MessageSquare, AlertTriangle, Info } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -233,7 +233,7 @@ function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
   )
 }
 
-export default function TransactionList({ transactions, onUpdate, onFilteredChange, customCategories = {}, cardNames = {} }) {
+function TransactionList({ transactions, onUpdate, onFilteredChange, customCategories = {}, cardNames = {} }) {
   const allCategories = useMemo(() => ({ ...CATEGORIES, ...customCategories }), [customCategories])
   const dn = s => cardNames[s] || s
   const [_p] = useState(loadFilterPrefs)
@@ -683,3 +683,5 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
     </div>
   )
 }
+
+export default memo(TransactionList)

@@ -108,20 +108,44 @@ export function exportXLSX(transactions, { asBlob = false, cardNames = {} } = {}
   XLSX.utils.book_append_sheet(wb, wsTx, 'Movimientos')
 
   // ── Sheet 5: Cuotas activas ───────────────────────────────────────────────
-  const instMap = {}
-  for (const t of transactions.filter(t => t.installment)) {
-    const key = t.description.slice(0, 30)
-    if (!instMap[key]) instMap[key] = []
-    instMap[key].push(t)
+  // Composite key matches InstallmentsPanel.buildGroups to avoid collapsing
+  // two identical purchases into one row.
+  const instBuckets = new Map()
+  for (const t of transactions.filter(t => t.installment && t.type !== 'credit')) {
+    const key = [
+      t.description.toLowerCase().trim().slice(0, 35),
+      t.source,
+      t.installment.total,
+      Math.round(t.amount),
+    ].join('|')
+    if (!instBuckets.has(key)) instBuckets.set(key, [])
+    instBuckets.get(key).push(t)
+  }
+  // Slot-based split for truly identical purchases (same composite key)
+  const instGroups = []
+  for (const txs of instBuckets.values()) {
+    const total = txs[0].installment.total
+    if (txs.length <= total) {
+      instGroups.push(txs)
+    } else {
+      const sorted = [...txs].sort((a, b) => a.date.localeCompare(b.date))
+      const slots = []
+      for (const t of sorted) {
+        const idx = slots.findIndex(s => !s.some(st => st.installment.current === t.installment.current))
+        if (idx >= 0) slots[idx].push(t)
+        else slots.push([t])
+      }
+      instGroups.push(...slots)
+    }
   }
   const instRows = [['Descripción', 'Cuota', 'Total cuotas', 'Importe/cuota ($)', 'Total ($)', 'Pagado ($)', 'Restante ($)']]
-  for (const [, txs] of Object.entries(instMap)) {
+  for (const txs of instGroups) {
     const t = txs.reduce((a, b) => (b.installment.current > a.installment.current ? b : a))
     const perCuota = t.amount
     const total = t.installment.total
     const current = t.installment.current
     instRows.push([
-      t.description,
+      sanitizeCell(t.description),
       `${current}/${total}`,
       total,
       fmtNum(perCuota),

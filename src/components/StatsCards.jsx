@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { List, PiggyBank, CreditCard, Landmark, BarChart2, AlertTriangle, Settings2 } from 'lucide-react'
 
 // Total con centavos: el redondeo a pesos enteros hacía que, p.ej., $1.579.501,94
@@ -15,7 +16,7 @@ const NAV_ICONS = {
   insights:    AlertTriangle,
 }
 
-export default function StatsCards({ transactions, tabs, onTab, cardNames = {}, onManage }) {
+function StatsCards({ transactions, tabs, onTab, cardNames = {}, onManage }) {
   if (transactions.length === 0) return null
 
   const debits      = transactions.filter(t => t.type !== 'credit')
@@ -109,3 +110,5 @@ export default function StatsCards({ transactions, tabs, onTab, cardNames = {}, 
     </div>
   )
 }
+
+export default memo(StatsCards)
