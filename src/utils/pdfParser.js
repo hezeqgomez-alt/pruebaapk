@@ -538,6 +538,12 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
       continue
     }
 
+    // Pre-filter: skip known non-transaction rows before running the full pipeline.
+    // Catches ICBC page-header rows ("ICBC CLUB", "Prox.Cierre", "Prox.Vto.",
+    // "LIMITES: COMPRA") and similar structural rows that can carry parseable dates
+    // and amounts but are never transactions.
+    if (/\bicbc\s+club\b|\bprox\.?\s*(?:cierre|vto)\b|\blimites?\s*:/i.test(row.text)) continue
+
     let date = parseDate(row.text, refYear)
 
     // ICBC continuation: rows starting with "DD NNNNNN *" inherit the month from the
@@ -671,6 +677,9 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
 
     // Statement-header summary rows carry empty-column placeholders ("-,--")
     if (/-,--/.test(text)) continue
+
+    // Pre-filter: skip known non-transaction rows (same guard as parseRows)
+    if (/\bicbc\s+club\b|\bprox\.?\s*(?:cierre|vto)\b|\blimites?\s*:/i.test(text)) continue
 
     // First column: try to find a date
     let dateCol = cols.find(c => parseDate(c.text, refYear))
