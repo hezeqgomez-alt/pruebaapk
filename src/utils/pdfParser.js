@@ -1021,6 +1021,8 @@ export async function parsePDF(file, { onProgress } = {}) {
       const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand, true)
       const rowTxs = parseRows(rows, file.name, refYear, true, bank, docBrand)
       const transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
+      // Log full OCR text to console for debugging (first 5000 chars)
+      if (typeof console !== 'undefined') console.debug('[pdfParser OCR raw]\n' + ocrText.slice(0, 5000))
       return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
     } catch (e) {
       return { bank: 'Desconocido', transactions: [], pageCount: pages.length, rawText: '', scanned: true, ocrFailed: true, ocrError: e.message }
