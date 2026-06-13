@@ -648,7 +648,7 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
 
 // ─── Column-aware parser (for PDFs with clearly separated columns) ───────────
 
-function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
+function parseColumnar(rows, filename, refYear, bank = '', docBrand = null, ocrMode = false) {
   const transactions = []
   let currentCard = null
   let lastCard = null        // card from the most recent end-of-section marker
@@ -754,6 +754,9 @@ function parseColumnar(rows, filename, refYear, bank = '', docBrand = null) {
 
     // Sanity cap: single transaction > 50M ARS is almost certainly a balance/total row
     if (Math.abs(amount) > 50_000_000) continue
+
+    // OCR noise filter: mirror the same floor applied in parseRows
+    if (ocrMode && Math.abs(amount) < 50) continue
 
     const installment = detectInstallment(text)
     const fx = detectForeignCurrency(text)
@@ -1015,7 +1018,7 @@ export async function parsePDF(file, { onProgress } = {}) {
       })()
       const refYear = detectYear(ocrText)
       const rows = sliceToConsumosSection(groupIntoRows(ocrItems), { ocrMode: true })
-      const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand)
+      const colTxs = parseColumnar(rows, file.name, refYear, bank, docBrand, true)
       const rowTxs = parseRows(rows, file.name, refYear, true, bank, docBrand)
       const transactions = dedupe(colTxs.length >= rowTxs.length ? colTxs : rowTxs)
       return { bank, transactions, pageCount: pages.length, rawText: ocrText.slice(0, 2000), scanned: true, ocr: true }
