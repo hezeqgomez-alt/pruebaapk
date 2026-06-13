@@ -1,8 +1,34 @@
 import { useState, useEffect } from 'react'
-import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock } from 'lucide-react'
+import { KeyRound, AlertTriangle, CheckCircle2, ExternalLink, Clock, RefreshCw, Zap, Download, LogOut } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
+import { trackEvent } from '../utils/analytics'
 
-const BUY_URL      = 'https://easyresumen.com/#pricing'
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token || null
+}
+
+// ─── PRO badge ────────────────────────────────────────────────────────────────
+
+export function ProBadge() {
+  const { trialStatus } = useAuth()
+  if (trialStatus?.status !== 'active') return null
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[10px] font-extrabold tracking-wide shadow-sm shadow-amber-200 dark:shadow-amber-900 select-none">
+      <Zap size={9} className="fill-white" />
+      PRO
+    </span>
+  )
+}
+
+const MP_PLAN_ID   = '65b536a45d974b038219887643100785'
 const IS_WEB       = !window.electronAPI
+
+export function getMpCheckoutUrl(userId) {
+  const base = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${MP_PLAN_ID}`
+  return userId ? `${base}&external_reference=${userId}` : base
+}
 
 function formatKey(raw) {
   const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 24)
@@ -80,7 +106,7 @@ function ActivationForm({ onActivated }) {
         ¿No tenés una clave?{' '}
         <button
           type="button"
-          onClick={() => window.electronAPI?.openExternal(BUY_URL)}
+          onClick={() => window.electronAPI?.openExternal('https://www.easyresumen.com.ar')}
           className="text-indigo-600 hover:underline font-medium inline-flex items-center gap-0.5"
         >
           Comprá EasyResumen <ExternalLink size={10} />
@@ -92,29 +118,94 @@ function ActivationForm({ onActivated }) {
 
 // ─── Trial banner (non-blocking) ─────────────────────────────────────────────
 
-export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated }) {
-  const [showModal, setShowModal] = useState(false)
-  const urgent = daysLeft <= 5 || pdfCount >= pdfLimit
+export function TrialBanner({ daysLeft, pdfCount = 0, onActivated }) { // pdfCount is informational only — no PDF cap on trial
+  const [showModal,   setShowModal]   = useState(false)
+  const [showVerify,  setShowVerify]  = useState(false)
+  const [checking,    setChecking]    = useState(false)
+  const [verifyMsg,   setVerifyMsg]   = useState('')
+  const [activated,   setActivated]   = useState(false)
+  const { user, refreshTrial } = useAuth()
+  const urgent = daysLeft <= 5
 
-  const ctaLabel  = IS_WEB ? 'Ver planes' : 'Activar licencia'
+  const ctaLabel  = IS_WEB ? 'Suscribirme' : 'Activar licencia'
   const ctaAction = IS_WEB
-    ? () => window.open(BUY_URL, '_blank')
+    ? () => { trackEvent('subscribe_click', { source: 'trial_banner' }); window.open(getMpCheckoutUrl(user?.id), '_blank'); setShowVerify(true) }
     : () => setShowModal(true)
+
+  async function handleVerify() {
+    setChecking(true)
+    setVerifyMsg('')
+    try {
+      const token = await getAccessToken()
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (data.activated) {
+        setActivated(true)
+        await refreshTrial()
+        setTimeout(() => onActivated?.(), 1500)
+        return
+      }
+      setVerifyMsg(!res.ok
+        ? 'Error al contactar MercadoPago. Intentá de nuevo en unos minutos.'
+        : data.found === false
+          ? 'No encontramos tu suscripción aún. Si acabás de pagar, esperá unos minutos.'
+          : 'Ocurrió un error al verificar. Intentá de nuevo.')
+    } catch {
+      setVerifyMsg('Error de conexión. Revisá tu internet e intentá de nuevo.')
+    } finally {
+      setChecking(false)
+    }
+    await refreshTrial()
+  }
 
   return (
     <>
-      <div className={`flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-medium ${urgent ? 'bg-red-500' : 'bg-amber-500'} text-white`}>
-        <Clock size={12} />
-        <span>
-          Prueba gratis:{' '}
-          <strong>{daysLeft} {daysLeft === 1 ? 'día' : 'días'}</strong>
-          {' · '}
-          <strong>{pdfCount}/{pdfLimit} resúmenes</strong> usados
+      <div className={`relative flex items-center justify-center gap-2.5 px-4 py-2 text-xs font-medium ${
+        urgent
+          ? 'bg-gradient-to-r from-red-600 to-rose-500'
+          : 'bg-gradient-to-r from-amber-500 to-orange-400'
+      } text-white shadow-sm`}>
+        <Clock size={11} className="shrink-0 opacity-90" />
+        <span className="tracking-wide">
+          {urgent ? '⚠️ ' : ''}Período de prueba:{' '}
+          <strong>{daysLeft} {daysLeft === 1 ? 'día restante' : 'días restantes'}</strong>
+          {pdfCount > 0 && <span className="opacity-75"> · {pdfCount} resúmenes procesados</span>}
         </span>
-        <button onClick={ctaAction} className="underline font-semibold hover:no-underline">
-          {ctaLabel}
+        {IS_WEB && (
+          <span className="opacity-75 hidden sm:inline">· $2.999/mes</span>
+        )}
+        <button
+          onClick={ctaAction}
+          className={`ml-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+            urgent
+              ? 'bg-white text-red-600 hover:bg-red-50'
+              : 'bg-white text-amber-600 hover:bg-amber-50'
+          } shadow-sm`}
+        >
+          {ctaLabel} →
         </button>
+        {IS_WEB && showVerify && !activated && (
+          <button
+            onClick={handleVerify}
+            disabled={checking}
+            className="ml-1 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 transition-all disabled:opacity-50"
+          >
+            {checking ? <RefreshCw size={11} className="inline animate-spin" /> : '✓ Ya me suscribí'}
+          </button>
+        )}
+        {IS_WEB && activated && (
+          <span className="ml-1 px-3 py-1 rounded-full text-xs font-bold bg-white/30">
+            ¡PRO activado! 🎉
+          </span>
+        )}
       </div>
+      {verifyMsg && (
+        <div className="text-center text-xs py-1 bg-amber-600 text-white px-4">{verifyMsg}</div>
+      )}
 
       {showModal && !IS_WEB && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -139,24 +230,118 @@ export function TrialBanner({ daysLeft, pdfCount = 0, pdfLimit = 3, onActivated 
 
 // ─── Expired gate (blocking) ──────────────────────────────────────────────────
 
-export function ExpiredGate({ onActivated }) {
+export function ExpiredGate({ onActivated, onExportCSV, onSignOut }) {
+  const { user, refreshTrial } = useAuth()
+  const [checking, setChecking] = useState(false)
+  const [checked,  setChecked]  = useState(false)
+  const [errMsg,   setErrMsg]   = useState('')
+
+  async function handleAlreadySubscribed() {
+    setChecking(true)
+    setErrMsg('')
+    try {
+      const token = await getAccessToken()
+      const res = await fetch('/api/verify-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (data.activated) {
+        await refreshTrial()
+        // refreshTrial will update trialStatus → 'active' → gate unmounts automatically
+        return
+      }
+      setErrMsg(data.found === false
+        ? 'No encontramos una suscripción activa. Si acabás de pagar, esperá unos minutos e intentá de nuevo.'
+        : 'Ocurrió un error al verificar. Intentá de nuevo.')
+    } catch {
+      setErrMsg('Error de conexión. Revisá tu internet e intentá de nuevo.')
+    }
+    await refreshTrial()
+    setChecking(false)
+    setChecked(true)
+    setTimeout(() => setChecked(false), 4000)
+  }
+
   if (IS_WEB) {
     return (
-      <div className="fixed inset-0 bg-slate-900/95 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-          <img src="/icon.png" alt="EasyResumen" className="w-16 h-16 mx-auto mb-4 rounded-2xl" onError={e => { e.target.style.display='none' }} />
-          <h1 className="text-xl font-extrabold text-slate-800 mb-1">Período de prueba finalizado</h1>
-          <p className="text-sm text-slate-500 mb-6">
-            Gracias por probar EasyResumen. Suscribite para seguir accediendo.
+      <div className="fixed inset-0 bg-[#0f0f1a]/98 flex items-center justify-center z-50 p-4">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/15 rounded-full blur-[120px]" />
+        </div>
+        <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-md text-center shadow-2xl shadow-black/40">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-indigo-500/30">
+            <KeyRound size={28} className="text-white" />
+          </div>
+          <h1 className="text-xl font-extrabold text-white mb-2">Período de prueba finalizado</h1>
+          <p className="text-sm text-slate-400 mb-2 leading-relaxed">
+            Seguí analizando tus resúmenes sin límites.
           </p>
-          <a
-            href={BUY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-          >
-            Ver planes <ExternalLink size={14} />
-          </a>
+          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 mb-6">
+            <span className="text-2xl font-extrabold text-white">$2.999</span>
+            <div className="text-left">
+              <div className="text-xs text-indigo-300 font-semibold">por mes</div>
+              <div className="text-[10px] text-slate-500">30 días gratis · Cancelá cuando quieras</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href={getMpCheckoutUrl(user?.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('subscribe_click', { source: 'expired_gate' })}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/25"
+            >
+              Suscribirme con MercadoPago <ExternalLink size={14} />
+            </a>
+
+            <button
+              onClick={handleAlreadySubscribed}
+              disabled={checking}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20 text-sm transition-all disabled:opacity-50"
+            >
+              {checking ? (
+                <><RefreshCw size={14} className="animate-spin" /> Verificando tu suscripción...</>
+              ) : checked ? (
+                <><CheckCircle2 size={14} className="text-emerald-400" /> ¡Suscripción verificada!</>
+              ) : (
+                <><RefreshCw size={14} /> Ya me suscribí</>
+              )}
+            </button>
+          </div>
+
+          {errMsg && (
+            <p className="mt-3 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-left">
+              ⚠️ {errMsg}
+            </p>
+          )}
+          <p className="mt-4 text-xs text-slate-600 leading-relaxed">
+            Después de suscribirte en MercadoPago, volvé acá y hacé clic en <strong className="text-slate-500">"Ya me suscribí"</strong>.
+          </p>
+
+          {(onExportCSV || onSignOut) && (
+            <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-center gap-4">
+              {onExportCSV && (
+                <button
+                  onClick={onExportCSV}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <Download size={12} /> Descargar mis datos (CSV)
+                </button>
+              )}
+              {onSignOut && (
+                <button
+                  onClick={onSignOut}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <LogOut size={12} /> Cerrar sesión
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -184,9 +369,12 @@ export function UpdateToast() {
 
   useEffect(() => {
     if (!window.electronAPI) return
-    window.electronAPI.onUpdateAvailable(() => setState('available'))
-    window.electronAPI.onUpdateProgress(({ percent }) => { setState('downloading'); setPct(Math.round(percent)) })
-    window.electronAPI.onUpdateReady(() => setState('ready'))
+    const unsub = [
+      window.electronAPI.onUpdateAvailable?.(() => setState('available')),
+      window.electronAPI.onUpdateProgress?.(({ percent }) => { setState('downloading'); setPct(Math.round(percent)) }),
+      window.electronAPI.onUpdateReady?.(() => setState('ready')),
+    ]
+    return () => unsub.forEach(fn => typeof fn === 'function' && fn())
   }, [])
 
   if (!state) return null

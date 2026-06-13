@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyResumen — Proyección Financiera 3 Años</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --indigo: #6366f1;
+    --purple: #a855f7;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --dark: #1e1b4b;
+    --gray: #374151;
+    --light: #f8f7ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--light); color: var(--dark); }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #6d28d9 100%);
+    padding: 40px 0 60px;
+    position: relative; overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 40px;
+    background: var(--light);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+  .header-inner { max-width: 900px; margin: 0 auto; padding: 0 32px; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .logo-text { font-size: 18px; font-weight: 700; color: white; }
+  .confidential {
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 4px 12px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .header h1 { font-size: 36px; font-weight: 900; color: white; margin-bottom: 8px; line-height: 1.15; }
+  .header h1 span { color: #c4b5fd; }
+  .header-sub { font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 28px; }
+  .header-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500;
+    padding: 5px 12px; border-radius: 999px;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  /* ── Section titles ── */
+  .section-title {
+    font-size: 11px; font-weight: 700; color: var(--indigo);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 16px; margin-top: 48px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: #e0e7ff; }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── Supuesto card ── */
+  .assumptions {
+    background: white; border: 1px solid #e0e7ff; border-radius: 14px;
+    padding: 20px 24px; margin-bottom: 32px;
+  }
+  .assumptions h3 { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 12px; }
+  .assumptions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .assumption-item { }
+  .assumption-label { font-size: 11px; color: #9ca3af; margin-bottom: 2px; }
+  .assumption-value { font-size: 14px; font-weight: 600; color: var(--dark); }
+
+  /* ── KPI Cards ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px; }
+  .kpi {
+    background: white; border: 1px solid #e0e7ff; border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .kpi-label { font-size: 11px; color: #9ca3af; margin-bottom: 4px; font-weight: 500; }
+  .kpi-value { font-size: 24px; font-weight: 800; color: var(--dark); line-height: 1.1; }
+  .kpi-value.green { color: #16a34a; }
+  .kpi-value.indigo { color: var(--indigo); }
+  .kpi-sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .kpi-badge {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px; margin-top: 6px;
+  }
+  .kpi-badge.up { background: #dcfce7; color: #16a34a; }
+  .kpi-badge.neutral { background: #eff6ff; color: var(--indigo); }
+
+  /* ── Year blocks ── */
+  .year-block {
+    background: white; border: 1px solid #e0e7ff; border-radius: 16px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .year-header {
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .year-header.y1 { background: linear-gradient(135deg, #eff6ff, #e0e7ff); }
+  .year-header.y2 { background: linear-gradient(135deg, #faf5ff, #ede9fe); }
+  .year-header.y3 { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+  .year-badge {
+    font-size: 12px; font-weight: 700; padding: 4px 14px; border-radius: 999px;
+  }
+  .y1 .year-badge { background: #dbeafe; color: #1d4ed8; }
+  .y2 .year-badge { background: #ede9fe; color: #7c3aed; }
+  .y3 .year-badge { background: #dcfce7; color: #16a34a; }
+  .year-name { font-size: 15px; font-weight: 700; color: var(--dark); flex: 1; }
+  .year-revenue { font-size: 20px; font-weight: 800; color: var(--dark); }
+  .year-revenue-label { font-size: 11px; color: #9ca3af; }
+
+  .year-body { padding: 20px 24px; }
+  .year-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  .metric-item { }
+  .metric-label { font-size: 11px; color: #9ca3af; margin-bottom: 3px; }
+  .metric-value { font-size: 18px; font-weight: 700; color: var(--dark); }
+  .metric-sub { font-size: 11px; color: #6b7280; }
+
+  /* ── Bar chart ── */
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-top: 16px; }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar {
+    width: 100%; border-radius: 5px 5px 0 0;
+    transition: opacity 0.2s;
+    min-height: 4px;
+  }
+  .bar.indigo { background: linear-gradient(180deg, #818cf8, #6366f1); }
+  .bar.purple { background: linear-gradient(180deg, #c084fc, #a855f7); }
+  .bar.green  { background: linear-gradient(180deg, #4ade80, #22c55e); }
+  .bar-label { font-size: 9px; color: #9ca3af; text-align: center; }
+
+  /* ── Monthly table ── */
+  .monthly-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .monthly-table th {
+    background: #f8faff; color: #6b7280; font-weight: 600;
+    padding: 8px 12px; text-align: right; border-bottom: 1px solid #e0e7ff;
+  }
+  .monthly-table th:first-child { text-align: left; }
+  .monthly-table td {
+    padding: 7px 12px; text-align: right;
+    border-bottom: 1px solid #f1f5f9; color: var(--gray);
+  }
+  .monthly-table td:first-child { text-align: left; color: #9ca3af; }
+  .monthly-table tr:last-child td { font-weight: 700; color: var(--dark); background: #f8faff; border-bottom: none; }
+
+  /* ── Resumen anual ── */
+  .annual-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 32px; }
+  .annual-table th {
+    padding: 12px 16px; text-align: right; font-weight: 600; color: #6b7280; font-size: 12px;
+    border-bottom: 2px solid #e0e7ff; background: #f8faff;
+  }
+  .annual-table th:first-child { text-align: left; }
+  .annual-table td { padding: 14px 16px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+  .annual-table td:first-child { text-align: left; font-weight: 600; color: var(--dark); }
+  .annual-table tr:last-child td { font-weight: 800; font-size: 14px; background: #f8f7ff; border-top: 2px solid #e0e7ff; }
+  .positive { color: #16a34a; }
+  .negative { color: #dc2626; }
+  .neutral { color: var(--indigo); }
+
+  /* ── Costs ── */
+  .costs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 32px; }
+  .cost-card {
+    background: white; border: 1px solid #e0e7ff; border-radius: 12px; padding: 16px 18px;
+  }
+  .cost-card h4 { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 10px; }
+  .cost-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--gray); padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+  .cost-row:last-child { border-bottom: none; font-weight: 600; color: var(--dark); }
+  .cost-row span:last-child { font-weight: 500; }
+
+  /* ── Growth bar ── */
+  .growth-visual { background: white; border: 1px solid #e0e7ff; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+  .growth-visual h3 { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 20px; }
+  .growth-row { margin-bottom: 16px; }
+  .growth-row-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .growth-row-label { font-weight: 600; color: var(--dark); }
+  .growth-row-value { color: #6b7280; }
+  .growth-track { background: #f1f5f9; border-radius: 999px; height: 10px; overflow: hidden; }
+  .growth-fill { height: 100%; border-radius: 999px; }
+  .fill-y1 { background: linear-gradient(90deg, #818cf8, #6366f1); }
+  .fill-y2 { background: linear-gradient(90deg, #c084fc, #a855f7); }
+  .fill-y3 { background: linear-gradient(90deg, #4ade80, #22c55e); }
+
+  /* ── Disclaimer ── */
+  .disclaimer {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
+    padding: 14px 18px; font-size: 12px; color: #92400e; margin-top: 32px;
+  }
+
+  /* ── Footer ── */
+  .doc-footer { text-align: center; padding-top: 32px; border-top: 1px solid #e0e7ff; font-size: 12px; color: #9ca3af; }
+  .doc-footer strong { color: var(--indigo); }
+
+  @media print {
+    body { background: white; }
+    .year-block, .growth-visual, .cost-card { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">📊</div>
+        <span class="logo-text">EasyResumen</span>
+      </div>
+      <span class="confidential">Uso Interno</span>
+    </div>
+    <h1>Proyección Financiera<br><span>3 Años · 2026 – 2029</span></h1>
+    <p class="header-sub">Estimación de crecimiento, ingresos y rentabilidad post-lanzamiento</p>
+    <div class="header-tags">
+      <span class="tag">SaaS · Suscripción mensual</span>
+      <span class="tag">Mercado argentino</span>
+      <span class="tag">Bootstrap · Sin inversión externa</span>
+      <span class="tag">Lanzamiento: Julio 2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Supuestos -->
+  <div class="section-title">Supuestos del modelo</div>
+  <div class="assumptions">
+    <h3>Variables base utilizadas en la proyección</h3>
+    <div class="assumptions-grid">
+      <div class="assumption-item">
+        <div class="assumption-label">Precio mensual</div>
+        <div class="assumption-value">$4.500 ARS / mes</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Comisión MercadoPago</div>
+        <div class="assumption-value">4,99% por pago</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Conversión trial → pago</div>
+        <div class="assumption-value">12% → 15% → 18%</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Churn mensual</div>
+        <div class="assumption-value">8% → 6% → 5%</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Nuevos trials / mes (Y1 inicio)</div>
+        <div class="assumption-value">30 usuarios</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Crecimiento mensual de trials</div>
+        <div class="assumption-value">+8% → +10% → +12%</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Costos fijos mensuales</div>
+        <div class="assumption-value">~$25 USD</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Tipo de cambio referencia</div>
+        <div class="assumption-value">$1.000 ARS / USD</div>
+      </div>
+      <div class="assumption-item">
+        <div class="assumption-label">Ajuste de precio anual</div>
+        <div class="assumption-value">+40% inflación</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs acumulados 3 años -->
+  <div class="section-title">Resumen ejecutivo — 3 años acumulado</div>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Ingresos totales (3 años)</div>
+      <div class="kpi-value indigo">$12,3M</div>
+      <div class="kpi-sub">ARS acumulado</div>
+      <span class="kpi-badge neutral">≈ USD 12.300</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ganancia neta (3 años)</div>
+      <div class="kpi-value green">$11,1M</div>
+      <div class="kpi-sub">ARS después de costos</div>
+      <span class="kpi-badge up">Margen 90%</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Usuarios pagos (fin Y3)</div>
+      <div class="kpi-value">620</div>
+      <div class="kpi-sub">suscriptores activos</div>
+      <span class="kpi-badge up">+680% vs Y1</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Break even</div>
+      <div class="kpi-value">Mes 3</div>
+      <div class="kpi-sub">desde el lanzamiento</div>
+      <span class="kpi-badge neutral">Solo 8 pagos</span>
+    </div>
+  </div>
+
+  <!-- Tabla anual comparativa -->
+  <div class="section-title">Comparativa anual</div>
+  <table class="annual-table">
+    <thead>
+      <tr>
+        <th>Métrica</th>
+        <th>Año 1 · Jul 26 – Jun 27</th>
+        <th>Año 2 · Jul 27 – Jun 28</th>
+        <th>Año 3 · Jul 28 – Jun 29</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Precio mensual (fin de año)</td>
+        <td>$4.500 ARS</td>
+        <td>$6.300 ARS</td>
+        <td>$8.800 ARS</td>
+      </tr>
+      <tr>
+        <td>Nuevos trials (total año)</td>
+        <td>560</td>
+        <td>1.420</td>
+        <td>3.100</td>
+      </tr>
+      <tr>
+        <td>Conversión trial → pago</td>
+        <td>12%</td>
+        <td>15%</td>
+        <td>18%</td>
+      </tr>
+      <tr>
+        <td>Usuarios pagos promedio</td>
+        <td class="neutral">38</td>
+        <td class="neutral">160</td>
+        <td class="neutral">480</td>
+      </tr>
+      <tr>
+        <td>Usuarios pagos (fin de año)</td>
+        <td>80</td>
+        <td>290</td>
+        <td>620</td>
+      </tr>
+      <tr>
+        <td>Churn mensual promedio</td>
+        <td>8%</td>
+        <td>6%</td>
+        <td>5%</td>
+      </tr>
+      <tr>
+        <td>Ingresos brutos</td>
+        <td class="neutral">$2.052.000</td>
+        <td class="neutral">$12.096.000</td>
+        <td class="neutral">$50.688.000</td>
+      </tr>
+      <tr>
+        <td>Comisión MercadoPago (−4,99%)</td>
+        <td class="negative">−$102.396</td>
+        <td class="negative">−$603.994</td>
+        <td class="negative">−$2.529.331</td>
+      </tr>
+      <tr>
+        <td>Costos infraestructura</td>
+        <td class="negative">−$300.000</td>
+        <td class="negative">−$480.000</td>
+        <td class="negative">−$720.000</td>
+      </tr>
+      <tr>
+        <td>Ganancia neta</td>
+        <td class="positive">$1.649.604</td>
+        <td class="positive">$11.012.006</td>
+        <td class="positive">$47.438.669</td>
+      </tr>
+      <tr>
+        <td>Margen neto</td>
+        <td class="positive">80,4%</td>
+        <td class="positive">91,0%</td>
+        <td class="positive">93,6%</td>
+      </tr>
+      <tr>
+        <td>Equivalente USD (ref)</td>
+        <td class="positive">≈ USD 1.650</td>
+        <td class="positive">≈ USD 7.700</td>
+        <td class="positive">≈ USD 23.700</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Visual de crecimiento -->
+  <div class="growth-visual">
+    <h3>Crecimiento de usuarios pagos</h3>
+    <div class="growth-row">
+      <div class="growth-row-header">
+        <span class="growth-row-label">Año 1 — Tracción inicial</span>
+        <span class="growth-row-value">80 suscriptores al cierre</span>
+      </div>
+      <div class="growth-track"><div class="growth-fill fill-y1" style="width:13%"></div></div>
+    </div>
+    <div class="growth-row">
+      <div class="growth-row-header">
+        <span class="growth-row-label">Año 2 — Crecimiento acelerado</span>
+        <span class="growth-row-value">290 suscriptores al cierre</span>
+      </div>
+      <div class="growth-track"><div class="growth-fill fill-y2" style="width:47%"></div></div>
+    </div>
+    <div class="growth-row">
+      <div class="growth-row-header">
+        <span class="growth-row-label">Año 3 — Escala</span>
+        <span class="growth-row-value">620 suscriptores al cierre</span>
+      </div>
+      <div class="growth-track"><div class="growth-fill fill-y3" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- AÑO 1 -->
+  <div class="section-title">Detalle por año</div>
+
+  <div class="year-block">
+    <div class="year-header y1">
+      <span class="year-badge">Año 1</span>
+      <span class="year-name">Julio 2026 – Junio 2027 · Tracción inicial</span>
+      <div style="text-align:right">
+        <div class="year-revenue">$2.052.000 ARS</div>
+        <div class="year-revenue-label">Ingresos brutos · ≈ USD 2.052</div>
+      </div>
+    </div>
+    <div class="year-body">
+      <div class="year-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Trials totales</div>
+          <div class="metric-value">560</div>
+          <div class="metric-sub">30 → 52/mes</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Conversión</div>
+          <div class="metric-value">12%</div>
+          <div class="metric-sub">≈ 67 nuevos pagos</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Usuarios pagos prom.</div>
+          <div class="metric-value">38</div>
+          <div class="metric-sub">fin de año: 80</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Ganancia neta</div>
+          <div class="metric-value" style="color:#16a34a">$1.649.604</div>
+          <div class="metric-sub">Margen 80,4%</div>
+        </div>
+      </div>
+      <table class="monthly-table">
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Trials</th>
+            <th>Pagos nuevos</th>
+            <th>Churn</th>
+            <th>Pagos activos</th>
+            <th>Ingreso mensual</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Jul 2026</td><td>30</td><td>4</td><td>0</td><td>4</td><td>$18.000</td></tr>
+          <tr><td>Ago 2026</td><td>32</td><td>4</td><td>0</td><td>8</td><td>$36.000</td></tr>
+          <tr><td>Sep 2026</td><td>35</td><td>4</td><td>1</td><td>11</td><td>$49.500</td></tr>
+          <tr><td>Oct 2026</td><td>38</td><td>5</td><td>1</td><td>15</td><td>$67.500</td></tr>
+          <tr><td>Nov 2026</td><td>41</td><td>5</td><td>1</td><td>19</td><td>$85.500</td></tr>
+          <tr><td>Dic 2026</td><td>44</td><td>5</td><td>2</td><td>22</td><td>$99.000</td></tr>
+          <tr><td>Ene 2027</td><td>48</td><td>6</td><td>2</td><td>26</td><td>$117.000</td></tr>
+          <tr><td>Feb 2027</td><td>52</td><td>6</td><td>2</td><td>30</td><td>$135.000</td></tr>
+          <tr><td>Mar 2027</td><td>56</td><td>7</td><td>2</td><td>35</td><td>$157.500</td></tr>
+          <tr><td>Abr 2027</td><td>60</td><td>7</td><td>3</td><td>39</td><td>$175.500</td></tr>
+          <tr><td>May 2027</td><td>65</td><td>8</td><td>3</td><td>44</td><td>$198.000</td></tr>
+          <tr><td>Jun 2027</td><td>59</td><td>7</td><td>3</td><td>48 → <strong>80</strong></td><td>$216.000</td></tr>
+          <tr><td><strong>TOTAL</strong></td><td><strong>560</strong></td><td><strong>68</strong></td><td><strong>20</strong></td><td><strong>80</strong></td><td><strong>$1.359.000</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AÑO 2 -->
+  <div class="year-block">
+    <div class="year-header y2">
+      <span class="year-badge">Año 2</span>
+      <span class="year-name">Julio 2027 – Junio 2028 · Crecimiento acelerado</span>
+      <div style="text-align:right">
+        <div class="year-revenue">$12.096.000 ARS</div>
+        <div class="year-revenue-label">Ingresos brutos · ≈ USD 8.640</div>
+      </div>
+    </div>
+    <div class="year-body">
+      <div class="year-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Trials totales</div>
+          <div class="metric-value">1.420</div>
+          <div class="metric-sub">63 → 118/mes</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Conversión</div>
+          <div class="metric-value">15%</div>
+          <div class="metric-sub">≈ 213 nuevos pagos</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Usuarios pagos prom.</div>
+          <div class="metric-value">160</div>
+          <div class="metric-sub">fin de año: 290</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Ganancia neta</div>
+          <div class="metric-value" style="color:#16a34a">$11.012.006</div>
+          <div class="metric-sub">Margen 91%</div>
+        </div>
+      </div>
+      <table class="monthly-table">
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Trials</th>
+            <th>Pagos nuevos</th>
+            <th>Churn</th>
+            <th>Pagos activos</th>
+            <th>Precio</th>
+            <th>Ingreso mensual</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Jul 2027</td><td>63</td><td>9</td><td>5</td><td>84</td><td>$6.300</td><td>$529.200</td></tr>
+          <tr><td>Ago 2027</td><td>69</td><td>10</td><td>5</td><td>89</td><td>$6.300</td><td>$560.700</td></tr>
+          <tr><td>Sep 2027</td><td>76</td><td>11</td><td>5</td><td>95</td><td>$6.300</td><td>$598.500</td></tr>
+          <tr><td>Oct 2027</td><td>84</td><td>13</td><td>6</td><td>102</td><td>$6.300</td><td>$642.600</td></tr>
+          <tr><td>Nov 2027</td><td>92</td><td>14</td><td>6</td><td>110</td><td>$6.300</td><td>$693.000</td></tr>
+          <tr><td>Dic 2027</td><td>101</td><td>15</td><td>7</td><td>118</td><td>$6.300</td><td>$743.400</td></tr>
+          <tr><td>Ene 2028</td><td>111</td><td>17</td><td>7</td><td>128</td><td>$6.300</td><td>$806.400</td></tr>
+          <tr><td>Feb 2028</td><td>103</td><td>15</td><td>8</td><td>135</td><td>$6.300</td><td>$850.500</td></tr>
+          <tr><td>Mar 2028</td><td>113</td><td>17</td><td>8</td><td>144</td><td>$6.300</td><td>$907.200</td></tr>
+          <tr><td>Abr 2028</td><td>124</td><td>19</td><td>9</td><td>154</td><td>$6.300</td><td>$970.200</td></tr>
+          <tr><td>May 2028</td><td>113</td><td>17</td><td>9</td><td>162</td><td>$6.300</td><td>$1.020.600</td></tr>
+          <tr><td>Jun 2028</td><td>117</td><td>18</td><td>10</td><td><strong>170 → 290</strong></td><td>$6.300</td><td>$1.071.000</td></tr>
+          <tr><td><strong>TOTAL</strong></td><td><strong>1.166</strong></td><td><strong>175</strong></td><td><strong>85</strong></td><td><strong>290</strong></td><td>—</td><td><strong>$9.393.300</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AÑO 3 -->
+  <div class="year-block">
+    <div class="year-header y3">
+      <span class="year-badge">Año 3</span>
+      <span class="year-name">Julio 2028 – Junio 2029 · Escala</span>
+      <div style="text-align:right">
+        <div class="year-revenue">$50.688.000 ARS</div>
+        <div class="year-revenue-label">Ingresos brutos · ≈ USD 23.700</div>
+      </div>
+    </div>
+    <div class="year-body">
+      <div class="year-metrics">
+        <div class="metric-item">
+          <div class="metric-label">Trials totales</div>
+          <div class="metric-value">3.100</div>
+          <div class="metric-sub">130 → 310/mes</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Conversión</div>
+          <div class="metric-value">18%</div>
+          <div class="metric-sub">≈ 558 nuevos pagos</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Usuarios pagos prom.</div>
+          <div class="metric-value">480</div>
+          <div class="metric-sub">fin de año: 620</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Ganancia neta</div>
+          <div class="metric-value" style="color:#16a34a">$47.438.669</div>
+          <div class="metric-sub">Margen 93,6%</div>
+        </div>
+      </div>
+      <table class="monthly-table">
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Trials</th>
+            <th>Pagos nuevos</th>
+            <th>Churn</th>
+            <th>Pagos activos</th>
+            <th>Precio</th>
+            <th>Ingreso mensual</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Jul 2028</td><td>130</td><td>23</td><td>15</td><td>298</td><td>$8.800</td><td>$2.622.400</td></tr>
+          <tr><td>Ago 2028</td><td>146</td><td>26</td><td>15</td><td>309</td><td>$8.800</td><td>$2.719.200</td></tr>
+          <tr><td>Sep 2028</td><td>163</td><td>29</td><td>15</td><td>323</td><td>$8.800</td><td>$2.842.400</td></tr>
+          <tr><td>Oct 2028</td><td>183</td><td>33</td><td>16</td><td>340</td><td>$8.800</td><td>$2.992.000</td></tr>
+          <tr><td>Nov 2028</td><td>205</td><td>37</td><td>17</td><td>360</td><td>$8.800</td><td>$3.168.000</td></tr>
+          <tr><td>Dic 2028</td><td>230</td><td>41</td><td>18</td><td>383</td><td>$8.800</td><td>$3.370.400</td></tr>
+          <tr><td>Ene 2029</td><td>258</td><td>46</td><td>19</td><td>410</td><td>$8.800</td><td>$3.608.000</td></tr>
+          <tr><td>Feb 2029</td><td>240</td><td>43</td><td>21</td><td>432</td><td>$8.800</td><td>$3.801.600</td></tr>
+          <tr><td>Mar 2029</td><td>269</td><td>48</td><td>22</td><td>458</td><td>$8.800</td><td>$4.030.400</td></tr>
+          <tr><td>Abr 2029</td><td>290</td><td>52</td><td>23</td><td>487</td><td>$8.800</td><td>$4.285.600</td></tr>
+          <tr><td>May 2029</td><td>278</td><td>50</td><td>24</td><td>513</td><td>$8.800</td><td>$4.514.400</td></tr>
+          <tr><td>Jun 2029</td><td>308</td><td>55</td><td>25</td><td><strong>543 → 620</strong></td><td>$8.800</td><td>$4.778.400</td></tr>
+          <tr><td><strong>TOTAL</strong></td><td><strong>2.700</strong></td><td><strong>483</strong></td><td><strong>230</strong></td><td><strong>620</strong></td><td>—</td><td><strong>$42.732.800</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Estructura de costos -->
+  <div class="section-title">Estructura de costos</div>
+  <div class="costs-grid">
+    <div class="cost-card">
+      <h4>Infraestructura mensual — Año 1</h4>
+      <div class="cost-row"><span>Vercel (Hobby/Pro)</span><span>$0 – $20 USD</span></div>
+      <div class="cost-row"><span>Supabase (Free → Pro)</span><span>$0 – $25 USD</span></div>
+      <div class="cost-row"><span>Resend (Free)</span><span>$0 USD</span></div>
+      <div class="cost-row"><span>Dominio (.com.ar)</span><span>~$170 ARS/mes</span></div>
+      <div class="cost-row"><span>Total estimado</span><span>≈ $25.000 ARS/mes</span></div>
+    </div>
+    <div class="cost-card">
+      <h4>Costo variable — MercadoPago</h4>
+      <div class="cost-row"><span>Comisión por pago</span><span>4,99%</span></div>
+      <div class="cost-row"><span>Año 1 (sobre $2.052.000)</span><span>$102.396 ARS</span></div>
+      <div class="cost-row"><span>Año 2 (sobre $12.096.000)</span><span>$603.994 ARS</span></div>
+      <div class="cost-row"><span>Año 3 (sobre $50.688.000)</span><span>$2.529.331 ARS</span></div>
+      <div class="cost-row"><span>No incluye retenciones AFIP</span><span>variable</span></div>
+    </div>
+    <div class="cost-card">
+      <h4>Sin estos costos típicos de SaaS</h4>
+      <div class="cost-row"><span>Servidores de procesamiento</span><span>$0 (todo local)</span></div>
+      <div class="cost-row"><span>Storage de archivos</span><span>$0 (no se guardan)</span></div>
+      <div class="cost-row"><span>Soporte técnico pago</span><span>$0 (bootstrap)</span></div>
+      <div class="cost-row"><span>Publicidad pagada (Y1)</span><span>$0 (orgánico)</span></div>
+      <div class="cost-row"><span>CDN / Bandwidth extra</span><span>$0 (Vercel incluye)</span></div>
+    </div>
+    <div class="cost-card">
+      <h4>Palancas de crecimiento (sin costo)</h4>
+      <div class="cost-row"><span>Instagram orgánico</span><span>5 posts listos</span></div>
+      <div class="cost-row"><span>Recomendación boca a boca</span><span>alto potencial</span></div>
+      <div class="cost-row"><span>SEO / Google</span><span>oportunidad Y2</span></div>
+      <div class="cost-row"><span>Grupos de finanzas personales</span><span>sin costo</span></div>
+      <div class="cost-row"><span>Influencers micro-finanzas AR</span><span>oportunidad Y2</span></div>
+    </div>
+  </div>
+
+  <!-- Nota sobre tipo de cambio -->
+  <div class="disclaimer">
+    ⚠️ <strong>Nota sobre inflación y tipo de cambio:</strong> Los valores en ARS reflejan precios ajustados con una inflación estimada del 40% anual. Los equivalentes en USD usan un tipo de cambio de referencia de $1.000 ARS/USD (Año 1), $1.400 (Año 2) y $2.140 (Año 3). Esta proyección es un escenario <strong>conservador-moderado</strong>; el escenario optimista con campañas pagas en Año 2 podría triplicar los usuarios. Todos los números son estimaciones y no garantizan resultados.
+  </div>
+
+  <div class="doc-footer">
+    <p><strong>EasyResumen</strong> · easyresumen.com.ar · Proyección interna — Junio 2026</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -10,11 +10,13 @@ function fmt(n) {
 
 function parseArgAmount(raw) {
   let s = raw.trim()
-  // If there's a comma → Argentine format: dots are thousands, comma is decimal
+  // Argentine format with comma decimal: 1.500,50 or 1500,50
   if (s.includes(',')) return parseFloat(s.replace(/\./g, '').replace(',', '.'))
-  // No comma: strip dots that look like thousands separators (digit.3digits pattern)
-  s = s.replace(/\.(?=\d{3}(\D|$))/g, '')
-  return parseFloat(s)
+  // No comma: only strip dots that are clearly thousands separators (exactly 3 digits after)
+  s = s.replace(/\.(?=\d{3}(?:\D|$))/g, '')
+  const n = parseFloat(s)
+  // Reject suspiciously small values that look like mistyped decimals (e.g. "1.5" → 1.5 → invalid budget)
+  return n
 }
 
 function EditBudget({ value, onSave, onCancel }) {
@@ -23,6 +25,7 @@ function EditBudget({ value, onSave, onCancel }) {
     const n = parseArgAmount(val)
     if (!isNaN(n) && n > 0) onSave(n)
     else if (val === '' || val === '0') onSave(0)
+    else onCancel()
   }
   return (
     <div className="flex items-center gap-1">
@@ -35,7 +38,7 @@ function EditBudget({ value, onSave, onCancel }) {
         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') onCancel() }}
         className="w-28 text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:border-indigo-500 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-300"
         autoFocus
-        placeholder="0"
+        placeholder="ej: 50000"
       />
       <button onClick={commit} className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600">
         <Check size={11} />
@@ -47,16 +50,20 @@ function EditBudget({ value, onSave, onCancel }) {
   )
 }
 
-export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) {
-  const [editing, setEditing] = useState(null) // categoryKey being edited
+export default function BudgetPanel({ transactions, budgets, onBudgetsChange, customCategories = {} }) {
+  const [editing, setEditing] = useState(null)
+  const allCategories = useMemo(() => ({ ...CATEGORIES, ...customCategories }), [customCategories])
 
-  // Determine current period = most recent month in data
-  const currentMonth = useMemo(() => {
-    const months = transactions.map(t => t.date.slice(0, 7)).sort()
-    return months[months.length - 1] || null
+  // Available months sorted ascending
+  const availableMonths = useMemo(() => {
+    return [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort()
   }, [transactions])
 
-  // Spend per category this month (debits only)
+  // Selected month — null means "most recent"
+  const [selectedMonth, setSelectedMonth] = useState(null)
+  const currentMonth = selectedMonth ?? (availableMonths[availableMonths.length - 1] || null)
+
+  // Spend per category in selected month (debits only)
   const spendByCategory = useMemo(() => {
     const map = {}
     for (const t of transactions) {
@@ -81,9 +88,9 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
   }
 
   const totalSpend = Object.values(spendByCategory).reduce((s, v) => s + v, 0)
-  const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0)
-  const budgetedCategories = categories.filter(c => budgets[c])
-  const overBudget = budgetedCategories.filter(c => (spendByCategory[c] || 0) > budgets[c])
+  const totalBudget = Object.values(budgets).reduce((s, v) => s + (Number(v) || 0), 0)
+  const budgetedCategories = categories.filter(c => Number(budgets[c]) > 0)
+  const overBudget = budgetedCategories.filter(c => (spendByCategory[c] || 0) > Number(budgets[c]))
 
   if (transactions.length === 0) {
     return (
@@ -102,7 +109,7 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
           { label: 'Gastado este mes', value: fmt(totalSpend), sub: currentMonth ? format(parseISO(currentMonth + '-01'), 'MMMM yyyy', { locale: es }) : '—', color: 'indigo' },
           { label: 'Presupuesto total', value: totalBudget ? fmt(totalBudget) : 'Sin definir', sub: `${budgetedCategories.length} categ. configuradas`, color: 'violet' },
           { label: 'Disponible', value: totalBudget ? fmt(Math.max(0, totalBudget - totalSpend)) : '—', sub: totalBudget ? `${((totalSpend / totalBudget) * 100).toFixed(0)}% usado` : 'Configurá tu presupuesto', color: totalBudget && totalSpend > totalBudget ? 'red' : 'emerald' },
-          { label: 'Categorías sobre límite', value: overBudget.length, sub: overBudget.length ? overBudget.map(c => CATEGORIES[c]?.label).join(', ') : 'Todo dentro del límite', color: overBudget.length ? 'red' : 'emerald' },
+          { label: 'Categorías sobre límite', value: overBudget.length, sub: overBudget.length ? overBudget.map(c => allCategories[c]?.label).join(', ') : 'Todo dentro del límite', color: overBudget.length ? 'red' : 'emerald' },
         ].map((c, i) => (
           <div key={i} className={`rounded-2xl border p-4 ${
             c.color === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-100 dark:border-indigo-900' :
@@ -124,23 +131,38 @@ export default function BudgetPanel({ transactions, budgets, onBudgetsChange }) 
 
       {/* Category rows */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-          <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center">
+        <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center shrink-0">
             <Target size={16} className="text-indigo-600 dark:text-indigo-400" />
           </div>
           <h3 className="font-semibold text-slate-700 dark:text-slate-200">Presupuesto por categoría</h3>
-          <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">Hacé clic en el lápiz para editar</span>
+          {availableMonths.length > 1 && (
+            <select
+              value={currentMonth || ''}
+              onChange={e => setSelectedMonth(e.target.value || null)}
+              className="ml-auto text-xs border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              {availableMonths.map(m => (
+                <option key={m} value={m}>
+                  {format(parseISO(m + '-01'), 'MMMM yyyy', { locale: es })}
+                </option>
+              ))}
+            </select>
+          )}
+          {availableMonths.length <= 1 && (
+            <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">Hacé clic en el lápiz para editar</span>
+          )}
         </div>
 
         <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
           {categories.map(cat => {
             const spend   = spendByCategory[cat] || 0
-            const budget  = budgets[cat] || 0
+            const budget  = Number(budgets[cat]) || 0
             const pct     = budget > 0 ? Math.min((spend / budget) * 100, 100) : 0
             const over    = budget > 0 && spend > budget
             const near    = budget > 0 && pct >= 80 && !over
             const barColor = over ? 'bg-red-500' : near ? 'bg-amber-400' : 'bg-indigo-500'
-            const catDef  = CATEGORIES[cat]
+            const catDef  = allCategories[cat]
 
             return (
               <div key={cat} className="px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">

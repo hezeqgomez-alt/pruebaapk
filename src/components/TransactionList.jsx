@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, memo } from 'react'
 import { Search, Edit3, Check, X, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, SlidersHorizontal, Tag, MessageSquare, AlertTriangle, Info } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -18,24 +18,28 @@ function SortIcon({ field, sortBy, sortDir }) {
   return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />
 }
 
-function EditableCategory({ value, onChange }) {
+function EditableCategory({ value, onChange, allCategories }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value)
+  const cat = allCategories[value]
 
   if (!editing) {
     return (
       <button
-        onClick={() => setEditing(true)}
+        onClick={() => { setVal(value); setEditing(true) }}
         className="group flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg hover:ring-1 hover:ring-indigo-200 dark:hover:ring-indigo-700 transition-all"
-        style={{ background: (CATEGORIES[value]?.color || '#94a3b8') + '18' }}
+        style={{ background: (cat?.color || '#94a3b8') + '18' }}
       >
-        <span style={{ color: CATEGORIES[value]?.color || '#64748b' }} className="font-medium">
-          {CATEGORIES[value]?.icon} {CATEGORIES[value]?.label || value}
+        <span style={{ color: cat?.color || '#64748b' }} className="font-medium">
+          {cat?.icon} {cat?.label || value}
         </span>
-        <Edit3 size={9} className="opacity-20 group-hover:opacity-60 transition-opacity" style={{ color: CATEGORIES[value]?.color || '#64748b' }} />
+        <Edit3 size={9} className="opacity-20 group-hover:opacity-60 transition-opacity" style={{ color: cat?.color || '#64748b' }} />
       </button>
     )
   }
+
+  const systemEntries = Object.entries(CATEGORIES)
+  const customEntries = Object.entries(allCategories).filter(([k]) => !CATEGORIES[k])
 
   return (
     <div className="flex items-center gap-1">
@@ -45,9 +49,18 @@ function EditableCategory({ value, onChange }) {
         className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-1.5 py-1 bg-white dark:bg-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
         autoFocus
       >
-        {Object.entries(CATEGORIES).map(([k, c]) => (
-          <option key={k} value={k}>{c.icon} {c.label}</option>
-        ))}
+        <optgroup label="Sistema">
+          {systemEntries.map(([k, c]) => (
+            <option key={k} value={k}>{c.icon} {c.label}</option>
+          ))}
+        </optgroup>
+        {customEntries.length > 0 && (
+          <optgroup label="Mis categorías">
+            {customEntries.map(([k, c]) => (
+              <option key={k} value={k}>{c.icon} {c.label}</option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <button onClick={() => { onChange(val); setEditing(false) }} className="w-6 h-6 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600">
         <Check size={12} />
@@ -102,22 +115,28 @@ function InlineNote({ value, onSave }) {
   )
 }
 
-function SourceFilter({ sources, selected, onChange }) {
+function SourceFilter({ sources, selected, onChange, cardNames = {} }) {
+  const dn = s => cardNames[s] || s
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
   useEffect(() => {
     if (!open) return
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    function handleKeyDown(e) { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [open])
 
   const allSelected = selected.length === 0
   const label = allSelected
     ? 'Todas las tarjetas'
     : selected.length === 1
-      ? selected[0]
+      ? dn(selected[0])
       : `${selected.length} de ${sources.length} tarjetas`
 
   function toggle(source) {
@@ -130,6 +149,9 @@ function SourceFilter({ sources, selected, onChange }) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Filtrar por tarjeta: ${label}`}
         className={`flex items-center justify-between gap-2 text-sm border rounded-xl px-3 py-1.5 w-full sm:w-52 text-left transition-colors
           ${selected.length > 0
             ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'
@@ -182,7 +204,7 @@ function SourceFilter({ sources, selected, onChange }) {
                       className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer shrink-0"
                     />
                     <span className={`text-sm truncate ${checked ? 'font-medium text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200'}`}>
-                      {source}
+                      {dn(source)}
                     </span>
                   </label>
                 </li>
@@ -196,17 +218,24 @@ function SourceFilter({ sources, selected, onChange }) {
 }
 
 function Th({ field, children, className = '', sortBy, sortDir, onSort }) {
+  const isActive = sortBy === field
   return (
     <th
       className={`pb-3 pr-4 text-slate-400 dark:text-slate-500 font-medium cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 whitespace-nowrap text-xs uppercase tracking-wide ${className}`}
       onClick={() => onSort(field)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort(field) } }}
+      tabIndex={0}
+      role="columnheader"
+      aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <span className="flex items-center gap-1">{children}<SortIcon field={field} sortBy={sortBy} sortDir={sortDir} /></span>
     </th>
   )
 }
 
-export default function TransactionList({ transactions, onUpdate, onFilteredChange }) {
+function TransactionList({ transactions, onUpdate, onFilteredChange, customCategories = {}, cardNames = {} }) {
+  const allCategories = useMemo(() => ({ ...CATEGORIES, ...customCategories }), [customCategories])
+  const dn = s => cardNames[s] || s
   const [_p] = useState(loadFilterPrefs)
   const [searchInput, setSearchInput] = useState(_p.search || '')
   const [search, setSearch]           = useState(_p.search || '')
@@ -305,7 +334,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
 
   function applyBulkCategory() {
     if (!bulkCat || selected.size === 0) return
-    onUpdate(transactions.map(t => selected.has(t.id) ? { ...t, category: bulkCat } : t))
+    onUpdate(prev => prev.map(t => selected.has(t.id) ? { ...t, category: bulkCat } : t))
     clearSelection()
   }
 
@@ -313,7 +342,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
     if (!confirmDelete) return setConfirmDelete(true)
     const removed = transactions.filter(t => selected.has(t.id))
     deletedRef.current = removed
-    onUpdate(transactions.filter(t => !selected.has(t.id)))
+    onUpdate(prev => prev.filter(t => !selected.has(t.id)))
     clearSelection()
     clearTimeout(undoTimerRef.current)
     setUndoCount(removed.length)
@@ -334,15 +363,15 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
   }
 
   function updateCategory(id, category) {
-    onUpdate(transactions.map(t => t.id === id ? { ...t, category } : t))
+    onUpdate(prev => prev.map(t => t.id === id ? { ...t, category, userCat: true } : t))
   }
 
   function updateNote(id, note) {
-    onUpdate(transactions.map(t => t.id === id ? { ...t, note } : t))
+    onUpdate(prev => prev.map(t => t.id === id ? { ...t, note } : t))
   }
 
   function deleteOne(id) {
-    onUpdate(transactions.filter(t => t.id !== id))
+    onUpdate(prev => prev.filter(t => t.id !== id))
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n })
   }
 
@@ -363,7 +392,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-2 flex-wrap">
+        <div className="ml-auto flex items-center gap-2 flex-wrap" data-tour="transaction-search">
           <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border transition-colors ${searchInput ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 dark:border-indigo-700' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-500'}`}>
             <Search size={13} className="text-slate-400 shrink-0" />
             <input
@@ -412,13 +441,14 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
           <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setPage(1) }}
             className="text-sm border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200 w-full sm:w-auto">
             <option value="">Todas las categorías</option>
-            {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
+            {Object.entries(allCategories).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
           </select>
           {sources.length > 1 && (
             <SourceFilter
               sources={sources}
               selected={filterSources}
               onChange={v => { setFilterSources(v); setPage(1) }}
+              cardNames={cardNames}
             />
           )}
           <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1) }}
@@ -450,7 +480,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
             <select value={bulkCat} onChange={e => setBulkCat(e.target.value)}
               className="text-sm border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="">— Categoría —</option>
-              {Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
+              {Object.entries(allCategories).map(([k, c]) => <option key={k} value={k}>{c.icon} {c.label}</option>)}
             </select>
             <button onClick={applyBulkCategory} disabled={!bulkCat}
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium disabled:opacity-40 transition-colors">
@@ -477,8 +507,51 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
         </div>
       )}
 
-      {/* Table */}
-      <div className="relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
+      {/* Mobile cards — visible only on small screens */}
+      <div className="block sm:hidden divide-y divide-slate-100 dark:divide-slate-700/50">
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center flex flex-col items-center gap-3 text-slate-400 dark:text-slate-500">
+            <Search size={24} className="opacity-30" />
+            <p className="text-sm font-medium">Sin resultados</p>
+            <button onClick={clearFilters} className="text-xs text-indigo-500 underline underline-offset-2">Limpiar filtros</button>
+          </div>
+        ) : paged.map(t => {
+          const isCredit = t.type === 'credit'
+          return (
+            <div key={t.id} className="px-4 py-3 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{t.description}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono">
+                  {safeFormat(t.date, 'dd MMM yy', { locale: es })}
+                  {t.source && <span className="ml-1.5 not-italic font-sans">· {dn(t.source)}</span>}
+                </p>
+                <div className="mt-1.5">
+                  <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} allCategories={allCategories} />
+                </div>
+                {t.installment && (
+                  <span className="inline-flex text-[10px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold px-1.5 py-0.5 rounded-full mt-0.5">
+                    Cuota {t.installment.current}/{t.installment.total}
+                  </span>
+                )}
+              </div>
+              <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
+                <span className={`text-sm font-bold tabular-nums ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                  {isCredit ? '+' : ''}{fmt(t.amount)}
+                </span>
+                <button
+                  onClick={() => deleteOne(t.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden sm:block relative overflow-x-auto px-4 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-8 after:bg-gradient-to-l after:from-white dark:after:from-slate-800 after:to-transparent sm:after:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-700 text-left">
@@ -521,7 +594,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                 const isCredit   = t.type === 'credit'
                 const isSelected = selected.has(t.id)
                 return (
-                  <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
+                  <tr key={t.id} className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors group ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-[inset_3px_0_0_#6366f1] dark:shadow-[inset_3px_0_0_#818cf8]' : 'hover:bg-slate-50/80 dark:hover:bg-slate-700/30'}`}>
                     <td className="py-2.5 pr-3 w-8">
                       <input type="checkbox" checked={isSelected} onChange={() => toggleOne(t.id)}
                         className="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
@@ -532,22 +605,22 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                     <td className="py-2.5 pr-4 max-w-xs">
                       <div className="truncate text-slate-700 dark:text-slate-200" title={t.description}>{t.description}</div>
                       <div className="flex gap-1.5 mt-0.5 flex-wrap">
-                        {t.installment && <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold">Cuota {t.installment.current}/{t.installment.total}</span>}
-                        {isCredit && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">↩ Crédito</span>}
+                        {t.installment && <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold px-1.5 py-0.5 rounded-full">Cuota {t.installment.current}/{t.installment.total}</span>}
+                        {isCredit && <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold px-1.5 py-0.5 rounded-full">↩ Crédito</span>}
                         {t.originalCurrency && (
                           <span className="text-[10px] text-sky-500 dark:text-sky-400 font-semibold font-mono">
                             {t.originalCurrency} {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.originalAmount)}
                           </span>
                         )}
                         {t.source && (
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[140px]" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>
-                            {t.source}{t.cardHolder ? ` · ${t.cardHolder}` : ''}
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium lg:hidden truncate max-w-[140px]" title={t.cardHolder ? `${dn(t.source)} · ${t.cardHolder}` : dn(t.source)}>
+                            {dn(t.source)}{t.cardHolder ? ` · ${t.cardHolder}` : ''}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="py-2.5 pr-4">
-                      <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} />
+                      <EditableCategory value={t.category} onChange={cat => updateCategory(t.id, cat)} allCategories={allCategories} />
                     </td>
                     <td className="py-2.5 pr-4">
                       <div className="flex flex-col gap-0.5">
@@ -558,10 +631,10 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
                       </div>
                     </td>
                     <td className="py-2.5 pr-4 max-w-[120px] hidden lg:table-cell">
-                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.cardHolder ? `${t.source} · ${t.cardHolder}` : t.source}>{t.source}</span>
+                      <span className="truncate block text-[11px] text-slate-400 dark:text-slate-500" title={t.cardHolder ? `${dn(t.source)} · ${t.cardHolder}` : dn(t.source)}>{dn(t.source)}</span>
                       {t.cardHolder && <span className="truncate block text-[10px] text-slate-300 dark:text-slate-600">{t.cardHolder}</span>}
                     </td>
-                    <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                    <td className={`py-2.5 pr-2 text-right font-semibold whitespace-nowrap text-sm tabular-nums ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                       {isCredit ? '+' : ''}{fmt(t.amount)}
                     </td>
                     <td className="py-2.5 w-10">
@@ -577,7 +650,7 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
             )}
           </tbody>
         </table>
-      </div>
+      </div>{/* end desktop table */}
 
       {filtered.length > paged.length && (
         <div className="p-4 pt-3">
@@ -610,3 +683,5 @@ export default function TransactionList({ transactions, onUpdate, onFilteredChan
     </div>
   )
 }
+
+export default memo(TransactionList)

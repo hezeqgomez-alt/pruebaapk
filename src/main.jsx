@@ -4,7 +4,14 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 
-// Polyfill for Chromium < 136 (e.g. Electron 42) — pdfjs-dist v5.7 uses these
+// Polyfills for older browsers / Android WebView — pdfjs-dist v5.x requires these
+if (typeof Promise.withResolvers === 'undefined') {
+  Promise.withResolvers = function() {
+    let resolve, reject
+    const promise = new Promise((res, rej) => { resolve = res; reject = rej })
+    return { promise, resolve, reject }
+  }
+}
 if (!Map.prototype.getOrInsertComputed) {
   Map.prototype.getOrInsertComputed = function(key, fn) {
     if (!this.has(key)) this.set(key, fn(key))

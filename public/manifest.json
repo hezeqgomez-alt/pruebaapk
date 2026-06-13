@@ -1,0 +1,25 @@
+{
+  "name": "EasyResumen",
+  "short_name": "EasyResumen",
+  "description": "Analizador de resúmenes de tarjeta de crédito y banco",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "scope": "/",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["finance", "productivity"]
+}

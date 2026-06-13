@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidad — EasyResumen</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #f8f7ff; color: #1e1b4b; line-height: 1.7; }
+  .header {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    padding: 20px 0;
+  }
+  .header-inner {
+    max-width: 760px; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-icon {
+    width: 36px; height: 36px; background: rgba(255,255,255,0.2);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .logo-text { font-size: 17px; font-weight: 700; color: white; }
+  .back-link { color: rgba(255,255,255,0.8); font-size: 13px; text-decoration: none; }
+  .back-link:hover { color: white; }
+  .container { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+  .page-title { font-size: 28px; font-weight: 800; color: #1e1b4b; margin-bottom: 6px; }
+  .page-meta { font-size: 13px; color: #7c6fcd; margin-bottom: 40px; }
+  h2 { font-size: 16px; font-weight: 700; color: #4f46e5; margin: 32px 0 10px; padding-top: 8px; border-top: 1px solid #e0e7ff; }
+  h2:first-of-type { border-top: none; }
+  p { font-size: 14px; color: #374151; margin-bottom: 12px; }
+  ul { padding-left: 20px; margin-bottom: 12px; }
+  li { font-size: 14px; color: #374151; margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th { background: #eff6ff; color: #1e40af; font-weight: 600; padding: 10px 14px; text-align: left; border: 1px solid #bfdbfe; }
+  td { padding: 10px 14px; border: 1px solid #e0e7ff; color: #374151; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8faff; }
+  .highlight {
+    background: #f0fdf4; border-left: 3px solid #22c55e;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 14px; color: #15803d;
+  }
+  .warning {
+    background: #fff7ed; border-left: 3px solid #f59e0b;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 14px; color: #92400e;
+  }
+  .footer-note { margin-top: 48px; padding-top: 24px; border-top: 1px solid #e0e7ff; text-align: center; font-size: 12px; color: #9ca3af; }
+  .footer-note a { color: #6366f1; text-decoration: none; }
+  a { color: #6366f1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <div class="logo-icon">📋</div>
+      <span class="logo-text">EasyResumen</span>
+    </a>
+    <a href="/" class="back-link">← Volver a la app</a>
+  </div>
+</div>
+
+<div class="container">
+  <h1 class="page-title">Política de Privacidad</h1>
+  <p class="page-meta">Última actualización: junio de 2026 · Versión 1.0</p>
+
+  <div class="highlight">
+    🔒 <strong>Principio central:</strong> Los PDFs que analizás nunca salen de tu dispositivo. EasyResumen procesa todo localmente en tu navegador. No subimos, leemos ni almacenamos el contenido de tus resúmenes de tarjeta.
+  </div>
+
+  <h2>1. Quiénes somos</h2>
+  <p>EasyResumen es un servicio web operado desde Argentina, disponible en <strong>easyresumen.com.ar</strong>. Si tenés consultas sobre esta política, podés escribirnos a <a href="mailto:soporte@easyresumen.com.ar">soporte@easyresumen.com.ar</a>.</p>
+
+  <h2>2. Qué datos recopilamos</h2>
+
+  <table>
+    <tr>
+      <th>Dato</th>
+      <th>Por qué lo recopilamos</th>
+      <th>Dónde se almacena</th>
+    </tr>
+    <tr>
+      <td><strong>Correo electrónico</strong></td>
+      <td>Crear y gestionar tu cuenta</td>
+      <td>Supabase (Auth)</td>
+    </tr>
+    <tr>
+      <td><strong>Contraseña (hash)</strong></td>
+      <td>Autenticación segura</td>
+      <td>Supabase (encriptada, nunca en texto plano)</td>
+    </tr>
+    <tr>
+      <td><strong>Metadatos de plan</strong></td>
+      <td>Saber si tu cuenta está en trial o PRO</td>
+      <td>Supabase (user_metadata)</td>
+    </tr>
+    <tr>
+      <td><strong>Datos de gastos (opcional)</strong></td>
+      <td>Sincronización en la nube entre dispositivos</td>
+      <td>Supabase (tabla user_data, solo si estás logueado)</td>
+    </tr>
+    <tr>
+      <td><strong>ID de suscripción MP</strong></td>
+      <td>Verificar el estado de tu suscripción</td>
+      <td>Supabase (user_metadata)</td>
+    </tr>
+  </table>
+
+  <h2>3. Qué datos NO recopilamos</h2>
+  <div class="highlight">
+    <ul style="margin:0; padding-left:18px;">
+      <li>El contenido de tus PDFs (se procesan 100% localmente en tu navegador)</li>
+      <li>Datos de tus tarjetas de crédito o cuentas bancarias</li>
+      <li>Tu número de tarjeta, CVV, ni ningún dato de pago (eso lo maneja MercadoPago directamente)</li>
+      <li>Tu ubicación, contactos ni ningún otro dato del dispositivo</li>
+    </ul>
+  </div>
+
+  <h2>4. Cómo usamos tus datos</h2>
+  <ul>
+    <li><strong>Gestión de cuenta:</strong> para permitirte iniciar sesión, recuperar contraseña y mantener tu perfil activo.</li>
+    <li><strong>Sincronización de datos:</strong> si optás por sincronizar en la nube, guardamos tus categorías y transacciones para que estén disponibles en todos tus dispositivos.</li>
+    <li><strong>Gestión de suscripción:</strong> para activar o desactivar tu plan PRO según el estado de pago en MercadoPago.</li>
+    <li><strong>Comunicaciones transaccionales:</strong> te enviamos emails cuando tu plan PRO es activado o cuando solicitás recuperar tu contraseña. No enviamos newsletters sin tu consentimiento explícito.</li>
+  </ul>
+
+  <h2>5. Terceros que procesan datos</h2>
+  <table>
+    <tr>
+      <th>Proveedor</th>
+      <th>Función</th>
+      <th>Política de privacidad</th>
+    </tr>
+    <tr>
+      <td><strong>Supabase</strong></td>
+      <td>Autenticación y base de datos en la nube</td>
+      <td><a href="https://supabase.com/privacy" target="_blank">supabase.com/privacy</a></td>
+    </tr>
+    <tr>
+      <td><strong>MercadoPago</strong></td>
+      <td>Procesamiento de pagos y suscripciones</td>
+      <td><a href="https://www.mercadopago.com.ar/privacidad" target="_blank">mercadopago.com.ar/privacidad</a></td>
+    </tr>
+    <tr>
+      <td><strong>Resend</strong></td>
+      <td>Envío de emails transaccionales</td>
+      <td><a href="https://resend.com/privacy" target="_blank">resend.com/privacy</a></td>
+    </tr>
+    <tr>
+      <td><strong>Vercel</strong></td>
+      <td>Hosting de la aplicación</td>
+      <td><a href="https://vercel.com/legal/privacy-policy" target="_blank">vercel.com/legal/privacy-policy</a></td>
+    </tr>
+  </table>
+  <p>Ninguno de estos proveedores tiene acceso al contenido de tus PDFs, ya que estos nunca salen de tu dispositivo.</p>
+
+  <h2>6. Almacenamiento local</h2>
+  <p>EasyResumen utiliza el <strong>localStorage</strong> de tu navegador como caché rápido para tus datos de gastos. Esta información permanece únicamente en tu dispositivo y no es accesible para nosotros. Podés borrarla en cualquier momento desde la configuración de tu navegador o desde la opción "Limpiar datos" dentro de la app.</p>
+
+  <h2>7. Cookies</h2>
+  <p>EasyResumen no utiliza cookies de seguimiento ni publicidad. Supabase puede utilizar cookies de sesión estrictamente necesarias para mantener tu inicio de sesión activo.</p>
+
+  <h2>8. Retención de datos</h2>
+  <p>Conservamos tus datos de cuenta mientras tu cuenta esté activa. Si solicitás la eliminación de tu cuenta, borramos todos tus datos personales y de gastos sincronizados dentro de los 30 días hábiles. Los datos de pagos son retenidos por MercadoPago según su propia política.</p>
+
+  <h2>9. Tus derechos</h2>
+  <p>En cumplimiento de la <strong>Ley 25.326 de Protección de Datos Personales</strong> de Argentina, tenés derecho a:</p>
+  <ul>
+    <li><strong>Acceso:</strong> solicitar qué datos personales tenemos sobre vos.</li>
+    <li><strong>Rectificación:</strong> corregir datos incorrectos o desactualizados.</li>
+    <li><strong>Supresión:</strong> solicitar la eliminación de tus datos personales.</li>
+    <li><strong>Oposición:</strong> oponerte al tratamiento de tus datos en determinados casos.</li>
+  </ul>
+  <p>Para ejercer cualquiera de estos derechos, escribinos a <a href="mailto:soporte@easyresumen.com.ar">soporte@easyresumen.com.ar</a>.</p>
+
+  <h2>10. Seguridad</h2>
+  <p>Implementamos medidas de seguridad razonables para proteger tus datos: comunicaciones cifradas mediante HTTPS, autenticación gestionada por Supabase con contraseñas hasheadas, y acceso restringido a las claves de servicio.</p>
+  <div class="warning">
+    Ningún sistema es 100% seguro. Te recomendamos usar una contraseña única y fuerte para tu cuenta de EasyResumen.
+  </div>
+
+  <h2>11. Menores de edad</h2>
+  <p>EasyResumen no está dirigido a menores de 18 años. No recopilamos intencionalmente datos personales de menores. Si tenés conocimiento de que un menor nos proporcionó datos personales, contactanos para proceder a su eliminación.</p>
+
+  <h2>12. Cambios a esta política</h2>
+  <p>Podemos actualizar esta Política de Privacidad periódicamente. Te notificaremos por correo electrónico ante cambios significativos. El uso continuado del servicio después de la notificación implica la aceptación de la política actualizada.</p>
+
+  <h2>13. Contacto</h2>
+  <p>Para cualquier consulta relacionada con esta política, podés escribirnos a <a href="mailto:soporte@easyresumen.com.ar">soporte@easyresumen.com.ar</a>. Nos comprometemos a responderte dentro de los 10 días hábiles.</p>
+
+  <div class="footer-note">
+    <p>© 2026 EasyResumen · <a href="/terminos.html">Términos y Condiciones</a> · <a href="/">Volver a la app</a></p>
+  </div>
+</div>
+
+</body>
+</html>

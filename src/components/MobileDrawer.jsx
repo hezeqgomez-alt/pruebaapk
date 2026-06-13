@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   X, FileBarChart2, FileSpreadsheet, Download, Upload,
   Plus, Trash2, Moon, Sun, LogOut, RefreshCw,
   LayoutDashboard, List, PiggyBank, CreditCard, Landmark, BarChart2, AlertTriangle,
-  FileText,
+  FileText, ChevronDown,
 } from 'lucide-react'
 
 const NAV_ICONS = {
@@ -20,19 +20,27 @@ export default function MobileDrawer({
   open, onClose,
   tabs, activeTab, onTab,
   hasData, generating,
-  onReport, onExcelExport, onCSVExport, onClear,
+  onReport, onReportSource, sources = [], cardNames = {},
+  onExcelExport, onCSVExport, onClear,
   onImport, onPDFFiles,
   darkMode, onDarkMode,
   user, onSignOut,
   filteredCount, totalCount,
   isSupabaseConfigured,
 }) {
+  const [reportExpanded, setReportExpanded] = useState(false)
   const pdfInputRef = useRef(null)
-  // Bloquear scroll del body cuando el drawer está abierto
+  // Bloquear scroll del body cuando el drawer está abierto + cerrar con Escape
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+    if (!open) return () => { document.body.style.overflow = '' }
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', h)
+    }
+  }, [open, onClose])
 
   const hasFilter = filteredCount != null && filteredCount < totalCount
 
@@ -88,8 +96,8 @@ export default function MobileDrawer({
             </button>
           </div>
 
-          {/* ── Navegación ── */}
-          {hasData && tabs.length > 0 && (
+          {/* ── Navegación: siempre visible — Préstamos y Balance no requieren transacciones ── */}
+          {tabs.length > 0 && (
             <section>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 px-1">
                 Vistas
@@ -134,14 +142,40 @@ export default function MobileDrawer({
                 Acciones
               </p>
               <div className="space-y-0.5">
-                <button
-                  onClick={() => { onReport(); onClose() }}
-                  disabled={generating}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all disabled:opacity-50"
-                >
-                  {generating ? <RefreshCw size={16} className="animate-spin" /> : <FileBarChart2 size={16} />}
-                  {generating ? 'Generando...' : 'Informe PDF'}
-                </button>
+                <div>
+                  <button
+                    onClick={() => sources.length > 1 ? setReportExpanded(v => !v) : (onReport(), onClose())}
+                    disabled={generating}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all disabled:opacity-50"
+                  >
+                    {generating ? <RefreshCw size={16} className="animate-spin" /> : <FileBarChart2 size={16} />}
+                    <span className="flex-1 text-left">{generating ? 'Generando...' : 'Informe PDF'}</span>
+                    {sources.length > 1 && !generating && (
+                      <ChevronDown size={14} className={`transition-transform duration-200 ${reportExpanded ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+                  {reportExpanded && sources.length > 1 && (
+                    <div className="ml-3 mt-0.5 border-l-2 border-indigo-100 dark:border-indigo-800 pl-3 space-y-0.5">
+                      <button
+                        onClick={() => { onReport(); setReportExpanded(false); onClose() }}
+                        className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      >
+                        <FileBarChart2 size={12} className="text-indigo-400 shrink-0" />
+                        Informe completo
+                      </button>
+                      {sources.map(src => (
+                        <button
+                          key={src}
+                          onClick={() => { onReportSource(src); setReportExpanded(false); onClose() }}
+                          className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        >
+                          <CreditCard size={11} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{cardNames[src] || src}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   onClick={() => { onExcelExport(); onClose() }}
@@ -206,6 +240,11 @@ export default function MobileDrawer({
               {user.email && <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{user.email}</span>}
             </button>
           )}
+          <div className="flex gap-3 px-3 pt-2 pb-1">
+            <a href="/terminos.html" target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-400 dark:text-slate-600 hover:text-indigo-500 transition-colors">Términos</a>
+            <span className="text-[11px] text-slate-300 dark:text-slate-700">·</span>
+            <a href="/privacidad.html" target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-400 dark:text-slate-600 hover:text-indigo-500 transition-colors">Privacidad</a>
+          </div>
         </div>
       </div>
     </>

@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partner EasyResumen — Ganá comisiones vendiendo una app que la gente necesita</title>
+  <meta name="description" content="Sumate al programa de Partners de EasyResumen y ganá hasta $114.000 por cada cierre. Sin horario, sin experiencia, sin inversión." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #818cf8;
+      --primary-bg: #eef2ff;
+      --green: #22c55e;
+      --green-dark: #16a34a;
+      --green-light: #bbf7d0;
+      --dark: #0f172a;
+      --gray-800: #1e293b;
+      --gray-700: #334155;
+      --gray-500: #64748b;
+      --gray-300: #cbd5e1;
+      --gray-100: #f1f5f9;
+      --white: #ffffff;
+      --radius: 12px;
+      --radius-lg: 20px;
+      --shadow: 0 4px 24px rgba(79, 70, 229, 0.10);
+      --shadow-lg: 0 8px 40px rgba(79, 70, 229, 0.18);
+      --transition: 0.2s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: var(--dark);
+      background: var(--white);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ===== UTILITIES ===== */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    .section { padding: 80px 0; }
+    .section-alt { background: var(--gray-100); }
+    .badge {
+      display: inline-block;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--dark);
+      margin-bottom: 14px;
+    }
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--gray-500);
+      max-width: 600px;
+      margin: 0 auto 48px;
+    }
+    .text-center { text-align: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 100px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--green);
+      color: var(--white);
+    }
+    .btn-primary:hover { background: var(--green-dark); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(34,197,94,0.35); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.12); transform: translateY(-2px); }
+    .btn-lg { padding: 18px 36px; font-size: 18px; }
+    .highlight { color: var(--primary); }
+    .highlight-green { color: var(--green); }
+
+    /* ===== NAV ===== */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--gray-300);
+      padding: 14px 0;
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo span { color: var(--dark); }
+    .nav-cta { font-size: 14px; padding: 10px 20px; }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, #6366f1 100%);
+      color: var(--white);
+      padding: 90px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+      top: -100px; right: -100px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(34,197,94,0.12) 0%, transparent 70%);
+      bottom: -80px; left: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(34,197,94,0.2);
+      color: var(--green-light);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 54px);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+    .hero h1 .accent {
+      color: var(--green);
+      display: block;
+    }
+    .hero-lead {
+      font-size: 18px;
+      opacity: 0.88;
+      margin-bottom: 32px;
+      max-width: 480px;
+    }
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .hero-trust {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 28px;
+      font-size: 13px;
+      opacity: 0.75;
+    }
+    .hero-trust span { display: flex; align-items: center; gap: 4px; }
+    .hero-trust span + span::before { content: '·'; margin-right: 10px; }
+
+    /* Hero visual */
+    .hero-card-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .commission-card {
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+    }
+    .commission-card .label {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .commission-card .value {
+      font-size: 38px;
+      font-weight: 900;
+      color: var(--green);
+      line-height: 1;
+    }
+    .commission-card .sub {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    .mini-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .mini-card {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .mini-card .mini-label { font-size: 12px; opacity: 0.65; margin-bottom: 4px; }
+    .mini-card .mini-val { font-size: 18px; font-weight: 800; }
+
+    /* ===== HOW IT WORKS ===== */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      position: relative;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 36px;
+      left: calc(16.66% + 16px);
+      right: calc(16.66% + 16px);
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      z-index: 0;
+    }
+    .step {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .step-num {
+      width: 72px; height: 72px;
+      background: var(--primary);
+      color: var(--white);
+      font-size: 28px;
+      font-weight: 900;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 4px 16px rgba(79,70,229,0.35);
+      border: 4px solid var(--white);
+    }
+    .step h3 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+    .step p { font-size: 15px; color: var(--gray-500); }
+
+    /* ===== CALCULATOR ===== */
+    .calc-wrap {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 40px;
+      max-width: 760px;
+      margin: 0 auto;
+      border: 1px solid var(--gray-300);
+    }
+    .calc-title { font-size: 24px; font-weight: 800; margin-bottom: 28px; }
+    .calc-group { margin-bottom: 28px; }
+    .calc-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 12px;
+    }
+    .calc-label .val {
+      color: var(--primary);
+      font-size: 17px;
+      font-weight: 800;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 10px;
+      background: var(--gray-300);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 2px 8px rgba(79,70,229,0.4);
+      cursor: pointer;
+      border: 3px solid var(--white);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      border: 3px solid var(--white);
+    }
+    .plan-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .plan-btn {
+      padding: 10px 8px;
+      border-radius: var(--radius);
+      border: 2px solid var(--gray-300);
+      background: var(--white);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gray-700);
+      transition: all var(--transition);
+      text-align: center;
+    }
+    .plan-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+    .plan-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+      color: var(--primary);
+    }
+    .plan-btn .plan-commission {
+      display: block;
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--green);
+      margin-top: 3px;
+    }
+    .calc-result {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      color: var(--white);
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    .result-item .r-label { font-size: 12px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .result-item .r-value { font-size: 28px; font-weight: 900; color: var(--green); line-height: 1; }
+    .result-item .r-sub { font-size: 13px; opacity: 0.7; margin-top: 3px; }
+    .calc-cta-row { text-align: center; margin-top: 28px; }
+
+    /* ===== PLANS TABLE ===== */
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    .plan-card {
+      background: var(--white);
+      border: 2px solid var(--gray-300);
+      border-radius: var(--radius-lg);
+      padding: 28px 20px;
+      text-align: center;
+      transition: all var(--transition);
+      position: relative;
+    }
+    .plan-card:hover { border-color: var(--primary); box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+    .plan-card.featured {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+    }
+    .plan-popular-badge {
+      position: absolute;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: var(--white);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 12px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+    .plan-icon { font-size: 32px; margin-bottom: 12px; }
+    .plan-name { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .plan-target { font-size: 13px; color: var(--gray-500); margin-bottom: 18px; }
+    .plan-price { font-size: 26px; font-weight: 900; color: var(--dark); margin-bottom: 4px; }
+    .plan-price span { font-size: 14px; font-weight: 500; color: var(--gray-500); }
+    .plan-divider { height: 1px; background: var(--gray-300); margin: 16px 0; }
+    .plan-commission-label { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; }
+    .plan-commission-val { font-size: 30px; font-weight: 900; color: var(--green); margin-top: 4px; }
+    .plan-commission-sub { font-size: 13px; color: var(--gray-500); }
+
+    /* ===== FOR WHOM ===== */
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    .audience-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      border: 1px solid var(--gray-300);
+      transition: all var(--transition);
+    }
+    .audience-card:hover { box-shadow: var(--shadow); border-color: var(--primary-light); }
+    .audience-icon {
+      font-size: 36px;
+      flex-shrink: 0;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-bg);
+      border-radius: 14px;
+    }
+    .audience-card h3 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .audience-card p { font-size: 14px; color: var(--gray-500); line-height: 1.5; }
+
+    /* ===== TESTIMONIALS ===== */
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .testimonial {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      border: 1px solid var(--gray-300);
+      position: relative;
+    }
+    .testimonial::before {
+      content: '"';
+      font-size: 80px;
+      color: var(--primary-bg);
+      position: absolute;
+      top: 8px;
+      left: 20px;
+      line-height: 1;
+      font-family: Georgia, serif;
+    }
+    .testimonial-text {
+      font-size: 15px;
+      color: var(--gray-700);
+      line-height: 1.65;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+      padding-top: 24px;
+    }
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .author-avatar {
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .avatar-1 { background: #ddd6fe; }
+    .avatar-2 { background: #d1fae5; }
+    .avatar-3 { background: #fce7f3; }
+    .author-name { font-size: 15px; font-weight: 700; }
+    .author-role { font-size: 13px; color: var(--gray-500); }
+    .author-earnings {
+      margin-left: auto;
+      background: var(--green-light);
+      color: var(--green-dark);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+    .stars { color: #f59e0b; font-size: 14px; margin-bottom: 8px; }
+
+    /* ===== FAQ ===== */
+    .faq-list { max-width: 720px; margin: 0 auto; }
+    .faq-item {
+      border-bottom: 1px solid var(--gray-300);
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      text-align: left;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--dark);
+      transition: color var(--transition);
+    }
+    .faq-question:hover { color: var(--primary); }
+    .faq-question .faq-icon {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      transition: all var(--transition);
+    }
+    .faq-item.open .faq-icon { background: var(--primary); color: var(--white); transform: rotate(45deg); }
+    .faq-answer {
+      font-size: 15px;
+      color: var(--gray-500);
+      line-height: 1.7;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.35s ease;
+      padding-bottom: 0;
+    }
+    .faq-item.open .faq-answer { max-height: 300px; padding-bottom: 20px; }
+
+    /* ===== FORM ===== */
+    .form-wrap {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 44px;
+      max-width: 620px;
+      margin: 0 auto;
+      border: 1px solid var(--gray-300);
+    }
+    .form-title { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+    .form-subtitle { font-size: 15px; color: var(--gray-500); margin-bottom: 28px; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 7px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--gray-300);
+      border-radius: var(--radius);
+      font-size: 15px;
+      color: var(--dark);
+      background: var(--white);
+      outline: none;
+      transition: border-color var(--transition);
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--primary); }
+    .form-group textarea { resize: vertical; min-height: 90px; }
+    .form-group select { cursor: pointer; }
+    .form-submit { width: 100%; padding: 16px; font-size: 17px; margin-top: 8px; border-radius: var(--radius); }
+    .form-disclaimer { font-size: 12px; color: var(--gray-500); text-align: center; margin-top: 12px; }
+    .form-success {
+      display: none;
+      text-align: center;
+      padding: 24px 0;
+    }
+    .form-success .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .form-success h3 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .form-success p { font-size: 15px; color: var(--gray-500); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: var(--dark);
+      color: var(--white);
+      padding: 48px 0 32px;
+    }
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .footer-brand .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary-light);
+      margin-bottom: 10px;
+    }
+    .footer-brand p { font-size: 14px; opacity: 0.6; line-height: 1.6; max-width: 280px; }
+    .footer-col h4 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.5; margin-bottom: 14px; }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 8px; }
+    .footer-col ul li a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; transition: color var(--transition); }
+    .footer-col ul li a:hover { color: var(--white); }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-bottom p { font-size: 13px; opacity: 0.5; }
+
+    /* ===== STICKY CTA BAR ===== */
+    .sticky-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--primary-dark);
+      color: var(--white);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 999;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
+      transform: translateY(100%);
+      transition: transform 0.35s ease;
+    }
+    .sticky-bar.visible { transform: translateY(0); }
+    .sticky-bar p { font-size: 15px; font-weight: 600; }
+    .sticky-bar .btn { padding: 10px 22px; font-size: 14px; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+      .hero-card-wrap { max-width: 460px; }
+      .steps { grid-template-columns: 1fr; gap: 24px; }
+      .steps::before { display: none; }
+      .plans-grid { grid-template-columns: repeat(2, 1fr); }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1/-1; }
+    }
+    @media (max-width: 640px) {
+      .section { padding: 56px 0; }
+      .calc-result { grid-template-columns: 1fr; gap: 16px; }
+      .plan-selector { grid-template-columns: repeat(2, 1fr); }
+      .plans-grid { grid-template-columns: 1fr; }
+      .audience-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .form-wrap { padding: 28px 20px; }
+      .calc-wrap { padding: 24px 20px; }
+      .footer-inner { grid-template-columns: 1fr; gap: 28px; }
+      .footer-bottom { flex-direction: column; text-align: center; }
+      .hero-ctas { flex-direction: column; align-items: flex-start; }
+      .sticky-bar { flex-direction: column; gap: 10px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">💜 <span>Easy</span>Resumen Partners</a>
+      <a href="#registro" class="btn btn-primary nav-cta">Quiero ser Partner →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="hero-badge">✨ Programa de Partners 2025</div>
+        <h1>
+          Ganá plata vendiendo
+          <span class="accent">lo que la gente ya necesita</span>
+        </h1>
+        <p class="hero-lead">
+          Sumate al programa de Partners de EasyResumen y cobrá el <strong>50% de cada suscripción</strong> que vendas. Sin horario fijo, sin experiencia previa, sin invertir nada.
+        </p>
+        <div class="hero-ctas">
+          <a href="#registro" class="btn btn-primary btn-lg">Registrarme gratis 🚀</a>
+          <a href="#como-funciona" class="btn btn-secondary">Ver cómo funciona</a>
+        </div>
+        <div class="hero-trust">
+          <span>✅ Sin inversión inicial</span>
+          <span>⚡ Cobro en 48hs</span>
+          <span>🇦🇷 Mercado Pago</span>
+        </div>
+      </div>
+      <div class="hero-card-wrap">
+        <div class="commission-card">
+          <div class="label">💰 Comisión por cada cierre</div>
+          <div class="value">$39.000 — $114.000</div>
+          <div class="sub">ARS · dependiendo del plan vendido</div>
+        </div>
+        <div class="mini-cards">
+          <div class="mini-card">
+            <div class="mini-label">📅 Sin cuota mínima</div>
+            <div class="mini-val">$0 requerido</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-label">🏦 Banco compatible</div>
+            <div class="mini-val">8+ bancos</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-label">⏱️ Pago en</div>
+            <div class="mini-val">48hs hábiles</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-label">📲 Por vía</div>
+            <div class="mini-val">Mercado Pago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section" id="como-funciona">
+  <div class="container text-center">
+    <div class="badge">Proceso simple</div>
+    <h2 class="section-title">3 pasos para empezar a cobrar</h2>
+    <p class="section-subtitle">No hace falta saber de tecnología, ni tener experiencia en ventas. Si tenés celular y ganas, alcanza.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Te registrás gratis 📋</h3>
+        <p>Completás el formulario de alta y en menos de 24 horas te mandamos tu link personal y acceso al panel de partners.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Compartís tu link 🔗</h3>
+        <p>Lo mandás por WhatsApp, redes sociales, email o en persona. Cada persona que se suscriba con tu link queda registrada a tu nombre.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Cobrás en 48hs 💸</h3>
+        <p>Cuando tu cliente activa su cuenta (sube el primer PDF), la comisión entra automáticamente a tu Mercado Pago en 48 horas hábiles.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CALCULATOR ===== -->
+<section class="section section-alt" id="calculadora">
+  <div class="container">
+    <div class="text-center" style="margin-bottom: 40px;">
+      <div class="badge">Calculadora de ganancias</div>
+      <h2 class="section-title">¿Cuánto podés ganar?</h2>
+      <p class="section-subtitle">Mové los sliders y descubrí tu potencial mensual como partner.</p>
+    </div>
+    <div class="calc-wrap">
+      <div class="calc-group">
+        <div class="calc-label">
+          <span>📦 Cierres por mes</span>
+          <span class="val" id="closings-val">5 cierres</span>
+        </div>
+        <input type="range" id="closings" min="1" max="30" value="5" step="1" />
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--gray-500); margin-top:6px;">
+          <span>1 cierre</span><span>30 cierres</span>
+        </div>
+      </div>
+      <div class="calc-group">
+        <div class="calc-label" style="margin-bottom: 14px;">
+          <span>📋 Plan que vas a vender</span>
+        </div>
+        <div class="plan-selector">
+          <button class="plan-btn" data-plan="Personal" data-commission="39000" onclick="selectPlan(this)">
+            Personal
+            <span class="plan-commission">$39.000</span>
+          </button>
+          <button class="plan-btn active" data-plan="Familia" data-commission="57000" onclick="selectPlan(this)">
+            Familia
+            <span class="plan-commission">$57.000</span>
+          </button>
+          <button class="plan-btn" data-plan="Profesional" data-commission="75000" onclick="selectPlan(this)">
+            Profesional
+            <span class="plan-commission">$75.000</span>
+          </button>
+          <button class="plan-btn" data-plan="PyME" data-commission="114000" onclick="selectPlan(this)">
+            PyME
+            <span class="plan-commission">$114.000</span>
+          </button>
+        </div>
+      </div>
+      <div class="calc-result">
+        <div class="result-item">
+          <div class="r-label">💰 Ganás por cierre</div>
+          <div class="r-value" id="per-close">$57.000</div>
+          <div class="r-sub">en 48hs hábiles</div>
+        </div>
+        <div class="result-item">
+          <div class="r-label">📅 Ganás por mes</div>
+          <div class="r-value" id="per-month">$285.000</div>
+          <div class="r-sub">5 cierres × $57.000</div>
+        </div>
+        <div class="result-item">
+          <div class="r-label">🗓️ Ganás por año</div>
+          <div class="r-value" id="per-year">$3.420.000</div>
+          <div class="r-sub">proyección anual</div>
+        </div>
+      </div>
+      <div class="calc-cta-row">
+        <a href="#registro" class="btn btn-primary btn-lg">Quiero ganar esto 🚀</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PLANS ===== -->
+<section class="section" id="planes">
+  <div class="container">
+    <div class="text-center" style="margin-bottom: 48px;">
+      <div class="badge">Planes y comisiones</div>
+      <h2 class="section-title">Vos elegís qué vender</h2>
+      <p class="section-subtitle">Cuatro planes para distintos perfiles de clientes. Comisión del 50% en todos.</p>
+    </div>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div class="plan-icon">👤</div>
+        <div class="plan-name">Personal</div>
+        <div class="plan-target">Para uso individual</div>
+        <div class="plan-price">$78.000 <span>/ año</span></div>
+        <div class="plan-divider"></div>
+        <div class="plan-commission-label">Vos cobrás</div>
+        <div class="plan-commission-val">$39.000</div>
+        <div class="plan-commission-sub">por cada cierre</div>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-popular-badge">⭐ Más vendido</div>
+        <div class="plan-icon">👨‍👩‍👧</div>
+        <div class="plan-name">Familia</div>
+        <div class="plan-target">Hasta 4 tarjetas</div>
+        <div class="plan-price">$114.000 <span>/ año</span></div>
+        <div class="plan-divider"></div>
+        <div class="plan-commission-label">Vos cobrás</div>
+        <div class="plan-commission-val">$57.000</div>
+        <div class="plan-commission-sub">por cada cierre</div>
+      </div>
+      <div class="plan-card">
+        <div class="plan-icon">💼</div>
+        <div class="plan-name">Profesional</div>
+        <div class="plan-target">Autónomos y freelancers</div>
+        <div class="plan-price">$150.000 <span>/ año</span></div>
+        <div class="plan-divider"></div>
+        <div class="plan-commission-label">Vos cobrás</div>
+        <div class="plan-commission-val">$75.000</div>
+        <div class="plan-commission-sub">por cada cierre</div>
+      </div>
+      <div class="plan-card">
+        <div class="plan-icon">🏢</div>
+        <div class="plan-name">PyME</div>
+        <div class="plan-target">Pequeñas empresas</div>
+        <div class="plan-price">$228.000 <span>/ año</span></div>
+        <div class="plan-divider"></div>
+        <div class="plan-commission-label">Vos cobrás</div>
+        <div class="plan-commission-val">$114.000</div>
+        <div class="plan-commission-sub">por cada cierre</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOR WHOM ===== -->
+<section class="section section-alt" id="para-quien">
+  <div class="container">
+    <div class="text-center" style="margin-bottom: 48px;">
+      <div class="badge">¿Para quién es?</div>
+      <h2 class="section-title">Si tenés ganas, es para vos</h2>
+      <p class="section-subtitle">No importa de dónde venís. Lo que importa es que tenés contactos y saber escuchar lo que la gente necesita.</p>
+    </div>
+    <div class="audience-grid">
+      <div class="audience-card">
+        <div class="audience-icon">🎓</div>
+        <div>
+          <h3>Estudiantes universitarios</h3>
+          <p>¿Estudiás y necesitás ingresos flexibles? Vendé entre tus compañeros, familia y en redes. Sin horario que te corte la cursada.</p>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="audience-icon">🔍</div>
+        <div>
+          <h3>Personas en búsqueda laboral</h3>
+          <p>Mientras buscás empleo, generá ingresos reales. Muchos partners arrancaron así y terminaron dedicándose a esto de lleno.</p>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="audience-icon">📱</div>
+        <div>
+          <h3>Creadores de contenido</h3>
+          <p>¿Tenés seguidores en Instagram, TikTok o YouTube? EasyResumen es un producto que tu audiencia necesita y que vende solo.</p>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="audience-icon">🧮</div>
+        <div>
+          <h3>Contadores y asesores financieros</h3>
+          <p>El fit perfecto: tus clientes ya tienen tarjetas. Ofrecé EasyResumen como herramienta complementaria y cobrá comisión por cada uno.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section class="section" id="testimonios">
+  <div class="container">
+    <div class="text-center" style="margin-bottom: 48px;">
+      <div class="badge">Testimonios reales</div>
+      <h2 class="section-title">Lo que dicen nuestros partners</h2>
+      <p class="section-subtitle">Gente como vos que se animó y ya está cobrando comisiones.</p>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-text">
+          "Arrancé a compartir el link en el grupo de la facu medio en joda y en el primer mes cerré 6 ventas. No lo podía creer. Lo mejor es que no me llevó tiempo, lo hacía entre clase y clase. Ya llevo 4 meses y es el ingreso extra que necesitaba para no pedirle plata a mis viejos."
+        </div>
+        <div class="testimonial-author">
+          <div class="author-avatar avatar-1">👩‍🎓</div>
+          <div>
+            <div class="author-name">Valentina M.</div>
+            <div class="author-role">Estudiante de Administración, CABA</div>
+          </div>
+          <div class="author-earnings">+$342.000/mes</div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-text">
+          "Trabajo como contador independiente y tengo unos 40 clientes PyME. Les empecé a ofrecer EasyResumen como parte del servicio y el 60% lo tomó. La plata de las comisiones literalmente me pagó las vacaciones de enero. No hubo que explicar mucho: el producto se vende solo."
+        </div>
+        <div class="testimonial-author">
+          <div class="author-avatar avatar-2">👨‍💼</div>
+          <div>
+            <div class="author-name">Rodrigo B.</div>
+            <div class="author-role">Contador público, Rosario</div>
+          </div>
+          <div class="author-earnings">+$2.280.000/mes</div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-text">
+          "Hice un reel mostrando cuántas suscripciones estaba pagando de más según EasyResumen (me salía como 45 lucas por mes en cosas que ni usaba) y el video lo vio un montón de gente. Puse el link en la bio y las ventas llegaron solas. Esto es lo mejor que encontré para monetizar mi cuenta sin vender cualquier cosa."
+        </div>
+        <div class="testimonial-author">
+          <div class="author-avatar avatar-3">👩‍💻</div>
+          <div>
+            <div class="author-name">Sofía del V.</div>
+            <div class="author-role">Creadora de contenido finance, La Plata</div>
+          </div>
+          <div class="author-earnings">+$855.000/mes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="section section-alt" id="faq">
+  <div class="container">
+    <div class="text-center" style="margin-bottom: 48px;">
+      <div class="badge">Preguntas frecuentes</div>
+      <h2 class="section-title">Todas las dudas, respondidas</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          ¿Cuándo cobro mi comisión exactamente?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          Cobrás cuando tu cliente activa su cuenta, es decir, cuando sube el primer PDF de resumen bancario. Eso confirma que es una venta real. A partir de ese momento, el pago llega a tu Mercado Pago en un plazo máximo de 48 horas hábiles. Si activó un viernes a las 6pm, por ejemplo, lo vas a ver el martes o miércoles siguiente.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          ¿Qué pasa si el cliente cancela o pide devolución?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          Los planes de EasyResumen son anuales y no tienen devoluciones. El cliente paga el año completo por adelantado, así que tu comisión está asegurada. No hay cargos back ni reversiones de comisión una vez que el pago fue procesado.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          ¿Necesito experiencia en ventas o en tecnología?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          Para nada. EasyResumen es un producto que la gente entiende de inmediato porque el dolor es cotidiano: "¿en qué gasté tanto este mes?". No tenés que saber nada de finanzas ni de tecnología. Te damos materiales de ventas, guiones para WhatsApp, y un panel para seguir tus cierres. Si podés explicar qué hace un resumen bancario, podés vender esto.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          ¿Hay cuota mínima de ventas o algún costo para ser partner?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          No hay absolutamente ningún costo. El programa es gratuito y no tiene cuota mínima. Podés cerrar una venta por mes o veinte, no hay penalidades ni presión. Eso sí, si pasás 6 meses sin ningún cierre te podemos contactar para ver si necesitás ayuda o si querés dar de baja tu cuenta.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          ¿Cómo hago para que la venta quede registrada a mi nombre?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          Cada partner recibe un link único de referido. Cuando alguien se registra a través de ese link, queda vinculado a tu cuenta automáticamente. También podés usar un código de descuento personalizado si el cliente prefiere entrar directo al sitio. Todo queda registrado en tu panel de partners en tiempo real.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          ¿Puedo vender desde cualquier parte del país?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          Sí, 100%. EasyResumen funciona para cualquier persona con tarjeta de crédito argentina (Galicia, Santander, Credicoop, BBVA, Banco Ciudad, Macro, y más). Podés vender a personas de cualquier provincia. El pago de comisiones también funciona desde cualquier punto del país a través de Mercado Pago.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FORM ===== -->
+<section class="section" id="registro">
+  <div class="container">
+    <div class="text-center" style="margin-bottom: 40px;">
+      <div class="badge">Empezá ahora</div>
+      <h2 class="section-title">Sumate al programa gratis</h2>
+      <p class="section-subtitle">Completá el formulario y en menos de 24hs te contactamos con tu link y materiales de venta.</p>
+    </div>
+    <div class="form-wrap">
+      <div id="form-main">
+        <h3 class="form-title">¡Quiero ser Partner! 🙌</h3>
+        <p class="form-subtitle">Sin costo, sin cuotas mínimas. Llenás esto y arrancamos.</p>
+        <form id="partner-form" onsubmit="handleSubmit(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="nombre">Nombre *</label>
+              <input type="text" id="nombre" name="nombre" placeholder="Tu nombre" required />
+            </div>
+            <div class="form-group">
+              <label for="apellido">Apellido *</label>
+              <input type="text" id="apellido" name="apellido" placeholder="Tu apellido" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" placeholder="tu@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="whatsapp">WhatsApp *</label>
+            <input type="tel" id="whatsapp" name="whatsapp" placeholder="+54 9 11 1234-5678" required />
+          </div>
+          <div class="form-group">
+            <label for="como-vender">¿Cómo pensás vender EasyResumen? *</label>
+            <select id="como-vender" name="como-vender" required>
+              <option value="">Elegí una opción...</option>
+              <option value="redes">Por redes sociales (Instagram, TikTok, etc.)</option>
+              <option value="whatsapp">Por WhatsApp a contactos y grupos</option>
+              <option value="clientes-existentes">A mis clientes actuales (trabajo propio)</option>
+              <option value="presencial">De forma presencial</option>
+              <option value="contenido">Creando contenido sobre finanzas</option>
+              <option value="varios">Varios canales a la vez</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="comentario">¿Algo más que quieras contarnos? (opcional)</label>
+            <textarea id="comentario" name="comentario" placeholder="Ej: soy contador y tengo 30 clientes, o tengo 5k seguidores en Instagram..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary form-submit">
+            Quiero ser Partner → Empezar gratis
+          </button>
+          <p class="form-disclaimer">
+            🔒 Tus datos están seguros. No hacemos spam. Te contactamos solo para enviarte tu link y materiales.
+          </p>
+        </form>
+      </div>
+      <div class="form-success" id="form-success">
+        <div class="success-icon">🎉</div>
+        <h3>¡Bienvenido/a al programa!</h3>
+        <p>Te vamos a escribir en las próximas 24 horas con tu link personal y todos los materiales para arrancar. Mientras tanto, podés ir pensando a quién le contás primero.</p>
+        <br />
+        <p style="font-size:14px; color:var(--gray-500);">Revisá tu bandeja de entrada (y la carpeta de spam, por las dudas 😄).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="brand-name">💜 EasyResumen Partners</div>
+        <p>El programa de afiliados de EasyResumen. Ganá comisiones vendiendo la app argentina de análisis de resúmenes de tarjeta de crédito.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Programa</h4>
+        <ul>
+          <li><a href="#como-funciona">Cómo funciona</a></li>
+          <li><a href="#planes">Planes y comisiones</a></li>
+          <li><a href="#calculadora">Calculadora</a></li>
+          <li><a href="#para-quien">¿Para quién es?</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <ul>
+          <li><a href="mailto:partners@easyresumen.com">partners@easyresumen.com</a></li>
+          <li><a href="https://wa.me/5491100000000" target="_blank">WhatsApp de soporte</a></li>
+          <li><a href="#faq">Preguntas frecuentes</a></li>
+          <li><a href="#registro">Registrarme</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 EasyResumen. Todos los derechos reservados.</p>
+      <p>Hecho con 💜 en Argentina 🇦🇷</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== STICKY BAR ===== -->
+<div class="sticky-bar" id="sticky-bar">
+  <p>💰 Ganá hasta $114.000 por cada venta que cerrés</p>
+  <a href="#registro" class="btn btn-primary">Sumarme al programa →</a>
+</div>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+  // ---- CALCULATOR ----
+  var selectedCommission = 57000;
+  var selectedPlanName = 'Familia';
+
+  function formatARS(n) {
+    return '$' + n.toLocaleString('es-AR');
+  }
+
+  function updateCalc() {
+    var closings = parseInt(document.getElementById('closings').value);
+    document.getElementById('closings-val').textContent = closings + (closings === 1 ? ' cierre' : ' cierres');
+
+    var perClose = selectedCommission;
+    var perMonth = selectedCommission * closings;
+    var perYear = perMonth * 12;
+
+    document.getElementById('per-close').textContent = formatARS(perClose);
+    document.getElementById('per-month').textContent = formatARS(perMonth);
+    document.getElementById('per-year').textContent = formatARS(perYear);
+
+    var closingsEl = parseInt(document.getElementById('closings').value);
+    document.querySelector('.result-item:nth-child(2) .r-sub').textContent =
+      closingsEl + ' ' + (closingsEl === 1 ? 'cierre' : 'cierres') + ' × ' + formatARS(selectedCommission);
+  }
+
+  function selectPlan(btn) {
+    document.querySelectorAll('.plan-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedCommission = parseInt(btn.getAttribute('data-commission'));
+    selectedPlanName = btn.getAttribute('data-plan');
+    updateCalc();
+  }
+
+  document.getElementById('closings').addEventListener('input', updateCalc);
+  updateCalc();
+
+  // ---- FAQ ----
+  function toggleFaq(btn) {
+    var item = btn.parentElement;
+    var isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(i) { i.classList.remove('open'); });
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // ---- FORM ----
+  function handleSubmit(e) {
+    e.preventDefault();
+    document.getElementById('form-main').style.display = 'none';
+    document.getElementById('form-success').style.display = 'block';
+    document.getElementById('registro').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---- STICKY BAR ----
+  var stickyBar = document.getElementById('sticky-bar');
+  var hero = document.querySelector('.hero');
+  var lastScrollY = 0;
+
+  window.addEventListener('scroll', function() {
+    var heroBottom = hero.getBoundingClientRect().bottom;
+    var currentScrollY = window.scrollY;
+
+    if (heroBottom < 0 && currentScrollY > lastScrollY) {
+      stickyBar.classList.add('visible');
+    } else if (currentScrollY < lastScrollY || heroBottom > 0) {
+      // hide on scroll up or when hero is visible
+    }
+
+    if (heroBottom > 0) {
+      stickyBar.classList.remove('visible');
+    }
+
+    lastScrollY = currentScrollY;
+  });
+
+  // Show sticky bar after scrolling past hero
+  var heroObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) {
+        stickyBar.classList.add('visible');
+      } else {
+        stickyBar.classList.remove('visible');
+      }
+    });
+  }, { threshold: 0 });
+
+  heroObserver.observe(hero);
+
+  // ---- SMOOTH SCROLL for all anchor links ----
+  document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+    anchor.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        var offset = 72;
+        var top = target.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

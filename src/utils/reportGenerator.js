@@ -16,8 +16,9 @@ const RED      = [220, 38, 38]
 const WHITE    = [255, 255, 255]
 const LIGHT    = [248, 250, 252]  // slate-50
 
+// Centavos exactos para que los importes del informe coincidan al peso con el resumen
 function fmt(n) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 }
 
 function hexToRgb(hex) {
@@ -101,9 +102,10 @@ function kpiCard(doc, x, y, w, h, label, value, sub, accentRgb) {
   doc.setTextColor(...DARK)
 }
 
-export async function generateReport({ transactions, chartDonutRef, chartBarRef }) {
+export async function generateReport({ transactions, chartDonutRef, chartBarRef, asBlob = false, cardNames = {} }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pw = doc.internal.pageSize.getWidth()
+  const dn = s => cardNames[s] || s
 
   const debits  = transactions.filter(t => t.type !== 'credit')
   const credits = transactions.filter(t => t.type === 'credit')
@@ -113,7 +115,11 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
 
   // By category
   const byCategory = {}
-  for (const t of debits) byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+  const catCounts  = {}
+  for (const t of debits) {
+    byCategory[t.category] = (byCategory[t.category] || 0) + t.amount
+    catCounts[t.category]  = (catCounts[t.category]  || 0) + 1
+  }
   const catSorted = Object.entries(byCategory).sort(([, a], [, b]) => b - a)
 
   // By month
@@ -130,12 +136,12 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   const topMerchants = Object.entries(byMerchant).sort(([, a], [, b]) => b - a).slice(0, 10)
 
   const sources = [...new Set(transactions.map(t => t.source))]
-  const TOTAL_PAGES = 3
 
   // ──────────────────────────────────────────────────────────────
   // PAGE 1 — Cover + executive summary
   // ──────────────────────────────────────────────────────────────
-  addPageChrome(doc, 1, TOTAL_PAGES)
+  // Page numbers are added retroactively after all content is rendered
+  addPageChrome(doc, 1, '…')
 
   // Hero band
   doc.setFillColor(...INDIGO)
@@ -161,7 +167,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     { label: 'Total gastos',     value: fmt(totalDebits),  sub: `${debits.length} movimientos`, color: INDIGO },
     { label: 'Créditos / devol.', value: fmt(totalCredits), sub: credits.length > 0 ? `${credits.length} créditos` : '—', color: [...GREEN] },
     { label: 'Neto',             value: fmt(net),           sub: null, color: net > totalDebits * 0.9 ? [...RED] : [...MID] },
-    { label: 'Tarjetas',         value: sources.length,     sub: sources.slice(0, 2).join(', '), color: VIOLET },
+    { label: 'Tarjetas',         value: sources.length,     sub: sources.slice(0, 2).map(dn).join(', '), color: VIOLET },
   ]
   kpis.forEach((c, i) => {
     kpiCard(doc, 14 + i * (cardW + 2), 65, cardW, 27, c.label, c.value, c.sub, c.color)
@@ -179,7 +185,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     doc.setTextColor(...INDIGO)
     doc.text('•', lx, y + row * 6)
     doc.setTextColor(...MID)
-    doc.text(src, lx + 4, y + row * 6)
+    doc.text(dn(src), lx + 4, y + row * 6)
   })
   y += Math.ceil(sources.length / 2) * 6 + 4
   doc.setTextColor(...DARK)
@@ -204,8 +210,8 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     body: catSorted.map(([cat, amt]) => [
       catLabel(cat),
       fmt(amt),
-      `${((amt / totalDebits) * 100).toFixed(1)}%`,
-      debits.filter(t => t.category === cat).length,
+      totalDebits > 0 ? `${((amt / totalDebits) * 100).toFixed(1)}%` : '—',
+      catCounts[cat] || 0,
     ]),
     foot: [['Total gastos', fmt(totalDebits), '100%', debits.length]],
     showFoot: 'lastPage',
@@ -231,7 +237,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   // PAGE 2 — Charts
   // ──────────────────────────────────────────────────────────────
   doc.addPage()
-  addPageChrome(doc, 2, TOTAL_PAGES)
+  addPageChrome(doc, 2, '…')
 
   y = 18
   y = sectionTitle(doc, 'Distribución por categoría', y)
@@ -260,7 +266,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...DARK)
     doc.text(
-      `${catLabel(cat)}: ${fmt(amt)} (${((amt / totalDebits) * 100).toFixed(1)}%)`,
+      `${catLabel(cat)}: ${fmt(amt)} (${totalDebits > 0 ? ((amt / totalDebits) * 100).toFixed(1) : '0'}%)`,
       lx + 5, ly
     )
   })
@@ -310,7 +316,7 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
   // PAGE 3 — Top merchants + transaction list
   // ──────────────────────────────────────────────────────────────
   doc.addPage()
-  addPageChrome(doc, 3, TOTAL_PAGES)
+  addPageChrome(doc, 3, '…')
 
   y = 18
   y = sectionTitle(doc, 'Top 10 comercios', y)
@@ -367,7 +373,27 @@ export async function generateReport({ transactions, chartDonutRef, chartBarRef 
     },
   })
 
+  // Retroactively update page numbers now that we know the real total
+  const totalPages = doc.internal.pages.length - 1
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    addPageChrome(doc, p, totalPages)
+  }
+
+  // Fix footer URL while we're at it
+  const ph = doc.internal.pageSize.getHeight()
+  const pw2 = doc.internal.pageSize.getWidth()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFillColor(...LIGHT)
+    doc.rect(0, ph - 10, pw2, 10, 'F')
+    doc.setFontSize(6)
+    doc.setTextColor(...GRAY)
+    doc.text('EasyResumen · procesamiento 100% local · www.easyresumen.com.ar', pw2 / 2, ph - 5, { align: 'center' })
+  }
+
   const fileName = `easyresumen_informe_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+  if (asBlob) return { blob: doc.output('blob'), fileName }
   doc.save(fileName)
   return fileName
 }

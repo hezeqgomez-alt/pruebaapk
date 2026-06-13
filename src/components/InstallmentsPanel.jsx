@@ -7,43 +7,67 @@ function fmt(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
-export default function InstallmentsPanel({ transactions }) {
-  const groups = useMemo(() => {
-    const map = {}
-    for (const t of transactions) {
-      if (!t.installment || t.type === 'credit') continue
-      const key = t.description.toLowerCase().trim().slice(0, 35)
-      if (!map[key]) map[key] = []
-      map[key].push(t)
-    }
+// Group installment transactions into purchase plans.
+// Two transactions belong to the same plan if they share description + source +
+// total-cuotas + amount-per-cuota. When even that key collides (two identical
+// purchases on the same card), slot-based assignment splits them: a transaction
+// is placed into a slot only if that slot doesn't already have the same
+// installment number.
+function buildGroups(transactions) {
+  const buckets = new Map()
+  for (const t of transactions) {
+    if (!t.installment || t.type === 'credit') continue
+    const key = [
+      t.description.toLowerCase().trim().slice(0, 35),
+      t.source,
+      t.installment.total,
+      Math.round(t.amount),
+    ].join('|')
+    if (!buckets.has(key)) buckets.set(key, [])
+    buckets.get(key).push(t)
+  }
 
-    return Object.values(map).map(txs => {
-      const latest = txs.reduce((a, b) =>
-        b.installment.current > a.installment.current ? b : a
-      )
-      const { current, total } = latest.installment
-      const perCuota   = latest.amount
-      const remaining  = total - current
-      const totalAmt   = perCuota * total
-      const paid       = perCuota * current
-      const restante   = perCuota * remaining
-      const pct        = (current / total) * 100
-
-      return {
-        description: latest.description,
-        source: latest.source,
-        current,
-        total,
-        perCuota,
-        totalAmt,
-        paid,
-        restante,
-        pct,
-        remaining,
-        dates: txs.map(t => t.date).sort(),
+  const allSlots = []
+  for (const txs of buckets.values()) {
+    const total = txs[0].installment.total
+    if (txs.length <= total) {
+      allSlots.push(txs)
+    } else {
+      // Multiple plans collapsed into the same key — split by installment number slots
+      const sorted = [...txs].sort((a, b) => a.date.localeCompare(b.date))
+      const slots = []
+      for (const t of sorted) {
+        const idx = slots.findIndex(s => !s.some(st => st.installment.current === t.installment.current))
+        if (idx >= 0) slots[idx].push(t)
+        else slots.push([t])
       }
-    }).sort((a, b) => a.remaining - b.remaining)
-  }, [transactions])
+      allSlots.push(...slots)
+    }
+  }
+
+  return allSlots.map(txs => {
+    const latest = txs.reduce((a, b) =>
+      b.installment.current > a.installment.current ? b : a
+    )
+    const { current, total } = latest.installment
+    const perCuota  = latest.amount
+    const remaining = total - current
+    return {
+      description: latest.description,
+      source:      latest.source,
+      current, total, perCuota,
+      totalAmt:  perCuota * total,
+      paid:      perCuota * current,
+      restante:  perCuota * remaining,
+      pct:       (current / total) * 100,
+      remaining,
+      dates: txs.map(t => t.date).sort(),
+    }
+  }).sort((a, b) => a.remaining - b.remaining)
+}
+
+export default function InstallmentsPanel({ transactions }) {
+  const groups = useMemo(() => buildGroups(transactions), [transactions])
 
   // Projection of installments for the next 3 calendar months from today.
   // Uses remaining count directly: a plan with R remaining payments will pay

@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auditoría EasyResumen — Junio 2026</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    :root {
+      --indigo: #4f46e5;
+      --violet: #7c3aed;
+      --slate-900: #0f172a;
+      --slate-700: #334155;
+      --slate-500: #64748b;
+      --slate-300: #cbd5e1;
+      --slate-100: #f1f5f9;
+      --slate-50:  #f8fafc;
+      --red:    #dc2626;
+      --amber:  #d97706;
+      --green:  #059669;
+      --blue:   #2563eb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+      color: var(--slate-900);
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    /* ── Print ─────────────────────────────── */
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 11px; }
+      .page-break { page-break-before: always; }
+      .cover { min-height: auto; padding: 40px; }
+      section { page-break-inside: avoid; }
+    }
+
+    /* ── Cover ─────────────────────────────── */
+    .cover {
+      background: linear-gradient(135deg, var(--indigo) 0%, var(--violet) 100%);
+      color: #fff;
+      padding: 60px 56px 48px;
+      min-height: 220px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute;
+      right: -60px; top: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.07);
+    }
+    .cover::after {
+      content: '';
+      position: absolute;
+      right: 40px; bottom: -80px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .cover-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 12px;
+      padding: 8px 16px;
+      margin-bottom: 28px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .cover h1 {
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+    .cover-meta {
+      display: flex;
+      gap: 24px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+    .cover-meta-item {
+      background: rgba(255,255,255,.15);
+      border-radius: 10px;
+      padding: 10px 16px;
+    }
+    .cover-meta-item .label { font-size: 10px; opacity: .7; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+    .cover-meta-item .value { font-size: 16px; font-weight: 800; }
+
+    /* ── Layout ─────────────────────────────── */
+    .container { max-width: 900px; margin: 0 auto; padding: 48px 40px; }
+
+    /* ── Sections ─────────────────────────────── */
+    .toc { background: var(--slate-50); border: 1px solid var(--slate-300); border-radius: 16px; padding: 24px 28px; margin-bottom: 48px; }
+    .toc h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-500); margin-bottom: 14px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { padding: 3px 0; color: var(--slate-700); font-size: 13px; }
+    .toc li a { color: var(--indigo); text-decoration: none; font-weight: 500; }
+    .toc li a:hover { text-decoration: underline; }
+
+    .section { margin-bottom: 52px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--slate-100);
+    }
+    .section-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--indigo), var(--violet));
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -.01em;
+    }
+
+    h3 { font-size: 14px; font-weight: 700; color: var(--slate-900); margin: 20px 0 8px; }
+    h4 { font-size: 12px; font-weight: 600; color: var(--indigo); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .05em; }
+    p { margin-bottom: 8px; color: var(--slate-700); }
+    ul, ol { padding-left: 20px; margin-bottom: 10px; }
+    li { color: var(--slate-700); padding: 2px 0; }
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      background: var(--slate-100);
+      color: var(--indigo);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      overflow-x: auto;
+      margin: 10px 0 14px;
+      line-height: 1.7;
+    }
+    pre .kw { color: #cba6f7; }
+    pre .fn { color: #89b4fa; }
+    pre .str { color: #a6e3a1; }
+    pre .cm { color: #6c7086; font-style: italic; }
+    pre .num { color: #fab387; }
+
+    /* ── Severity chips ─────────────────────────────── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-left: 6px;
+    }
+    .chip-high   { background: #fee2e2; color: #b91c1c; }
+    .chip-medium { background: #fef3c7; color: #92400e; }
+    .chip-low    { background: #dcfce7; color: #166534; }
+
+    /* ── Cards ─────────────────────────────── */
+    .card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-300);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 10px 0;
+    }
+    .card.critical {
+      border-color: #fca5a5;
+      background: #fff5f5;
+    }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--slate-900); margin-bottom: 6px; }
+    .card-meta { font-size: 11px; color: var(--slate-500); margin-bottom: 8px; }
+
+    .file-ref {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 10.5px;
+      color: var(--violet);
+      background: #f5f3ff;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin: 0 2px;
+    }
+
+    /* ── Summary table ─────────────────────────────── */
+    .summary-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12px; }
+    .summary-table thead tr { background: var(--indigo); color: #fff; }
+    .summary-table th { padding: 9px 12px; font-weight: 600; text-align: left; white-space: nowrap; }
+    .summary-table td { padding: 8px 12px; border-bottom: 1px solid var(--slate-100); vertical-align: top; }
+    .summary-table tr:hover td { background: var(--slate-50); }
+    .summary-table .sev-high   { color: var(--red);   font-weight: 700; }
+    .summary-table .sev-medium { color: var(--amber); font-weight: 700; }
+    .summary-table .sev-low    { color: var(--green); font-weight: 700; }
+
+    /* ── Phases ─────────────────────────────── */
+    .phase {
+      border-left: 3px solid var(--indigo);
+      padding: 14px 18px;
+      margin: 12px 0;
+      background: var(--slate-50);
+      border-radius: 0 10px 10px 0;
+    }
+    .phase-title { font-size: 13px; font-weight: 700; color: var(--indigo); margin-bottom: 8px; }
+    .phase ol { margin: 0; padding-left: 18px; }
+    .phase li { margin: 4px 0; color: var(--slate-700); }
+
+    /* ── Print button ─────────────────────────────── */
+    .print-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(15,23,42,.95);
+      backdrop-filter: blur(8px);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+    .print-bar span { color: rgba(255,255,255,.7); font-size: 13px; }
+    .btn-print {
+      background: linear-gradient(135deg, var(--indigo), var(--violet));
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s;
+    }
+    .btn-print:hover { opacity: .9; }
+
+    /* bottom padding so content isn't hidden behind bar */
+    .container { padding-bottom: 80px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Cover ─────────────────────────────────────────────────────── -->
+<div class="cover">
+  <div class="cover-logo">📊 EasyResumen</div>
+  <h1>Auditoría Técnica<br>y de Producto</h1>
+  <p style="opacity:.8; font-size:14px; max-width:480px;">Análisis integral de arquitectura, performance, UX, seguridad, monetización y oportunidades de crecimiento.</p>
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="label">Fecha</div>
+      <div class="value">Junio 2026</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Secciones</div>
+      <div class="value">10</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Issues detectados</div>
+      <div class="value">32</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Stack</div>
+      <div class="value">React 19 · Vite · Supabase</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Índice ─────────────────────────────────────────────────────── -->
+  <div class="toc">
+    <h2>Índice</h2>
+    <ol>
+      <li><a href="#s1">Arquitectura y calidad de código</a></li>
+      <li><a href="#s2">Performance</a></li>
+      <li><a href="#s3">Gaps de UX y producto</a></li>
+      <li><a href="#s4">Bugs y casos borde</a></li>
+      <li><a href="#s5">Seguridad</a></li>
+      <li><a href="#s6">Experiencia mobile</a></li>
+      <li><a href="#s7">Monetización y crecimiento</a></li>
+      <li><a href="#s8">Oportunidades de simplificación</a></li>
+      <li><a href="#s9">Nuevas funcionalidades propuestas</a></li>
+      <li><a href="#s10">Tabla resumen y plan de acción</a></li>
+    </ol>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 1. ARQUITECTURA -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Arquitectura y calidad de código</div>
+    </div>
+
+    <h3>✅ Fortalezas</h3>
+    <ul>
+      <li>Separación de responsabilidades clara en la mayoría de los componentes</li>
+      <li>Uso correcto de Context API para autenticación (AuthContext)</li>
+      <li>Patrón defensivo con <code>ErrorBoundary</code> en secciones críticas</li>
+      <li>Manejo de cuota de localStorage con degradación graceful</li>
+    </ul>
+
+    <h3>⚠️ Problemas críticos</h3>
+
+    <div class="card critical">
+      <div class="card-title">A. App.jsx monolítico (1.031 líneas) <span class="chip chip-high">HIGH</span></div>
+      <div class="card-meta"><span class="file-ref">src/App.jsx · líneas 88–550</span></div>
+      <p>Un solo componente maneja: transacciones + sincronización cloud, cola de toasts (hasta 4 simultáneos), 8+ modales, progreso de OCR, tracking de PDFs, modo oscuro, presupuestos y categorías personalizadas.</p>
+      <p><strong>Riesgo:</strong> Imposible hacer unit testing sin mockear 15+ hooks. Cualquier bug en estado puede afectar funciones no relacionadas.</p>
+      <p><strong>Refactor sugerido:</strong> Extraer en hooks personalizados:</p>
+      <ul>
+        <li><code>useTransactionManager()</code> → estado + sincronización cloud</li>
+        <li><code>useToastQueue()</code> → cola de notificaciones</li>
+        <li><code>useModalStack()</code> → unificar 8 estados de modal en uno solo</li>
+        <li><code>usePdfImport()</code> → manejo de archivos + progreso OCR</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">B. Acoplamiento en pdfParser.js <span class="chip chip-medium">MEDIUM</span></div>
+      <div class="card-meta"><span class="file-ref">src/utils/pdfParser.js · líneas 474–679</span></div>
+      <p><code>parseRows()</code> y <code>parseColumnar()</code> tienen +150 líneas de lógica casi idéntica: extracción de tarjeta, parseo de fechas, detección de cuotas, sanitización de descripciones.</p>
+      <p><strong>Fix:</strong> Extraer <code>extractTransaction(row, refYear, currentCard)</code> → retorna <code>&#123; date, desc, amount, installment, fx &#125;</code></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Función fmt() duplicada en 6 archivos <span class="chip chip-medium">MEDIUM</span></div>
+      <p>La misma función de formato de moneda (<code>Intl.NumberFormat es-AR ARS</code>) está copiada en StatsCards, BudgetPanel, InsightsPanel, InstallmentsPanel, LoansPanel y reportGenerator.js.</p>
+      <p><strong>Fix:</strong> Crear <span class="file-ref">src/utils/format.js</span> con <code>export const ARS = (n) =&gt; ...</code></p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 2. PERFORMANCE -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s2">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Performance</div>
+    </div>
+
+    <div class="card critical">
+      <div class="card-title">A. Re-renders innecesarios <span class="chip chip-high">HIGH</span></div>
+      <div class="card-meta"><span class="file-ref">src/App.jsx · líneas 885, 932</span></div>
+      <p>StatsCards y TransactionList re-renderizan con cualquier cambio de estado en App.jsx (incluso <code>darkMode</code> o apertura de modales), porque no están memoizados.</p>
+      <p><code>filteredForReport</code> actualiza en cada cambio de filtro en TransactionList → dispara re-render en App → re-renderiza BudgetPanel, InstallmentsPanel, etc.</p>
+      <p><strong>Fix:</strong> Envolver StatsCards y TransactionList con <code>React.memo()</code>. Pasar solo los datos que cada componente necesita.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">B. detectUnnecessary() es O(n×m) en cada render <span class="chip chip-high">HIGH</span></div>
+      <div class="card-meta"><span class="file-ref">src/utils/categorizer.js · líneas 421–561</span></div>
+      <p>La función normaliza la descripción de cada transacción para cada comercio único. Con 5.000 transacciones puede generar 500.000 llamadas a <code>normalize()</code> por re-render.</p>
+      <p><strong>Fix:</strong> Cachear las descripciones normalizadas en el objeto de transacción al momento del parseo, o memoizar el mapa de normalización:</p>
+      <pre><span class="cm">// en App.jsx</span>
+<span class="kw">const</span> normCache = <span class="fn">useMemo</span>(
+  () => <span class="kw">new</span> Map(transactions.<span class="fn">map</span>(t => [t.id, <span class="fn">normalize</span>(t.description)])),
+  [transactions]
+)</pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Worker OCR sin manejo de crash <span class="chip chip-medium">MEDIUM</span></div>
+      <div class="card-meta"><span class="file-ref">src/utils/pdfParser.js · líneas 771–826</span></div>
+      <p>El worker OCR es un singleton global. Si crashea (memoria insuficiente en PDF grande), todos los uploads pendientes fallan silenciosamente sin posibilidad de retry.</p>
+      <p><strong>Fix:</strong> Detectar crash del worker y reiniciarlo; agregar lógica de retry con backoff.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">D. Bundle innecesariamente grande en primer load <span class="chip chip-low">LOW</span></div>
+      <p>pdfjs-dist y tesseract.js (5MB WASM) se cargan aunque el usuario nunca suba un PDF escaneado.</p>
+      <p><strong>Fix:</strong> Dynamic import — cargar el módulo OCR solo cuando se detecta un PDF escaneado.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 3. UX / PRODUCTO -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s3">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Gaps de UX y producto</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">A. Cuotas: no hay estado para pagadas anticipadamente <span class="chip chip-medium">MEDIUM</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/InstallmentsPanel.jsx · líneas 48–65</span></div>
+      <p>Las cuotas solo tienen estado "activa". Si el usuario cancela una compra en cuotas, refinancia o paga anticipado, la proyección de los próximos meses queda incorrecta.</p>
+      <p><strong>Fix:</strong> Agregar campo <code>status: 'active' | 'paused' | 'prepaid'</code> con UI para marcar manualmente.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">B. Presupuestos sin carry-over mensual <span class="chip chip-medium">MEDIUM</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/BudgetPanel.jsx</span></div>
+      <p>Si el usuario configura $50.000 para alimentación y gasta $30.000, los $20.000 no pasan al mes siguiente. Los presupuestos son planos y no reflejan el comportamiento real del gasto.</p>
+      <p><strong>Fix:</strong> Agregar opción <code>rollover: true/false</code> por categoría. Calcular <code>adjustedLimit = limit + underspend_prev_month</code>.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Informe PDF sin proyección de cuotas futuras <span class="chip chip-low">LOW</span></div>
+      <p>InstallmentsPanel proyecta los próximos 3 meses pero esa información no aparece en el informe PDF exportado. El informe está incompleto para usuarios con muchas cuotas.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">D. Undo sin contador regresivo <span class="chip chip-low">LOW</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/TransactionList.jsx · línea 349</span></div>
+      <p>El botón "Deshacer" desaparece silenciosamente a los 5 segundos. El usuario no sabe que pierde esa oportunidad.</p>
+      <p><strong>Fix:</strong> Mostrar "Deshacer (3s)" y cambiar color del botón a medida que se acerca el vencimiento.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">E. Sin flujo para fusionar transacciones duplicadas <span class="chip chip-medium">MEDIUM</span></div>
+      <p>La deduplicación al subir PDFs usa match exacto de <code>fecha|monto|descripción|origen</code>. Variaciones mínimas en la descripción ("NETFLIX" vs "NETFLIX.COM") resultan en duplicados que el usuario no puede resolver fácilmente.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 4. BUGS Y CASOS BORDE -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s4">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">Bugs y casos borde</div>
+    </div>
+
+    <div class="card critical">
+      <div class="card-title">A. Merge cloud/local falla con descripciones alteradas <span class="chip chip-high">HIGH</span></div>
+      <div class="card-meta"><span class="file-ref">src/App.jsx · líneas 176–230</span></div>
+      <p>La clave de merge es <code>fecha|monto|descripción|origen</code>. Si OCR normaliza "MCDONALD" como "MCDONALDS" en un segundo parse, o si el usuario edita la descripción, la misma transacción se duplica en el siguiente sync.</p>
+      <p><strong>Fix crítico:</strong> Usar el campo <code>id</code> (UUID) como clave de merge — ya se genera con <code>randomUUID()</code> al parsear. Requiere asegurar que los IDs persisten en el round-trip localStorage ↔ Supabase.</p>
+    </div>
+
+    <div class="card critical">
+      <div class="card-title">B. Cuotas agrupadas por descripción colapsan compras iguales <span class="chip chip-high">HIGH</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/InstallmentsPanel.jsx · líneas 20–45</span><span class="file-ref">src/utils/exportXLSX.js · líneas 111–137</span></div>
+      <p>Si el usuario compró el mismo artículo dos veces en el mismo comercio con cuotas idénticas (ej: dos portátiles $300.000 en 12 cuotas), ambas se colapsan en una sola entrada mostrando el doble del monto.</p>
+      <p><strong>Fix:</strong> Agrupar por <code>id</code> + descripción en lugar de solo descripción.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Race condition: cloud save después de logout <span class="chip chip-medium">MEDIUM</span></div>
+      <div class="card-meta"><span class="file-ref">src/App.jsx · líneas 233–254</span></div>
+      <p>El debounce de 2s puede dispararse después de que el usuario cierre sesión. El timer sigue activo con el <code>user.id</code> del estado anterior.</p>
+      <p><strong>Fix:</strong> Cancelar el timer pendiente cuando <code>user</code> cambia a <code>null</code>.</p>
+      <pre><span class="fn">useEffect</span>(() => {
+  <span class="kw">return</span> () => { <span class="kw">if</span> (debounceTimer.current) <span class="fn">clearTimeout</span>(debounceTimer.current) }
+}, [user])</pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title">D. OCR progress se queda colgado si el componente se desmonta <span class="chip chip-low">LOW</span></div>
+      <p>Si el usuario navega mientras un PDF se procesa con OCR, el worker sigue corriendo pero el componente ya no puede actualizar el progreso. No hay cleanup al desmontar.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 5. SEGURIDAD -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s5">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Seguridad</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ CSV/Excel injection correctamente protegido</div>
+      <div class="card-meta"><span class="file-ref">src/utils/exportXLSX.js · líneas 13–16</span></div>
+      <p>La función <code>sanitizeCell()</code> prefija con <code>'</code> cualquier celda que empiece con <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code>. Está aplicada en todos los campos. <strong>Bien implementado.</strong></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">A. Sin sanitización HTML en notas de transacción <span class="chip chip-low">LOW</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/TransactionList.jsx · líneas 103–116</span></div>
+      <p>Las notas se muestran como texto plano hoy — sin riesgo inmediato. Pero si en el futuro se decide renderizarlas como HTML (markdown, links), habría riesgo XSS. Sanitizar preventivamente al guardar.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">B. Caracteres de control en texto OCR no sanitizados <span class="chip chip-low">LOW</span></div>
+      <div class="card-meta"><span class="file-ref">src/utils/pdfParser.js · línea 832</span></div>
+      <p>El texto extraído por OCR puede contener caracteres de control (<code>\x00</code>–<code>\x1f</code>) que podrían romper el render o exportaciones.</p>
+      <p><strong>Fix:</strong> <code>line.replace(/[\x00-\x1f]/g, ' ').trim()</code> antes de procesar.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Electron: URL de apertura externa sin whitelist <span class="chip chip-low">LOW</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/LicenseGate.jsx · línea 109</span></div>
+      <p><code>window.electronAPI.openExternal(url)</code> sin validar el dominio destino. Riesgo bajo porque la URL está hardcodeada, pero si se parametriza en el futuro es un vector.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 6. MOBILE -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s6">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div class="section-title">Experiencia mobile</div>
+    </div>
+
+    <div class="card critical">
+      <div class="card-title">A. Touch targets demasiado pequeños <span class="chip chip-high">HIGH</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/TransactionList.jsx · línea 641</span></div>
+      <p>El botón eliminar individual es <code>w-8 h-8</code> (32px). El estándar de accesibilidad WCAG es 44px mínimo. En mobile con dedos normales el tap falla con frecuencia.</p>
+      <p><strong>Fix inmediato:</strong> Cambiar a <code>w-10 h-10 -m-1</code> en todos los botones de icono de la lista.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">B. Modales no cierran con swipe hacia abajo <span class="chip chip-medium">MEDIUM</span></div>
+      <p>En iOS y Android el gesto esperado para cerrar un modal es swipe down. Actualmente solo funciona click en el backdrop o botón X. Causa fricción notable en uso cotidiano.</p>
+      <p><strong>Fix:</strong> Agregar handler de gesto con <code>useGesture</code> o <code>Framer Motion</code> drag constraints.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Sin indicador de modo offline <span class="chip chip-low">LOW</span></div>
+      <p>Si el usuario está sin conexión, el cloud sync falla silenciosamente (solo <code>console.warn</code>). Los datos están seguros en localStorage pero el usuario no lo sabe — puede generar desconfianza.</p>
+      <p><strong>Fix:</strong> Mostrar badge "Sin conexión · datos guardados localmente" cuando la sync falla reiteradamente.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">D. Filtros de fecha se superponen en pantallas muy pequeñas <span class="chip chip-low">LOW</span></div>
+      <div class="card-meta"><span class="file-ref">src/components/TransactionList.jsx · líneas 460–466</span></div>
+      <p>Los dos date pickers están en la misma fila. En pantallas &lt;320px se comprimen y son inutilizables.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 7. MONETIZACIÓN -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s7">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div class="section-title">Monetización y crecimiento</div>
+    </div>
+
+    <div class="card critical">
+      <div class="card-title">A. Trial demasiado generoso — fuga de revenue <span class="chip chip-high">HIGH</span></div>
+      <p>El trial de 30 días no tiene tope de PDFs (se eliminó intencionalmente). Un usuario puede subir 100 PDFs durante el trial, extraer todo el valor de la app, y no convertir.</p>
+      <p><strong>Fix sugerido:</strong> Re-introducir un tope suave que se vaya liberando: 3 PDFs en la primera semana, +2 por semana. Así el usuario ve valor progresivo y siente urgencia de convertir.</p>
+    </div>
+
+    <div class="card critical">
+      <div class="card-title">B. Sin funnel de conversión dentro de la app <span class="chip chip-high">HIGH</span></div>
+      <p>Los usuarios de trial ven el banner solo cuando los días son pocos. No hay prompts contextuales al usar features premium.</p>
+      <p><strong>Momentos de conversión no aprovechados:</strong></p>
+      <ul>
+        <li>Después del 3er informe PDF generado</li>
+        <li>Al llegar a 50+ transacciones cargadas</li>
+        <li>Al usar el panel de Préstamos por primera vez</li>
+        <li>Al exportar a Excel por segunda vez</li>
+      </ul>
+      <p><strong>Fix:</strong> Mostrar modal de upgrade contextual en esos momentos con el mensaje apropiado.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Diferenciación Pro vs. Free no está comunicada <span class="chip chip-medium">MEDIUM</span></div>
+      <p>No hay tabla de comparación de planes. El usuario que entra al sitio no entiende qué gana pagando. Todo parece gratuito hasta que expira.</p>
+      <p><strong>Fix:</strong> Agregar sección "¿Qué incluye Pro?" en la pantalla de expiración y en el drawer mobile.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">D. Sin mecanismo de referidos <span class="chip chip-low">LOW</span></div>
+      <p>El botón "Compartir" genera un texto genérico sin tracking. No hay incentivo para que el usuario actual refiera nuevos usuarios.</p>
+      <p><strong>Fix:</strong> Generar código de referido por usuario. "Compartí XXXX — los dos ganan 7 días gratis."</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">E. Features premium no implementados aún <span class="chip chip-medium">MEDIUM</span></div>
+      <p>Oportunidades claras para el tier Pro que aún no existen:</p>
+      <ul>
+        <li>Informe PDF mensual automático por email</li>
+        <li>Link de reporte compartible (solo lectura) para contador/familia</li>
+        <li>Alertas por exceso de presupuesto via push/email</li>
+        <li>Exportación bulk + programada</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 8. SIMPLIFICACIONES -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s8">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div class="section-title">Oportunidades de simplificación</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">A. Consolidar 8 estados de modal en uno solo</div>
+      <div class="card-meta"><span class="file-ref">src/App.jsx · líneas 114–120</span></div>
+      <pre><span class="cm">// Antes (5 booleans independientes):</span>
+<span class="kw">const</span> [showAddModal, setShowAddModal] = <span class="fn">useState</span>(<span class="kw">false</span>)
+<span class="kw">const</span> [showBankGuide, setShowBankGuide] = <span class="fn">useState</span>(<span class="kw">false</span>)
+...
+
+<span class="cm">// Después (1 estado con string):</span>
+<span class="kw">const</span> [openModal, setOpenModal] = <span class="fn">useState</span>(<span class="kw">null</span>)
+<span class="cm">// null | 'add' | 'bank' | 'cat' | 'card' | 'report'</span></pre>
+      <p>Ahorra 10 líneas y facilita navegación entre modales sin conflictos de estado.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">B. Extraer lógica compartida de parseo en pdfParser.js</div>
+      <div class="card-meta"><span class="file-ref">src/utils/pdfParser.js · líneas 474–679</span></div>
+      <p>Los dos parsers (<code>parseRows</code> y <code>parseColumnar</code>) comparten ~150 líneas de lógica. Extrayendo <code>extractTransaction()</code> se eliminarían ~80 líneas de código duplicado y se facilitaría agregar nuevos bancos.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C. Extraer integración Electron a hook dedicado</div>
+      <div class="card-meta"><span class="file-ref">src/App.jsx · líneas 124–168, 302–308, 581–587</span></div>
+      <p>La lógica Electron (<code>window.electronAPI</code>) está dispersa en 6+ lugares de App.jsx. Extraer <code>useElectronLicense()</code> mejoraría legibilidad y facilitaría el mantenimiento del build de escritorio.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">D. Eliminar flag _ocrWorkerReady sin uso</div>
+      <div class="card-meta"><span class="file-ref">src/utils/pdfParser.js · líneas 772–774</span></div>
+      <p>La variable <code>_ocrWorkerReady</code> se setea pero nunca se lee. Se puede eliminar y usar <code>_ocrWorker !== null</code> directamente.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 9. NUEVAS FUNCIONALIDADES -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s9">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <div class="section-title">Nuevas funcionalidades propuestas</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔔 A. Alertas de gasto en tiempo real <span class="chip chip-high">ALTO VALOR · 2h</span></div>
+      <p>Al agregar una transacción, detectar si el gasto del mes supera el 80% del presupuesto de esa categoría y mostrar un warning inmediato.</p>
+      <p><em>Implementación:</em> Extender <code>detectUnnecessary()</code> o crear <code>detectBudgetViolations()</code>. Candidato ideal para feature Pro.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏷️ B. Sistema de alias de comercios <span class="chip chip-medium">MEDIO VALOR · 4h</span></div>
+      <p>"MCDONALD", "MCDONALDS", "MCDONALD'S" aparecen como 3 comercios distintos en el informe Top 10. Permitir que el usuario defina aliases que se aplican al agrupar.</p>
+      <p><em>Implementación:</em> Mapa <code>&#123; "MCDONALD": "McDonald's" &#125;</code> similar al sistema de alias de tarjetas ya implementado.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 C. Comparación año a año <span class="chip chip-medium">MEDIO VALOR · 6h</span></div>
+      <p>El gráfico de barras mensuales es muy popular. Agregar comparación contra el mismo mes del año anterior cuando hay datos suficientes.</p>
+      <p><em>Implementación:</em> Refactorizar la agregación mensual en MonthComparison para soportar múltiples años.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔮 D. Proyección de gasto mensual <span class="chip chip-high">ALTO VALOR · 8h</span></div>
+      <p>Basándose en el promedio de los últimos 3 meses por categoría, predecir el gasto del mes actual con barra de progreso y nivel de confianza.</p>
+      <p><em>Implementación:</em> Nueva función <code>forecastMonthlySpend(transactions, month)</code> en categorizer.js. Mostrar en BudgetPanel como "Proyección: $45.000 ± $8.000".</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔗 E. Link de reporte compartible (solo lectura) <span class="chip chip-medium">ALTO VALOR MONETIZACIÓN · 10h</span></div>
+      <p>Generar un link único que muestra el reporte de gastos del mes sin datos sensibles de autenticación. Útil para compartir con contador o pareja.</p>
+      <p><em>Implementación:</em> Tabla Supabase <code>report_shares</code> + endpoint <code>/api/report/:shareId</code> + UI en Settings. Feature Pro.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📧 F. Informe mensual automático por email <span class="chip chip-low">MEDIO VALOR · 6h backend</span></div>
+      <p>Enviar automáticamente el informe PDF del mes cerrado el primer día de cada mes. Sin que el usuario tenga que recordar generarlo.</p>
+      <p><em>Implementación:</em> Supabase Edge Function con cron job + Resend.com para envío. Feature Pro add-on.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 G. Templates de transacciones recurrentes <span class="chip chip-low">VALOR RETENCIÓN · 3h</span></div>
+      <p>Después de guardar una transacción manual, ofrecer "Guardar como plantilla". El mes siguiente se puede aplicar la plantilla con un toque.</p>
+      <p><em>Implementación:</em> Array <code>templates</code> en localStorage + dropdown en AddTransactionModal.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 10. TABLA RESUMEN -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section page-break" id="s10">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <div class="section-title">Tabla resumen y plan de acción</div>
+    </div>
+
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th>Issue</th>
+          <th>Sev.</th>
+          <th>Esfuerzo</th>
+          <th>Impacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Arquitectura</td><td>App.jsx monolítico (1031 líneas)</td><td class="sev-high">HIGH</td><td>8h</td><td>Mantenibilidad</td></tr>
+        <tr><td>Arquitectura</td><td>fmt() duplicado en 6 archivos</td><td class="sev-medium">MEDIUM</td><td>1h</td><td>Deuda técnica</td></tr>
+        <tr><td>Arquitectura</td><td>parseRows/parseColumnar duplicados</td><td class="sev-medium">MEDIUM</td><td>4h</td><td>DRY</td></tr>
+        <tr><td>Performance</td><td>Re-renders en StatsCards/TransactionList</td><td class="sev-high">HIGH</td><td>4h</td><td>Lentitud con 5K+ txs</td></tr>
+        <tr><td>Performance</td><td>detectUnnecessary() O(n×m)</td><td class="sev-high">HIGH</td><td>3h</td><td>Freeze en render</td></tr>
+        <tr><td>Performance</td><td>Bundle OCR cargado siempre</td><td class="sev-low">LOW</td><td>2h</td><td>Primer load lento</td></tr>
+        <tr><td>UX</td><td>Cuotas sin estado prepaid/paused</td><td class="sev-medium">MEDIUM</td><td>8h</td><td>Feature incompleto</td></tr>
+        <tr><td>UX</td><td>Presupuesto sin carry-over</td><td class="sev-medium">MEDIUM</td><td>6h</td><td>Expectativa no cumplida</td></tr>
+        <tr><td>UX</td><td>Undo sin countdown</td><td class="sev-low">LOW</td><td>1h</td><td>Confusión</td></tr>
+        <tr><td>Bug</td><td>Merge cloud/local por descripción (no ID)</td><td class="sev-high">HIGH</td><td>3h</td><td>Duplicados silenciosos</td></tr>
+        <tr><td>Bug</td><td>Cuotas colapsadas por descripción</td><td class="sev-high">HIGH</td><td>2h</td><td>Datos incorrectos</td></tr>
+        <tr><td>Bug</td><td>Race: cloud save post-logout</td><td class="sev-medium">MEDIUM</td><td>1h</td><td>Guardado con user null</td></tr>
+        <tr><td>Seguridad</td><td>Sin sanitización HTML en notas</td><td class="sev-low">LOW</td><td>1h</td><td>Preventivo</td></tr>
+        <tr><td>Mobile</td><td>Touch targets 32px (mín. 44px)</td><td class="sev-high">HIGH</td><td>2h</td><td>Accesibilidad</td></tr>
+        <tr><td>Mobile</td><td>Sin swipe-to-close en modales</td><td class="sev-medium">MEDIUM</td><td>3h</td><td>Expectativa iOS/Android</td></tr>
+        <tr><td>Mobile</td><td>Sin indicador offline</td><td class="sev-low">LOW</td><td>2h</td><td>Confianza del usuario</td></tr>
+        <tr><td>Monetización</td><td>Trial sin tope de PDFs</td><td class="sev-high">HIGH</td><td>2h</td><td>Fuga de revenue</td></tr>
+        <tr><td>Monetización</td><td>Sin funnel de upgrade contextual</td><td class="sev-high">HIGH</td><td>6h</td><td>Conversión baja</td></tr>
+        <tr><td>Monetización</td><td>Diferenciación Pro/Free no comunicada</td><td class="sev-medium">MEDIUM</td><td>4h</td><td>Mensaje confuso</td></tr>
+        <tr><td>Monetización</td><td>Sin referidos</td><td class="sev-low">LOW</td><td>4h</td><td>Crecimiento orgánico</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:32px">Plan de acción por fases</h3>
+
+    <div class="phase">
+      <div class="phase-title">⚡ Fase 1 — Quick wins (Semana 1, ~9h total)</div>
+      <ol>
+        <li>Extraer <code>utils/format.js</code> con fmt() compartido — <strong>1h</strong></li>
+        <li>Consolidar estados de modal en App.jsx — <strong>2h</strong></li>
+        <li>Fix touch targets a w-10 h-10 en mobile — <strong>1h</strong></li>
+        <li>Agregar countdown al botón Deshacer — <strong>1h</strong></li>
+        <li>Fix race condition cloud save post-logout — <strong>1h</strong></li>
+        <li>Fix bug cuotas colapsadas por descripción — <strong>2h</strong></li>
+        <li>Sanitizar caracteres de control en OCR output — <strong>1h</strong></li>
+      </ol>
+    </div>
+
+    <div class="phase" style="border-color: var(--violet)">
+      <div class="phase-title" style="color: var(--violet)">🔧 Fase 2 — Performance y arquitectura (Semanas 2–3, ~22h)</div>
+      <ol>
+        <li>Memoizar StatsCards y TransactionList con React.memo — <strong>4h</strong></li>
+        <li>Cachear descripciones normalizadas en el parseo — <strong>3h</strong></li>
+        <li>Refactorizar merge cloud/local para usar transaction.id — <strong>3h</strong></li>
+        <li>Extraer parseRows/parseColumnar → extractTransaction() — <strong>4h</strong></li>
+        <li>Dynamic import para módulo OCR — <strong>2h</strong></li>
+        <li>Extraer useElectronLicense() hook — <strong>3h</strong></li>
+        <li>Manejo de crash en OCR worker + retry — <strong>3h</strong></li>
+      </ol>
+    </div>
+
+    <div class="phase" style="border-color: var(--green)">
+      <div class="phase-title" style="color: var(--green)">💰 Fase 3 — Monetización (Semanas 3–4, ~18h)</div>
+      <ol>
+        <li>Tope progresivo de PDFs en trial (3+2/semana) — <strong>2h</strong></li>
+        <li>Prompts de upgrade contextuales (3 informe, 50 txs, Préstamos) — <strong>6h</strong></li>
+        <li>Pantalla de comparación Pro vs. Free — <strong>4h</strong></li>
+        <li>Sistema básico de referidos con código único — <strong>4h</strong></li>
+        <li>Indicador offline en header — <strong>2h</strong></li>
+      </ol>
+    </div>
+
+    <div class="phase" style="border-color: var(--amber)">
+      <div class="phase-title" style="color: var(--amber)">🚀 Fase 4 — Nuevas features (Mes 2, ~38h)</div>
+      <ol>
+        <li>Alertas de presupuesto en tiempo real — <strong>2h</strong></li>
+        <li>Sistema de alias de comercios — <strong>4h</strong></li>
+        <li>Swipe-to-close en modales mobile — <strong>3h</strong></li>
+        <li>Templates de transacciones recurrentes — <strong>3h</strong></li>
+        <li>Comparación año a año en gráfico — <strong>6h</strong></li>
+        <li>Proyección de gasto mensual — <strong>8h</strong></li>
+        <li>Link de reporte compartible (feature Pro) — <strong>10h</strong></li>
+        <li>Informe mensual automático por email (feature Pro) — <strong>6h backend</strong></li>
+      </ol>
+    </div>
+
+    <div style="margin-top: 40px; padding: 20px 24px; background: linear-gradient(135deg, #eef2ff, #f5f3ff); border-radius: 14px; border: 1px solid #c7d2fe;">
+      <h3 style="color: var(--indigo); margin-bottom: 10px; margin-top: 0;">Resumen ejecutivo</h3>
+      <p>La app está bien construida para su etapa. El parseo de PDFs es el componente más sofisticado y funciona correctamente para los principales bancos argentinos. Los mayores riesgos actuales son <strong>dos bugs de datos silenciosos</strong> (merge por descripción, cuotas colapsadas) y <strong>una fuga de revenue clara</strong> (trial sin tope + sin funnel de conversión).</p>
+      <p style="margin-bottom:0">La deuda técnica (App.jsx monolítico, fmt() duplicado) no bloquea el producto hoy pero ralentizará el desarrollo en 2–3 meses si no se aborda. Las mayores oportunidades de crecimiento están en <strong>monetización</strong> (Fase 3) y en <strong>features Pro</strong> diferenciados (Fase 4).</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Print bar ─────────────────────────────────────────────────────── -->
+<div class="print-bar no-print">
+  <span>Auditoría EasyResumen · Junio 2026 · 32 issues · 10 secciones</span>
+  <button class="btn-print" onclick="window.print()">⬇ Descargar PDF</button>
+</div>
+
+</body>
+</html>

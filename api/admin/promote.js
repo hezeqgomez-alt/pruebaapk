@@ -5,23 +5,41 @@
  * Requiere env var ADMIN_SECRET para autenticar la llamada.
  */
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
 
 export default async function handler(req, res) {
-  // CORS para llamadas desde herramientas externas
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  // Admin endpoint — server-to-server only, no CORS needed
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { email, secret, plan = 'paid' } = req.body || {}
+  const adminSecret = process.env.ADMIN_SECRET
+  if (!adminSecret) return res.status(500).json({ error: 'ADMIN_SECRET not configured' })
 
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' })
+  // Secret via Authorization header (prevents logging in request body)
+  const authHeader = req.headers.authorization || ''
+  const headerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  // Also support legacy body secret for backward compat (will be removed)
+  const { email, secret: bodySecret, plan = 'paid' } = req.body || {}
+  const secret = headerSecret || bodySecret
+
+  if (!['paid', 'expired', 'trial'].includes(plan)) {
+    return res.status(400).json({ error: 'Invalid plan value' })
   }
 
+  if (!secret) return res.status(401).json({ error: 'Unauthorized' })
+  const secretsMatch = (() => {
+    try {
+      const a = Buffer.from(secret)
+      const b = Buffer.from(adminSecret)
+      return a.length === b.length && timingSafeEqual(a, b)
+    } catch { return false }
+  })()
+  if (!secretsMatch) return res.status(401).json({ error: 'Unauthorized' })
+
   if (!email) return res.status(400).json({ error: 'Missing email' })
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email format' })
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -29,22 +47,28 @@ export default async function handler(req, res) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Buscar usuario por email
-  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-  if (listError) return res.status(500).json({ error: listError.message })
+  // Buscar usuario por email (paginado)
+  let users = [], page = 1
+  while (true) {
+    const { data, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+    if (listError) return res.status(500).json({ error: listError.message })
+    users.push(...data.users)
+    if (data.users.length < 1000) break
+    page++
+  }
 
   const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
   if (!user) return res.status(404).json({ error: `Usuario ${email} no encontrado` })
 
-  // Actualizar metadata
+  // Plan en app_metadata: solo escribible con service_role (el cliente no puede auto-promoverse)
   const { data, error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
-    user_metadata: { ...user.user_metadata, plan },
+    app_metadata: { ...user.app_metadata, plan },
   })
 
   if (updateError) return res.status(500).json({ error: updateError.message })
 
   return res.status(200).json({
     ok: true,
-    user: { id: data.user.id, email: data.user.email, plan: data.user.user_metadata?.plan },
+    user: { id: data.user.id, email: data.user.email, plan: data.user.app_metadata?.plan },
   })
 }

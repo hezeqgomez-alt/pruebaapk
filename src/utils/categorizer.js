@@ -1,4 +1,5 @@
 export const CATEGORIES = {
+  intereses:     { label: 'Intereses Financieros', color: '#f43f5e', icon: '💸' },
   mercadopago:   { label: 'Pagos con MercadoPago', color: '#00b1ea', icon: '💙' },
   alimentacion:    { label: 'Alimentación',         color: '#f59e0b', icon: '🍔' },
   supermercado:    { label: 'Supermercado',          color: '#10b981', icon: '🛒' },
@@ -25,6 +26,19 @@ export const CATEGORIES = {
 // Order matters: first match wins. More specific patterns come before broad ones.
 
 const RULES = [
+  // ── Intereses Financieros ─────────────────────────────────────────────────────
+  { cat: 'intereses', kw: [
+    'interes financiero', 'intereses financieros',
+    'interes por financiacion', 'intereses por financiacion',
+    'interes financiacion', 'intereses financiacion',
+    'interes de financiacion', 'intereses de financiacion',
+    'interes s/ saldo', 'intereses s/ saldo', 'interes s/saldo',
+    'cargo financiero', 'financiacion automatica', 'financiacion automat',
+    'interes mora', 'intereses mora', 'recargo financiero',
+    'costo financiero', 'interes punitorio', 'intereses punitorios',
+    'interes compra', 'intereses compra',
+  ]},
+
   // ── MercadoPago / MercadoLibre ───────────────────────────────────────────────
   { cat: 'mercadopago', kw: [
     'mercadopago', 'mercado pago', 'mercadolibre', 'mercado libre',
@@ -34,7 +48,8 @@ const RULES = [
   // ── Donaciones ───────────────────────────────────────────────────────────────
   { cat: 'donaciones', kw: [
     'garrahan', 'fund garrahan', 'fundgarrahan', 'fundacion', 'fund ',
-    'donacion', 'donativo', 'caritas', 'unicef', 'greenpeace', 'techo ',
+    'donacion', 'donativo', 'caritas', 'unicef', 'greenpeace',
+    'fundacion techo', 'techo argentina',
     'red solidaria', 'banco de alimentos', 'medicos sin fronteras',
     'aldeas infantiles', 'oxfam', 'acnur',
   ]},
@@ -48,14 +63,18 @@ const RULES = [
 
   // ── Supermercados ────────────────────────────────────────────────────────────
   { cat: 'supermercado', kw: [
-    'carrefour', 'disco ', 'jumbo', 'walmart', 'coto ', 'dia ', 'vea ',
+    'carrefour', ' disco ', 'jumbo', 'walmart', ' coto ', ' dia ', ' vea ',
     'la anonima', 'chango mas', 'changomas', 'makro', 'atomo',
+    'hiper libertad', 'la gallega', ' toledo ', 'cencosud',
     'hipermayor', 'yaguar', 'diarco', 'maxiconsumo', 'el super', 'mi super',
     'tattersall', 'vital', 'supermercado', 'supermarket',
     'almacen', 'despensa', 'autoservicio', 'minimarket',
     'verduleria', 'fruteria', 'carniceria', 'pescaderia',
     'fiambreria', 'lacteos', 'panaderia', 'rotiseria',
     'cooperativa de consumo',
+    // Cadenas argentinas identificadas por nombre abreviado en MERPAGO
+    'open25',   // Open 25 Hs — drugstore/kiosco 24hs, +300 sucursales nacional
+    'supermarc', // Supermercados Marc — regional CABA/GBA
   ]},
 
   // ── Entretenimiento (venues conocidos antes de coincidencias amplias) ─────────
@@ -77,6 +96,7 @@ const RULES = [
     'primevideo', 'prime video', 'amazon prime',
     'flow ', 'directv', 'telecentro', 'cablevision', 'fibertel',
     'spotify', 'deezer', 'tidal', 'apple music',
+    'crunchyroll', 'mubi ', 'hbo max', 'youtube',
     // Apple: antes de que 'apple ' genérico quede sin categoría
     'apple.com', 'apple com', 'apple tv', 'apple one', 'apple arcade',
     'apple storage', 'icloud',
@@ -101,18 +121,21 @@ const RULES = [
     'restaurant', 'restoran', 'barra ', 'asador', 'parrilla', 'tenedor libre',
     'bodegon', 'cantina', 'trattoria', 'sushi', 'wok ', 'china ',
     'buffet', 'comedor', 'gastronomia', 'grill ', 'burger ',
-    'hamburgues', 'pizzeria', 'pizza ', 'empanada', 'sandwicheria',
+    'hamburgu', 'pizzeria', 'pizza ', ' pizz ', 'empanada', 'sandwicheria',
     'arabe ', 'thai ', 'mexicano', 'vegetarian',
     'tosta', 'selectos', 'parrillada', 'churrasco',
+    'big pizza', 'big pizz',   // Big Pizza — cadena nacional argentina
   ]},
 
   // ── Cafeterías ────────────────────────────────────────────────────────────────
   { cat: 'cafeterias', kw: [
-    'starbucks', 'cafe martinez', 'cafe havanna', 'cafe tortoni', 'havanna',
+    'starbucks', 'sbux',         // Starbucks (sbux = abrev. en resúmenes)
+    'cafe martinez', 'cafe havanna', 'cafe tortoni', 'havanna',
     'freddo', 'grido', 'via resto', 'bonafide', 'tienda de cafe',
-    'cafe ', 'cafeteria', 'bar ', 'confiteria',
+    'cafe ', 'cafeteria', 'caffe', ' bar ', 'confiteria',
     'heladeria', 'gelateria', 'helado', 'factura ', 'medialunas',
     'caramel', 'nero ', 'rapanui', 'laquinta', 'el noble',
+    'caffe truffa', 'truffacafe', // Caffè Truffa — Lavalle 372 CABA
   ]},
 
   // ── Comida rápida / delivery ─────────────────────────────────────────────────
@@ -130,13 +153,18 @@ const RULES = [
   { cat: 'transporte', kw: [
     'uber', 'cabify', 'didi ', 'beat ', 'indriver', 'in driver',
     'taxi', 'remis', 'transfer ', 'shuttle', 'colectivo', 'subte',
-    'sube ', 'tren ', 'metrobus', 'movibus', 'ecobici', 'scooter',
+    ' sube ', ' tren ', 'metrobus', 'movibus', 'ecobici', 'scooter',
     'moto taxi', 'aeropuerto bus', 'omnibus',
     'flecha bus', 'flechabus', 'via bariloche', 'andesmar',
-    'cata ', 'jac ', 'plusmar', 'el rapido', 'flybondi express',
+    ' cata ', ' jac ', 'plusmar', 'el rapido', 'flybondi express',
+    // Peajes
+    'telepase', 'peaje', 'ausol', 'aubasa', 'caminos del rio', 'autopistas del sol',
     // Neumáticos y mecánica
     'neumen', 'neumatico', 'gomeria', 'auxilio mecanico',
     'taller mecanico', 'mecanica automotriz', 'repuesto automotor',
+    // Estacionamiento
+    'seeker',     // Seeker Parking — reserva de cocheras en eventos (MERPAGOSEEKER)
+    'parkimovil', 'estacionamiento', 'cochera', 'parking',
   ]},
 
   // ── Combustible ──────────────────────────────────────────────────────────────
@@ -154,6 +182,7 @@ const RULES = [
     'consultorio', 'medico', 'doctor', 'odontologia', 'dentista',
     'odontologo', 'optica', 'laboratorio', 'bioquimica', 'diagnostico',
     'prepaga', 'obra social', 'emergencias', 'ambulancia',
+    'pami ', 'ioma ', 'vacunatorio', 'farmaplus',
     'fisioterapia', 'kinesiologia', 'psicologia', 'psiquiatria',
     'nutricionista', 'gym', 'gimnasio', 'personal trainer',
     'pilates', 'yoga', 'meditacion',
@@ -162,6 +191,7 @@ const RULES = [
 
   // ── Indumentaria ─────────────────────────────────────────────────────────────
   { cat: 'indumentaria', kw: [
+    'stock center', 'dafiti', 'dexter', 'sportline', 'grimoldi', 'solodeportes',
     'zara', 'h&m', 'pull&bear', 'bershka', 'stradivarius',
     'adidas', 'nike ', 'puma ', 'lacoste', 'levis', 'levi ',
     'tommy', 'gap ', 'forever 21', 'rapsodia', 'legacy ', 'mimo ',
@@ -192,22 +222,38 @@ const RULES = [
     // Muebles / decoración
     'muebles', 'colchon', 'sommier', 'bazar', 'menaje',
     'vajilla', 'manteleria', 'cortinas', 'alfombra',
-    // Limpieza
-    'limpieza', 'ala ', 'ariel ', 'skip ', 'drive ', 'ace ',
+    // Limpieza — marcas cortas con espacio inicial y final para evitar
+    // falsos positivos por substring ("uala " → 'ala ', "space " → 'ace ')
+    'limpieza', ' ala ', ' ariel ', ' skip ', ' drive ', ' ace ',
     'lysoform', 'detergente', 'desodorante ambiental', 'iluminacion',
+    // Electro / hogar argentinos
+    ' rodo ', 'hiper rodo', 'cetrogar', 'naldo', 'ribeiro', 'on city',
+    // Energía provincial
+    'ecogas', 'litoral gas', 'epec ', 'edemsa', 'edea ',
+    // Artículos para bebés / puericultura
+    'panalera', 'pañalera',   // pañalerías (Delta, etc.)
+    'panalonce', 'panal once', // Pañal Once — Once CABA
+    'briccone',               // Briccone — artículos de bebés, La Paternal CABA
+    'puericultura', 'cochecito', 'chupete',
   ]},
 
   // ── Educación ─────────────────────────────────────────────────────────────────
   { cat: 'educacion', kw: [
-    'universidad', 'facultad', 'uba ', 'uca ', 'udesa', 'austral',
-    'palermo', 'belgrano', 'uade', 'utn ', 'unlp', 'unsam',
+    // Universidades: nombres completos — 'austral'/'palermo'/'belgrano' solos son
+    // aerolíneas y barrios, no universidades
+    'universidad', 'facultad', 'uba ', 'uca ', 'udesa',
+    'universidad austral', 'univ austral',
+    'universidad de palermo', 'univ palermo',
+    'universidad de belgrano', 'univ belgrano',
+    'uade', 'utn ', 'unlp', 'unsam',
     'colegio', 'escuela', 'instituto', 'jardin', 'guarderia',
     'academia', 'capacitacion', 'curso ', 'seminario',
     'platzi', 'udemy', 'coursera', 'edx ', 'domestika',
     'coderhouse', 'acamica', 'henry ', 'digitalhouse', 'wolox',
     'egg ', 'scholarships',
-    'libreria', 'librerias', 'el ateneo', 'distal', 'el libro',
+    'libreria', 'librerias', 'el ateneo', 'distal', ' libro ',
     'rayuela', 'crisol', 'yenny',
+    'brisetulibrer', 'brise ',  // Brise Tu Librería — Barracas CABA
   ]},
 
   // ── Viajes y turismo ──────────────────────────────────────────────────────────
@@ -215,9 +261,10 @@ const RULES = [
     'despegar', 'booking', 'airbnb', 'hotels', 'trivago', 'tripadvisor',
     'expedia', 'hotel ', 'apart ', 'hostel', 'motel ', 'cabana',
     'posada', 'alojamiento',
-    'aerolineas', 'aerolineas', 'latam', 'flybondi', 'jetsmart',
-    'aeromexico', 'american airlines', 'copa ', 'gol ', 'lan ', 'vuelo',
+    'aerolineas', 'austral lineas', 'latam', 'flybondi', 'jetsmart',
+    'aeromexico', 'american airlines', ' copa ', ' gol ', ' lan ', 'vuelo',
     'pasaje', 'turismo', 'agencia de viajes',
+    'almundo', 'hoteles', 'assist card', 'assistcard',
     'rent a car', 'avis ', 'hertz ', 'europcar',
     'carlos paz', 'bariloche', 'ushuaia', 'iguazu',
   ]},
@@ -229,7 +276,7 @@ const RULES = [
     'dell ', 'hp ', 'lenovo', 'asus ', 'intel ', 'amd ', 'nvidia',
     'crucial', 'kingston', 'western digital', 'seagate',
     'pc factory', 'compuservice', 'megatone', 'maxihogar',
-    'full ', 'nexo ', 'bangho', 'compumundo',
+    'nexo ', 'bangho', 'compumundo', 'grupo nucleo',
     'notebook', 'monitor', 'teclado', 'mouse ', 'impresora',
     'camara', 'celular', 'smartphone', 'tablet',
     'auricular', 'parlante', 'proyector', 'cable ',
@@ -247,6 +294,7 @@ const RULES = [
     'seguro de vida', 'seguro de tarjeta',
     'retiro atm', 'extraccion cajero',
     'brubank', 'uala ', 'naranja x', 'naranja ', 'prex ', 'lemon ',
+    'modo ', 'cuenta dni', 'western union',
     'cuenta dolar', 'fci ', 'fondo comun', 'cauciones', 'plazo fijo',
     'mobbex', 'todopago', 'todo pago', 'pomelo',
   ]},
@@ -257,12 +305,12 @@ const RULES = [
     'tasa ', 'ingresos brutos', 'iva ', 'sellado', 'abl ', 'patente',
     'automotor', 'bien de uso',
     // Seguros
-    'seguro ', 'seguros', 'cia seg', 'aseguradora',
+    'seguro ', 'seguros', 'cia seg', 'aseguradora', 'segurcoop',
     'allianz', 'zurich', 'mapfre', 'sancor seguros',
     'federacion patronal', 'berkley', 'rio uruguay', 'nacion seguros',
     // Cobro / envíos / pagos
-    'trenes argentinos', 'autopistas', 'aubasa', 'ausa ', 'osm ',
-    'correo argentino', 'andreani', 'oca ', 'fedex ', 'dhl ',
+    'trenes argentinos', 'autopistas', 'ausa ', 'osm ',
+    'correo argentino', 'andreani', ' oca ', 'fedex ', 'dhl ',
     'rapipago', 'pagofacil', 'cobroexpress', 'pago mis cuentas',
   ]},
 ]
@@ -271,7 +319,7 @@ const RULES = [
 
 function normalize(s) {
   return String(s).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -282,7 +330,7 @@ function normalize(s) {
 // padded description (' ' + n + ' ').
 function normalizeKw(s) {
   return String(s).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')
 }
@@ -300,6 +348,7 @@ const GATEWAY_PREFIXES = [
   /^mobbex[*\s]*/i,
   /^todopago[*\s]*/i,
   /^cnp[*\s]+\d+[/\d]*/i,
+  /^pvs[*\s]*/i,
 ]
 
 function extractMerchant(desc) {
@@ -310,25 +359,58 @@ function extractMerchant(desc) {
   return null
 }
 
+// Resolve well-known abbreviations that appear in gateway-stripped merchant
+// names and wouldn't otherwise match any keyword.
+// Keys are lowercase normalized merchant names (or prefixes).
+function resolveAlias(merchant) {
+  const m = merchant.toLowerCase().trim()
+  // Starbucks uses SBUX (stock ticker) as internal abbreviation
+  // e.g. SBUXESPEJO, SBUXRECOLETA, SBUX*PALERMO
+  if (m.startsWith('sbux')) return 'starbucks'
+  // McDonald's uses MCD in some gateways
+  if (m.startsWith('mcd') && m.length <= 8) return 'mcdonalds'
+  // YPF may appear abbreviated
+  if (m === 'ypf' || m.startsWith('ypf ') || m.startsWith('ypf*')) return 'ypf'
+  // Pedidos Ya shorthand
+  if (m.startsWith('pedya') || m.startsWith('pdya')) return 'pedidosya'
+  return merchant
+}
+
+// Pre-normalize keywords once at module load — avoids re-normalizing ~300 kw × n transactions
+const RULES_N = RULES.map(rule => ({ cat: rule.cat, kw: rule.kw.map(normalizeKw) }))
+
+// Bump this whenever categorize() logic changes so cached transactions get re-categorized on next load.
+export const CATEGORIZER_VERSION = 2
+
+// Re-run categorize() on a transaction array, preserving user-edited categories (userCat: true).
+export function recategorizeAll(transactions) {
+  return transactions.map(t => t.userCat ? t : { ...t, category: categorize(t.description) })
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function categorize(description) {
   if (!description) return 'otros'
-  const n = normalize(description)
-  const np = ' ' + n + ' '
 
-  for (const rule of RULES) {
-    if (rule.kw.some(k => np.includes(normalizeKw(k)))) return rule.cat
-  }
-
-  // If it's a gateway transaction, extract the merchant name and retry
+  // ── 1. Gateway merchant extraction — runs FIRST ───────────────────────────
+  // Without this order, the 'merpago' keyword in the mercadopago rule would
+  // fire on every MERPAGO* transaction before we can identify the real
+  // merchant: MERPAGOMOSTAZA → mercadopago (wrong) instead of alimentacion.
   const merchant = extractMerchant(description)
   if (merchant && merchant.length >= 3) {
-    const mn = normalize(merchant)
-    const mnp = ' ' + mn + ' '
-    for (const rule of RULES) {
-      if (rule.kw.some(k => mnp.includes(normalizeKw(k)))) return rule.cat
+    const resolved = resolveAlias(merchant)
+    const mnp = ' ' + normalize(resolved) + ' '
+    for (const rule of RULES_N) {
+      if (rule.kw.some(k => mnp.includes(k))) return rule.cat
     }
+  }
+
+  // ── 2. Full-description rules (fallback) ──────────────────────────────────
+  // Catches 'merpago' → mercadopago when the merchant couldn't be classified,
+  // direct transactions (NETFLIX, SPOTIFY, etc.), and non-gateway descriptions.
+  const np = ' ' + normalize(description) + ' '
+  for (const rule of RULES_N) {
+    if (rule.kw.some(k => np.includes(k))) return rule.cat
   }
 
   return 'otros'
@@ -382,16 +464,26 @@ export function detectUnnecessary(transactions) {
   }
 
   // Merchant concentration: one merchant > 50% of its category total
-  const catTotals = {}
-  const merchantTotals = {}
-  for (const t of transactions.filter(t => t.type !== 'credit')) {
-    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount
-    const mk = `${t.category}|${normalize(t.description).slice(0, 20)}`
-    merchantTotals[mk] = (merchantTotals[mk] || 0) + t.amount
+  // Precompute normalized descriptions once to avoid O(n²) repeated normalize() calls
+  const normDescCache = new Map()
+  const getNorm = t => {
+    const k = t.id ?? t.description
+    if (!normDescCache.has(k)) normDescCache.set(k, normalize(t.description).slice(0, 20))
+    return normDescCache.get(k)
   }
+
+  const catTotals = {}
   const catCounts = {}
-  for (const t of transactions.filter(t => t.type !== 'credit')) {
+  const merchantTotals = {}
+  const merchantTxs = {} // mk → array of transactions
+  for (const t of transactions) {
+    if (t.type === 'credit') continue
+    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount
     catCounts[t.category] = (catCounts[t.category] || 0) + 1
+    const mk = `${t.category}|${getNorm(t)}`
+    merchantTotals[mk] = (merchantTotals[mk] || 0) + t.amount
+    if (!merchantTxs[mk]) merchantTxs[mk] = []
+    merchantTxs[mk].push(t)
   }
   for (const [mk, amt] of Object.entries(merchantTotals)) {
     const [cat, desc] = mk.split('|')
@@ -403,9 +495,9 @@ export function detectUnnecessary(transactions) {
           type: 'concentration',
           label: 'Gasto concentrado en un comercio',
           description: `"${desc}" representa el ${Math.round((amt / catTotal) * 100)}% de ${CATEGORIES[cat]?.label || cat}`,
-          count: transactions.filter(t => normalize(t.description).startsWith(desc)).length,
+          count: merchantTxs[mk].length,
           total: amt,
-          transactions: transactions.filter(t => normalize(t.description).slice(0, 20).startsWith(desc)),
+          transactions: merchantTxs[mk],
         })
       }
     }
