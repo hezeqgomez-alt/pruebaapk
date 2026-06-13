@@ -171,7 +171,9 @@ function detectForeignCurrency(text) {
 
 // Monto válido: separador de miles (1.234), coma decimal (1234,56),
 // signo $ delante, 5+ dígitos, o trailing dash para créditos (553.343,47-).
-const AMT_RE = /(?:^|\s)(-?\(?\$\s*\d[\d.,]*|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?-?\)?|-?\(?\d+,\d{1,2}-?\)?|-?\(?\d{5,}-?\)?)(?=\s|$)/g
+// The $-prefixed alternative requires either 2+ digits or at least one separator
+// so that bare "$9" OCR noise is not matched (only "$9.600,00" or "$90" etc.)
+const AMT_RE = /(?:^|\s)(-?\(?\$\s*(?:\d{2,}[\d.,]*|\d[.,]\d[\d.,]*)|\(?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?-?\)?|-?\(?\d+,\d{1,2}-?\)?|-?\(?\d{5,}-?\)?)(?=\s|$)/g
 
 function findAmounts(text) {
   const results = []
@@ -604,6 +606,11 @@ function parseRows(rows, filename, refYear, ocrMode = false, bank = '', docBrand
 
     // Sanity cap: single transaction > 50M ARS is almost certainly a balance/total row
     if (Math.abs(amountVal) > 50_000_000) continue
+
+    // OCR noise filter: single-digit or very small amounts are almost always OCR artifacts
+    // (e.g. "$9.600,00" split across lines leaving a bare "$9" token).
+    // $50 is the practical minimum for any real Argentine CC purchase in 2026.
+    if (ocrMode && Math.abs(amountVal) < 50) continue
 
     const installment = detectInstallment(row.text)
     const fx = detectForeignCurrency(row.text)
