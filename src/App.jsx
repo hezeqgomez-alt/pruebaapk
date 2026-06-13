@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
 import {
   ReceiptText, Trash2, Download, RefreshCw, FileBarChart2, X,
-  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag, ChevronDown, CreditCard,
+  CheckCircle, AlertTriangle, Info, Moon, Sun, Plus, FileSpreadsheet, Upload, LogOut, Menu, HelpCircle, Share2, Tag, ChevronDown, CreditCard, BookOpen,
 } from 'lucide-react'
 import MobileDrawer from './components/MobileDrawer'
 import UploadZone from './components/UploadZone'
@@ -137,6 +137,12 @@ export default function App() {
   const handleTourSkip = useCallback(() => {
     localStorage.setItem('er_tour_done', '1')
     setTourStep(null)
+  }, [])
+
+  const handleRestartTour = useCallback(() => {
+    localStorage.removeItem('er_tour_done')
+    setActiveTab('dashboard')
+    setTimeout(() => setTourStep(0), 100)
   }, [])
 
   const [ocrProgress, setOcrProgress]             = useState(null)
@@ -912,6 +918,16 @@ export default function App() {
             <HelpCircle size={15} />
             <span className="hidden sm:inline">¿Cómo bajo el PDF?</span>
           </button>
+          {hasData && (
+            <button
+              onClick={handleRestartTour}
+              title="Ver el tutorial nuevamente"
+              className="shrink-0 flex items-center gap-2 px-3 h-[52px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all text-xs font-medium"
+            >
+              <BookOpen size={15} />
+              <span className="hidden sm:inline">Tutorial</span>
+            </button>
+          )}
         </div>
         <OnboardingTooltip hasData={hasData} />
 
